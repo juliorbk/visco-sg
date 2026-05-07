@@ -30,4 +30,7 @@ public class Supplier {
 
   @Column(nullable = false)
   private String description;
+
+  @Column(name = "is_active", nullable = false)
+  private boolean active; // Logical removing flag
 }
