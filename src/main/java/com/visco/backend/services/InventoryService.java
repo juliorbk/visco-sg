@@ -1,11 +1,13 @@
 package com.visco.backend.services;
 
 import com.visco.backend.models.entities.Product;
-import com.visco.backend.models.dtos.ProductDTO;
+import org.springframework.stereotype.Service;
 
+@Service
 public class InventoryService {
-  
-    public Product createProduct(ProductDTO productDTO) {
-        // Implementation for creating a product
-    }
+
+  public Product createProduct(Product productDTO) {
+    // Implementation for creating a product
+    return null; // Placeholder return statement
+  }
 }

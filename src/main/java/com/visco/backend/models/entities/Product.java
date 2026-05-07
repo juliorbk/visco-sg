@@ -2,8 +2,6 @@ package com.visco.backend.models.entities;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 import lombok.*;
 
 @Entity
@@ -28,6 +26,9 @@ public class Product {
   @Column(nullable = false)
   private String name;
 
+  @Column(length = 1000)
+  private String description;
+
   @Column(name = "sap_code", nullable = false)
   private String sapCode;
 
@@ -35,31 +36,13 @@ public class Product {
   @Column(nullable = false)
   private Uom uom;
 
-  // ==========================================
-  // ¿Este es el stock global o el de un almacén en específico?
-  // ==========================================
-  @Column(name = "current_stock", nullable = false)
-  private BigDecimal currentStock;
-
+  // Punto de reorden global (cuándo hay que comprar más)
   @Column(name = "reorder_point", nullable = false)
   private BigDecimal reorderPoint;
 
   @Builder.Default
   @Column(name = "is_active", nullable = false)
   private boolean active = true;
-
-  // ==========================================
-  // RELACIONES (JOINS)
-  // ==========================================
-
-  @ManyToMany(fetch = FetchType.LAZY)
-  @JoinTable(
-    name = "product_warehouses",
-    joinColumns = @JoinColumn(name = "product_id"),
-    inverseJoinColumns = @JoinColumn(name = "warehouse_id")
-  )
-  @Builder.Default
-  private Set<Warehouse> warehouses = new HashSet<>();
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "supplier_id", referencedColumnName = "id")
@@ -69,20 +52,5 @@ public class Product {
   @JoinColumn(name = "category_id", referencedColumnName = "id")
   private Category category;
 
-  /*
-   * Cuidado aquí también: Si el producto está en varios almacenes,
-   * probablemente también esté en diferentes ubicaciones (pasillos/estantes)
-   * dependiendo del almacén.
-   */
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "location_id", referencedColumnName = "id")
-  private Location location;
-
-  @Transient
-  public String getCalculatedStatus() {
-    if (currentStock == null) return "Sin stock";
-    if (currentStock.compareTo(BigDecimal.ZERO) <= 0) return "Sin stock";
-    if (currentStock.compareTo(reorderPoint) <= 0) return "Bajo stock";
-    return "En stock";
-  }
+  // ELIMINADOS: currentStock, warehouses, location y getCalculatedStatus()
 }

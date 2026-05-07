@@ -1,6 +1,13 @@
 package com.visco.backend.models.entities;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,6 +37,18 @@ public class Supplier {
 
   @Column(nullable = false)
   private String description;
+
+  @Column(name = "created_at", nullable = false, updatable = false)
+  private LocalDateTime createdAt = LocalDateTime.now();
+
+  @Column(name = "updated_at", nullable = false)
+  private LocalDateTime updatedAt = LocalDateTime.now();
+
+  @Column(name = "deleted_at")
+  private LocalDateTime deletedAt;
+
+  @Column (name = "sap_code")
+  private String sapCode; // Código del proveedor en SAP, si aplica
 
   @Column(name = "is_active", nullable = false)
   private boolean active; // Logical removing flag

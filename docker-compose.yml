@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  visco-db:
+    image: postgres:16-alpine # Usamos alpine porque es súper ligera
+    container_name: visco_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: visco_db
+      POSTGRES_USER: visco_admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - visco_pg_data:/var/lib/postgresql/data
+
+volumes:
+  visco_pg_data:

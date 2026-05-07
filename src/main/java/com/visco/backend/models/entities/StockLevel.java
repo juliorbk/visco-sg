@@ -1,8 +1,8 @@
 package com.visco.backend.models.entities;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import lombok.Data;
-
 
 @Data
 @Entity
@@ -22,8 +22,8 @@ public class StockLevel {
   private Location location;
 
   @Column(nullable = false)
-  private Double currentStock;
+  private BigDecimal currentStock;
 
   @Column(nullable = false)
-  private Double pendingStock;
+  private BigDecimal pendingStock;
 }
