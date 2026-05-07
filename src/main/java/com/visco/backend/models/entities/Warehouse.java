@@ -7,7 +7,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "warehouses")
-@Data
+@Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -27,8 +28,8 @@ public class Warehouse {
   @Column(nullable = false)
   private String description;
 
-  @Column(name = "sap_code")
-  private String sapCode; // Código del almacén en SAP, si aplica
+  @Column(name = "sap_center_code")
+  private String sapCenterCode; // Código del almacén en SAP, si aplica
 
   @Column(name = "is_active", nullable = false)
   private boolean active;
