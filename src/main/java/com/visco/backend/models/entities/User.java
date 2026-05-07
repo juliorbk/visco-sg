@@ -67,7 +67,6 @@ public class User implements UserDetails {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "area_id")
-  @Column(nullable = false)
   private RequestingArea area;
 
   @Column(name = "is_active", nullable = false)
