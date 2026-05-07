@@ -1,21 +1,13 @@
-package com.yoko.backend.entities;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
+package com.visco.backend.models.entities;
 
 import jakarta.persistence.*;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-
 import lombok.*;
-
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import com.visco.backend.models.entities.RequestingArea;
-import com.visco.backend.models.entities.UserRole;
 
 @Entity
 @Table(name = "app_user")
@@ -74,5 +66,5 @@ public class User implements UserDetails {
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
-  private RequestingArea area ;
+  private RequestingArea area;
 }

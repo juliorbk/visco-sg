@@ -25,6 +25,12 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String sap_code; // Código SAP para integración 
+    
+    @Column(nullable = false)
+    private Uom uom; // Unidad de medida (Ej: Litros, Kilogramos, Unidades)
+
     @Column(name = "current_stock", nullable = false)
     private BigDecimal currentStock;
 
