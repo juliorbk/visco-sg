@@ -65,7 +65,8 @@ public class User implements UserDetails {
   @Column(nullable = false)
   private UserRole role;
 
-  @Enumerated(EnumType.STRING)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "area_id")
   @Column(nullable = false)
   private RequestingArea area;
 
