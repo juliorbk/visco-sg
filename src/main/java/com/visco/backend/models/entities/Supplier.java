@@ -1,13 +1,14 @@
 package com.visco.backend.models.entities;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,9 +48,14 @@ public class Supplier {
   @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
-  @Column (name = "sap_code")
+  @Column(name = "sap_code")
   private String sapCode; // Código del proveedor en SAP, si aplica
 
   @Column(name = "is_active", nullable = false)
   private boolean active; // Logical removing flag
+
+  // Dentro de Supplier.java
+  @Enumerated(EnumType.STRING)
+  @Column(name = "currency", nullable = false)
+  private Currency currency;
 }
