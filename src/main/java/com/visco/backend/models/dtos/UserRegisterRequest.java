@@ -1,24 +1,27 @@
 package com.visco.backend.models.dtos;
 
-import com.visco.backend.models.entities.RequestingArea;
 import com.visco.backend.models.entities.UserRole;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class UserRegisterRequest {
 
-  @NotBlank(message = "Name is required")
+  @NotBlank(message = "El nombre es obligatorio")
   private String name;
 
-  @NotBlank(message = "Email is required")
+  @Email(message = "Formato de email inválido")
+  @NotBlank(message = "El email es obligatorio")
   private String email;
 
-  @NotBlank(message = "Password is required")
+  @NotBlank(message = "La contraseña es obligatoria")
+  @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
   private String password;
 
+  @NotBlank(message = "El rol es obligatorio")
   private UserRole role;
-  private RequestingArea area;
+
+  private Long areaId;
 }
