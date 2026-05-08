@@ -3,6 +3,7 @@ package com.visco.backend.models.dtos;
 import com.visco.backend.models.entities.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -20,7 +21,7 @@ public class UserRegisterRequest {
   @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
   private String password;
 
-  @NotBlank(message = "El rol es obligatorio")
+  @NotNull(message = "El rol es obligatorio")
   private UserRole role;
 
   private Long areaId;
