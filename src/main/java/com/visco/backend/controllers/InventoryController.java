@@ -26,11 +26,16 @@ public class InventoryController {
 		this.productService = productService;
 	}
 
+	// GET /api/inventory/products?page=0&size=10
+	// Lista paginada de productos. Retorna ProductDTO (no expone la entidad).
 	@GetMapping("/products")
 	public Page<ProductDTO> getAllProducts(Pageable pageable) {
 		return productService.getAllProducts(pageable);
 	}
 
+	// POST /api/inventory/products
+	// Crea un producto. Retorna 201 Created con el DTO.
+	// Si hay duplicado de SKU → 400 Bad Request.
 	@PostMapping("/products")
 	public ResponseEntity<ProductDTO> createProduct(@RequestBody Product product) {
 		try {
@@ -41,11 +46,14 @@ public class InventoryController {
 		}
 	}
 
+	// GET /api/inventory/products/{id}
 	@GetMapping("/products/{id}")
 	public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
 		return ResponseEntity.ok(productService.getProductById(id));
 	}
 
+	// PUT /api/inventory/products/{id}
+	// Actualiza los campos del producto. Retorna el DTO actualizado.
 	@PutMapping("/products/{id}")
 	public ResponseEntity<ProductDTO> updateProduct(@PathVariable Long id, @RequestBody Product product) {
 		try {
@@ -55,6 +63,8 @@ public class InventoryController {
 		}
 	}
 
+	// DELETE /api/inventory/products/{id}
+	// Soft delete: desactiva el producto. Retorna 204 No Content.
 	@DeleteMapping("/products/{id}")
 	public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
 		productService.deleteProduct(id);

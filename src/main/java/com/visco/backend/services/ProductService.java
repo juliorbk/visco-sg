@@ -1,5 +1,8 @@
 package com.visco.backend.services;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -8,8 +11,6 @@ import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.repositories.ProductRepository;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -18,6 +19,8 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    // Crea un producto nuevo.
+    // Valida SKU único (internalCode se genera automáticamente en @PrePersist).
     @Transactional
     public Product createProduct(Product product) {
 
@@ -40,6 +43,7 @@ public class ProductService {
         return productRepository.save(newProduct);
     }
 
+    // Busca un producto por su código interno (VIS-000001).
     public ProductDTO getProductByInternalCode(String internalCode) {
         Product product = productRepository.findByInternalCode(internalCode)
                 .orElseThrow(() -> new EntityNotFoundException(
@@ -47,16 +51,21 @@ public class ProductService {
         return ProductDTO.fromEntity(product);
     }
 
+    // Lista paginada de todos los productos.
+    // GET /api/inventory/products?page=0&size=10
     public Page<ProductDTO> getAllProducts(Pageable pageable) {
         return productRepository.findAll(pageable).map(ProductDTO::fromEntity);
     }
 
+    // Busca un producto por su ID numérico.
     public ProductDTO getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + id));
         return ProductDTO.fromEntity(product);
     }
 
+    // Actualiza los campos editables de un producto.
+    // Valida SKU único si el valor cambió. No modifica internalCode.
     @Transactional
     public ProductDTO updateProduct(Long id, Product updated) {
         Product existing = productRepository.findById(id)
@@ -79,6 +88,7 @@ public class ProductService {
         return ProductDTO.fromEntity(productRepository.save(existing));
     }
 
+    // Eliminación lógica: desactiva el producto sin borrarlo de la DB.
     @Transactional
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
@@ -88,52 +98,6 @@ public class ProductService {
     }
 }
 
-        Product newProduct = Product.builder().name(product.getName())
-                .category(product.getCategory()).description(product.getDescription())
-                .sapCode(product.getSapCode()).uom(product.getUom()).active(true)
-                .internalCode(product.getInternalCode()).reorderPoint(product.getReorderPoint())
-                .sku(product.getSku()).supplier(product.getSupplier()).build();
 
-        return productRepository.save(newProduct);
 
-    }
 
-    public Product updateProduct(Long id, Product productDetails) {
-
-        Product existingProduct = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
-
-        // 1. Standard text/number fields
-        existingProduct.setName(productDetails.getName());
-        existingProduct.setDescription(productDetails.getDescription());
-        existingProduct.setSapCode(productDetails.getSapCode());
-        existingProduct.setUom(productDetails.getUom());
-        existingProduct.setReorderPoint(productDetails.getReorderPoint());
-        existingProduct.setSku(productDetails.getSku());
-
-        // 2. Relationships
-        existingProduct.setCategory(productDetails.getCategory());
-        existingProduct.setSupplier(productDetails.getSupplier());
-
-        // 3. Boolean safety check
-        if (productDetails.getActive() != null) {
-            existingProduct.setActive(productDetails.getActive());
-        }
-
-        return productRepository.save(existingProduct);
-    }
-
-    public void deleteProduct(Long id) {
-        Product existingProduct = productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
-        existingProduct.setActive(false); // Logical delete
-        productRepository.save(existingProduct);
-    }
-
-    public Page<ProductDTO> getAllProducts(Pageable pageable) {
-        // 1. Pass the pageable request to the repository
-        // 2. The repository returns a Page<Product>
-        // 3. Page has a built-in .map() to convert the entities to DTOs
-        return productRepository.findAll(pageable).map(ProductDTO::fromEntity);
-    }
-}

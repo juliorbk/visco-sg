@@ -79,9 +79,9 @@ public class SecurityConfig {
           .hasAnyAuthority("ADMIN", "MANAGER")
           // Todos los autenticados
           .requestMatchers("/api/inventory/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "USER")
+          .hasAnyAuthority("ADMIN", "MANAGER", "WAREHOUSEMAN")
           .requestMatchers("/api/dashboard/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "USER")
+          .hasAnyAuthority("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
           .anyRequest()
           .authenticated()
       )

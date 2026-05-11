@@ -72,12 +72,18 @@ public class AuthService {
   public AuthResponse login(LoginRequest request) {
     log.info("Intento de login para el usuario: {}", request.getEmail());
 
-    authenticationManager.authenticate(
-      new UsernamePasswordAuthenticationToken(
-        request.getEmail(),
-        request.getPassword()
-      )
-    );
+    try {
+      authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+          request.getEmail(),
+          request.getPassword()
+        )
+      );
+      log.info("Autenticacion exitosa para: {}", request.getEmail());
+    } catch (BadCredentialsException e) {
+      log.warn("Credenciales invalidas para: {}", request.getEmail());
+      throw e;
+    }
 
     User user = userRepository
       .findByEmail(request.getEmail())
@@ -89,6 +95,7 @@ public class AuthService {
         return new BadCredentialsException("Invalid credentials");
       });
 
+    log.debug("Generando JWT para usuario: {}", request.getEmail());
     return buildResponse(user);
   }
 
