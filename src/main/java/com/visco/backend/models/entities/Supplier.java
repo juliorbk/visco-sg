@@ -78,7 +78,7 @@ public class Supplier {
   private String sapCode; // Código del proveedor en SAP, si aplica
 
   @Column(name = "is_active", nullable = false)
-  private boolean active; // Logical removing flag
+  private Boolean active; // Logical removing flag
 
   @Enumerated(EnumType.STRING)
   @Column(name = "currency", nullable = false)

@@ -1,10 +1,32 @@
 package com.visco.backend.models.entities;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.*;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "purchase_orders")
@@ -27,6 +49,16 @@ public class PurchaseOrder {
   // Corregido: Usamos tu Enum en lugar de un String
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
+  private PaymentMethod paymentMethod;
+
+  // Corregido: Usamos tu Enum en lugar de un String
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PurchaseOrderType type;
+
+  // Corregido: Usamos tu Enum en lugar de un String
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
   private PurchaseOrderStatus status;
 
   // Relación con el Proveedor
@@ -38,17 +70,21 @@ public class PurchaseOrder {
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;
 
+  @Column(name = "updated_at", updatable = true)
+  private LocalDateTime updatedAt;
+
   @PrePersist
   protected void onCreate() {
     createdAt = LocalDateTime.now();
   }
 
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
+
   // Relación bidireccional con los items de la orden
-  @OneToMany(
-    mappedBy = "purchaseOrder",
-    cascade = CascadeType.ALL,
-    orphanRemoval = true
-  )
+  @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude

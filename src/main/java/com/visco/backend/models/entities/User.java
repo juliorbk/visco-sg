@@ -70,5 +70,5 @@ public class User implements UserDetails {
   private RequestingArea area;
 
   @Column(name = "is_active", nullable = false)
-  private boolean active;
+  private Boolean active;
 }

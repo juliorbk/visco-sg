@@ -2,8 +2,11 @@ package com.visco.backend.controllers;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,10 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
+import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.PurchaseOrderResponse;
+import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.services.ProcurementService;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -26,7 +30,7 @@ public class ProcurementController {
 
     private final ProcurementService procurementService;
 
-    // POST /api/v1/procurement/orders
+    // Crea una nueva orden de compra
     @PostMapping("/orders")
     public ResponseEntity<PurchaseOrderResponse> createOrder(
             @Valid @RequestBody CreatePurchaseOrderRequest request) {
@@ -34,27 +38,38 @@ public class ProcurementController {
                 .body(procurementService.createPurchaseOrder(request));
     }
 
-    // GET /api/v1/procurement/orders
+    // Lista todas las órdenes de compra
     @GetMapping("/orders")
     public ResponseEntity<List<PurchaseOrderResponse>> getAllOrders() {
         return ResponseEntity.ok(procurementService.getAllOrders());
     }
 
-    // GET /api/v1/procurement/orders/{id}
+    // Obtiene una orden de compra por ID
     @GetMapping("/orders/{id}")
     public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
         return ResponseEntity.ok(procurementService.getOrderById(id));
     }
 
-    // PATCH /api/v1/procurement/orders/{id}/deliver
-    @PatchMapping("/orders/{id}/deliver")
-    public ResponseEntity<PurchaseOrderResponse> markDelivered(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.markAsDelivered(id));
+    // Aprueba una orden (solo si está PENDING)
+    @PatchMapping("/orders/{id}/approve")
+    public ResponseEntity<PurchaseOrderResponse> markApproved(@PathVariable Long id) {
+        return ResponseEntity.ok(procurementService.markAsApproved(id));
     }
 
-    // PATCH /api/v1/procurement/orders/{id}/cancel
+    // Cancela una orden (solo si está PENDING o IN_TRANSIT)
     @PatchMapping("/orders/{id}/cancel")
     public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable Long id) {
         return ResponseEntity.ok(procurementService.cancelOrder(id));
+    }
+
+    // Recibe mercancía contra una orden de compra
+    // Crea una nota de recepción y ajusta el stock automáticamente
+    // Si falta mercancía → PARTIALLY_DELIVERED, si está completo → DELIVERED
+    @PostMapping("/orders/{id}/receive")
+    public ResponseEntity<GoodReceiptResponse> receiveGoods(
+            @PathVariable Long id,
+            @Valid @RequestBody ReceiveGoodsRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(procurementService.receiveGoods(id, request));
     }
 }

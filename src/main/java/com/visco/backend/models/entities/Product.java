@@ -1,8 +1,26 @@
 package com.visco.backend.models.entities;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
-import lombok.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.SequenceGenerator;
+import jakarta.persistence.Table;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "products")
@@ -14,8 +32,17 @@ import lombok.*;
 public class Product {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_seq")
+  @SequenceGenerator(name = "product_seq", sequenceName = "product_code_seq", allocationSize = 1)
   private Long id;
+
+  // Agregar método
+  @PrePersist
+  public void generateInternalCode() {
+    if (internalCode == null || internalCode.isBlank()) {
+      this.internalCode = String.format("VIS-%06d", this.id);
+    }
+  }
 
   @Column(name = "internal_code", unique = true, nullable = false)
   private String internalCode;
@@ -42,7 +69,7 @@ public class Product {
 
   @Builder.Default
   @Column(name = "is_active", nullable = false)
-  private boolean active = true;
+  private Boolean active = true;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "supplier_id", referencedColumnName = "id")

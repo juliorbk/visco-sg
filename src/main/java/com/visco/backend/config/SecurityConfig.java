@@ -41,7 +41,7 @@ public class SecurityConfig {
       List.of("http://localhost:3000", "http://localhost:5173")
     ); // Add your React ports
     configuration.setAllowedMethods(
-      List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
+      List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
     );
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
