@@ -2,6 +2,7 @@ package com.visco.backend.services;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
+import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
@@ -55,7 +57,20 @@ public class ProcurementService {
 
             addPendingStock(product.getId(), BigDecimal.valueOf(itemReq.quantity()));
 
-            return toResponse(saved);
+
         }
+    }
+
+    private void addPendingStock(Long productId, BigDecimal quantity) {
+        List<StockLevel> stockLevels = stockLevelRepository.findByProductId(productId);
+
+        if (stockLevels.isEmpty()) {
+            throw new EntityNotFoundException("No stock level found for product ID: " + productId);
+        }
+        
+        StockLevel level = stockLevels.get(0); // Assuming one stock level per product for simplicity
+        level.setPendingStock(level.getPendingStock().add(quantity));
+        stockLevelRepository.save(level);
+
     }
 }
