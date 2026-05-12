@@ -18,7 +18,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -42,6 +41,10 @@ public class PurchaseOrder {
 
   @Column(unique = true, nullable = false)
   private String orderNumber;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "created_by_id", nullable = false)
+  private User createdBy;
 
   @Column(nullable = false)
   private String description;

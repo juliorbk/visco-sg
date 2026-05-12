@@ -61,14 +61,4 @@ public class ProcurementController {
         return ResponseEntity.ok(procurementService.cancelOrder(id));
     }
 
-    // Recibe mercancía contra una orden de compra
-    // Crea una nota de recepción y ajusta el stock automáticamente
-    // Si falta mercancía → PARTIALLY_DELIVERED, si está completo → DELIVERED
-    @PostMapping("/orders/{id}/receive")
-    public ResponseEntity<GoodReceiptResponse> receiveGoods(
-            @PathVariable Long id,
-            @Valid @RequestBody ReceiveGoodsRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(procurementService.receiveGoods(id, request));
-    }
 }

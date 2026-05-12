@@ -19,10 +19,10 @@ import com.visco.backend.services.ProductService;
 
 @RestController
 @RequestMapping("/api/inventory")
-public class InventoryController {
+public class ProductController {
 	private final ProductService productService;
 
-	public InventoryController(ProductService productService) {
+	public ProductController(ProductService productService) {
 		this.productService = productService;
 	}
 

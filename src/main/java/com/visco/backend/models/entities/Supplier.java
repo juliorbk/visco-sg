@@ -18,7 +18,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
+
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -29,6 +34,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class Supplier {
 
   @Id
@@ -66,9 +72,11 @@ public class Supplier {
   private String description;
 
   @Column(name = "created_at", nullable = false, updatable = false)
+  @CreatedDate
   private LocalDateTime createdAt = LocalDateTime.now();
 
   @Column(name = "updated_at", nullable = false)
+  @LastModifiedDate
   private LocalDateTime updatedAt = LocalDateTime.now();
 
   @Column(name = "deleted_at")
