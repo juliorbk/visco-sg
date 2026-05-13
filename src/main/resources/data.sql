@@ -1,15 +1,20 @@
 -- ============================================================
 -- SEED DATA — visco-sg
 -- Orden de inserción respetando FK:
---   1. warehouses
---   2. locations
---   3. categories
---   4. suppliers
---   5. products
---   6. stock_levels
+--   1. app_user (no FK, needed for other tables referencing created_by)
+--   2. warehouses
+--   3. locations
+--   4. categories
+--   5. suppliers
+--   6. products
+--   7. stock_levels
 --
 -- TRUNCATE al inicio para que sea idempotente (dev only)
 -- ============================================================
+
+-- Ensure missing FK columns exist (workaround for Hibernate ddl-auto=update gaps)
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS created_by_id UUID;
+ALTER TABLE purchase_orders ADD CONSTRAINT fk_purchase_orders_created_by FOREIGN KEY (created_by_id) REFERENCES app_user(id);
 
 TRUNCATE TABLE stock_levels,
              purchase_order_items,
@@ -22,7 +27,8 @@ TRUNCATE TABLE stock_levels,
              suppliers,
              categories,
              locations,
-             warehouses
+             warehouses,
+             app_user
 RESTART IDENTITY CASCADE;
 
 -- 1. ALMACÉN
@@ -52,12 +58,12 @@ VALUES ('PROD-002', 'SKU-CA-002', 'Catalizador C-200', 'Catalizador para reaccio
 INSERT INTO products (internal_code, sku, name, description, sap_code, uom, reorder_point, is_active, supplier_id, category_id)
 VALUES ('PROD-003', 'SKU-SV-003', 'Solvente SV-300', 'Solvente industrial para limpieza de equipos', 'SAP-SV-003', 'GALON', 1000.000, true, 1, 1);
 
--- 6. STOCK LEVEL para cada producto (stock inicial = 0, pendiente = 0)
+-- 6. STOCK LEVEL para cada producto
 INSERT INTO stock_levels (product_id, location_id, current_stock, pending_stock)
-VALUES (1, 1, 0.000, 0.000);
+VALUES (1, 1, 850.000, 0.000);
 
 INSERT INTO stock_levels (product_id, location_id, current_stock, pending_stock)
-VALUES (2, 1, 0.000, 0.000);
+VALUES (2, 1, 150.000, 0.000);
 
 INSERT INTO stock_levels (product_id, location_id, current_stock, pending_stock)
-VALUES (3, 1, 0.000, 0.000);
+VALUES (3, 1, 1200.000, 0.000);

@@ -22,13 +22,14 @@ public class ProductDTO {
 	private String sapCode;
 	private String uom; // String para evitar exponer el enum
 	private BigDecimal reorderPoint;
+	private BigDecimal totalStock;
 	private Boolean active;
 	private Long supplierId;
 	private String supplierName;
 	private Long categoryId;
 	private String categoryName;
 
-	public static ProductDTO fromEntity(Product product) {
+	public static ProductDTO fromEntity(Product product, BigDecimal totalStock) {
 		return ProductDTO.builder()
 				.id(product.getId())
 				.internalCode(product.getInternalCode())
@@ -38,6 +39,7 @@ public class ProductDTO {
 				.sapCode(product.getSapCode())
 				.uom(product.getUom().name())
 				.reorderPoint(product.getReorderPoint())
+				.totalStock(totalStock)
 				.active(product.getActive())
 				.supplierId(product.getSupplier() != null ? product.getSupplier().getId() : null)
 				.supplierName(product.getSupplier() != null ? product.getSupplier().getName() : null)

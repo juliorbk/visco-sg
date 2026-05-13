@@ -1,5 +1,7 @@
 package com.visco.backend.services;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.repositories.ProductRepository;
+import com.visco.backend.repositories.StockLevelRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final StockLevelRepository stockLevelRepository;
 
     // Crea un producto nuevo.
     // Valida SKU único (internalCode se genera automáticamente en @PrePersist).
@@ -43,25 +47,31 @@ public class ProductService {
         return productRepository.save(newProduct);
     }
 
+    private BigDecimal getTotalStock(Long productId) {
+        BigDecimal stock = stockLevelRepository.getTotalStockByProductId(productId);
+        return stock != null ? stock : BigDecimal.ZERO;
+    }
+
     // Busca un producto por su código interno (VIS-000001).
     public ProductDTO getProductByInternalCode(String internalCode) {
         Product product = productRepository.findByInternalCode(internalCode)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Producto no encontrado con código interno: " + internalCode));
-        return ProductDTO.fromEntity(product);
+        return ProductDTO.fromEntity(product, getTotalStock(product.getId()));
     }
 
     // Lista paginada de todos los productos.
     // GET /api/inventory/products?page=0&size=10
     public Page<ProductDTO> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable).map(ProductDTO::fromEntity);
+        return productRepository.findAll(pageable)
+                .map(p -> ProductDTO.fromEntity(p, getTotalStock(p.getId())));
     }
 
     // Busca un producto por su ID numérico.
     public ProductDTO getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + id));
-        return ProductDTO.fromEntity(product);
+        return ProductDTO.fromEntity(product, getTotalStock(product.getId()));
     }
 
     // Actualiza los campos editables de un producto.
@@ -85,7 +95,8 @@ public class ProductService {
         existing.setSupplier(updated.getSupplier());
         existing.setCategory(updated.getCategory());
 
-        return ProductDTO.fromEntity(productRepository.save(existing));
+        Product saved = productRepository.save(existing);
+        return ProductDTO.fromEntity(saved, getTotalStock(saved.getId()));
     }
 
     // Eliminación lógica: desactiva el producto sin borrarlo de la DB.

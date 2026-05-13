@@ -40,7 +40,8 @@ public class ProductController {
 	public ResponseEntity<ProductDTO> createProduct(@RequestBody Product product) {
 		try {
 			Product createdProduct = productService.createProduct(product);
-			return ResponseEntity.status(HttpStatus.CREATED).body(ProductDTO.fromEntity(createdProduct));
+			ProductDTO dto = productService.getProductById(createdProduct.getId());
+			return ResponseEntity.status(HttpStatus.CREATED).body(dto);
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
 		}
