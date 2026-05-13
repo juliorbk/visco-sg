@@ -23,13 +23,14 @@ public class ProductDTO {
 	private String uom; // String para evitar exponer el enum
 	private BigDecimal reorderPoint;
 	private BigDecimal totalStock;
+	private BigDecimal totalPendingStock;
 	private Boolean active;
 	private Long supplierId;
 	private String supplierName;
 	private Long categoryId;
 	private String categoryName;
 
-	public static ProductDTO fromEntity(Product product, BigDecimal totalStock) {
+	public static ProductDTO fromEntity(Product product, BigDecimal totalStock, BigDecimal totalPendingStock) {
 		return ProductDTO.builder()
 				.id(product.getId())
 				.internalCode(product.getInternalCode())
@@ -40,6 +41,7 @@ public class ProductDTO {
 				.uom(product.getUom().name())
 				.reorderPoint(product.getReorderPoint())
 				.totalStock(totalStock)
+				.totalPendingStock(totalPendingStock)
 				.active(product.getActive())
 				.supplierId(product.getSupplier() != null ? product.getSupplier().getId() : null)
 				.supplierName(product.getSupplier() != null ? product.getSupplier().getName() : null)

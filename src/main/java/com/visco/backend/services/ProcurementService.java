@@ -3,6 +3,8 @@ package com.visco.backend.services;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -65,11 +67,24 @@ public class ProcurementService {
 				.createdAt(LocalDateTime.now())
 				.build();
 
-		for (PurchaseOrderItemRequest itemReq : request.items()) {
-			Product product = productRepository.findById(itemReq.productId())
-					.orElseThrow(() -> new EntityNotFoundException(
-							"Product not found: " + itemReq.productId()));
+		// 1. Extract all product IDs from the request
+		List<Long> productIds = request.items().stream()
+				.map(PurchaseOrderItemRequest::productId)
+				.toList();
 
+		// 2. Fetch all products in ONE database query
+		List<Product> products = productRepository.findAllById(productIds);
+
+		// 3. Create a map for quick lookup
+		Map<Long, Product> productMap = products.stream()
+				.collect(Collectors.toMap(Product::getId, p -> p));
+
+		// 4. Now loop through your items
+		for (PurchaseOrderItemRequest itemReq : request.items()) {
+			Product product = productMap.get(itemReq.productId());
+			if (product == null) {
+				throw new EntityNotFoundException("Product not found: " + itemReq.productId());
+			}
 			PurchaseOrderItem item = PurchaseOrderItem.builder()
 					.purchaseOrder(order)
 					.product(product)
@@ -91,7 +106,7 @@ public class ProcurementService {
 	// ─────────────────────────────────────────────────────────────
 
 	@Transactional
-	public void rejectOrder(Long orderId) {
+	public void cancelOrderById(Long orderId) {
 		PurchaseOrder order = purchaseOrderRepository.findById(orderId)
 				.orElseThrow(() -> new EntityNotFoundException(
 						"Purchase order not found: " + orderId));
@@ -99,13 +114,11 @@ public class ProcurementService {
 		if (order.getStatus() != PurchaseOrderStatus.PENDING
 				&& order.getStatus() != PurchaseOrderStatus.IN_TRANSIT) {
 			throw new IllegalStateException(
-					"Only pending or in-transit orders can be rejected");
+					"Only pending or in-transit orders can be cancelled");
 		}
-		log.info("Rejecting order ID: {}, current status: {}", orderId, order.getStatus());
-		order.setStatus(PurchaseOrderStatus.REJECTED);
-		order.setUpdatedAt(LocalDateTime.now());
+		log.info("Cancelling order ID: {}, current status: {}", orderId, order.getStatus());
+		order.setStatus(PurchaseOrderStatus.CANCELLED);
 		purchaseOrderRepository.save(order);
-
 		for (PurchaseOrderItem item : order.getItems()) {
 			warehouseService.substractPendingStock(item.getProduct().getId(),
 					BigDecimal.valueOf(item.getQuantity()));
@@ -131,12 +144,14 @@ public class ProcurementService {
 	// Consultas
 	// ─────────────────────────────────────────────────────────────
 
+	@Transactional
 	public List<PurchaseOrderResponse> getAllOrders() {
 		return purchaseOrderRepository.findAll().stream()
 				.map(this::toResponse)
 				.toList();
 	}
 
+	@Transactional
 	public PurchaseOrderResponse getOrderById(Long id) {
 		PurchaseOrder order = purchaseOrderRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + id));
@@ -151,7 +166,7 @@ public class ProcurementService {
 
 	@Transactional
 	public PurchaseOrderResponse cancelOrder(Long id) {
-		rejectOrder(id);
+		cancelOrderById(id);
 		return getOrderById(id);
 	}
 
@@ -173,10 +188,10 @@ public class ProcurementService {
 				order.getOrderNumber(),
 				order.getDescription(),
 				order.getStatus(),
-				order.getSupplier().getName(),
+				order.getSupplier() != null ? order.getSupplier().getName() : "Unknown",
 				order.getPaymentMethod(),
 				order.getType(),
-				order.getCreatedBy().getName(),
+				order.getCreatedBy() != null ? order.getCreatedBy().getName() : "Unknown",
 				order.getCreatedAt(),
 				itemResponses);
 	}

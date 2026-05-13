@@ -2,8 +2,6 @@ package com.visco.backend.services;
 
 import java.time.LocalDateTime;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -13,6 +11,7 @@ import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.SupplierRepository;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 
 @Service

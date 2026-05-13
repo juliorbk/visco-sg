@@ -53,7 +53,7 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .csrf(csrf -> csrf.disable()) // CSRF is usually disabled for stateless APIs
-        .cors(cors -> cors.configure(http)) // Ensure CORS is enabled if React is calling this
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(auth -> auth
             // Público
             .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

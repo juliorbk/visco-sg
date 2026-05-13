@@ -2,6 +2,7 @@ package com.visco.backend.services;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
+import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.WarehouseResponse;
+import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.PurchaseOrder;
@@ -23,6 +27,7 @@ import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.StockLevelRepository;
+import com.visco.backend.repositories.WarehouseRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -33,12 +38,15 @@ public class WarehouseService {
 	private final PurchaseOrderRepository purchaseOrderRepository;
 	private final GoodReceiptRepository goodReceiptRepository;
 	private final StockLevelRepository stockLevelRepository;
+	private final WarehouseRepository warehouseRepository;
 
 	public WarehouseService(PurchaseOrderRepository purchaseOrderRepository,
-			GoodReceiptRepository goodReceiptRepository, StockLevelRepository stockLevelRepository) {
+			GoodReceiptRepository goodReceiptRepository, StockLevelRepository stockLevelRepository,
+			WarehouseRepository warehouseRepository) {
 		this.purchaseOrderRepository = purchaseOrderRepository;
 		this.goodReceiptRepository = goodReceiptRepository;
 		this.stockLevelRepository = stockLevelRepository;
+		this.warehouseRepository = warehouseRepository;
 	}
 
 	@Transactional
@@ -221,6 +229,14 @@ public class WarehouseService {
 	}
 
 	@Transactional(readOnly = true)
+	public List<GoodReceiptResponse> getReceiptsByOrderId(Long orderId) {
+		return goodReceiptRepository.findByPurchaseOrderId(orderId)
+				.stream()
+				.map(this::toResponse)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
 	public Page<GoodReceiptResponse> getAllOrders(Pageable pageable) {
 		return goodReceiptRepository.findAll(pageable)
 				.map(this::toResponse);
@@ -231,6 +247,64 @@ public class WarehouseService {
 		GoodReceipt receipt = goodReceiptRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("Receipt not found: " + id));
 		return toResponse(receipt);
+	}
+
+	// ─── Warehouse & Stock methods ──────────────────────────────
+
+	@Transactional(readOnly = true)
+	public List<WarehouseResponse> getAllWarehouses() {
+		return warehouseRepository.findAll().stream()
+				.filter(com.visco.backend.models.entities.Warehouse::isActive)
+				.map(w -> WarehouseResponse.builder()
+						.id(w.getId())
+						.name(w.getName())
+						.sapCenterCode(w.getSapCenterCode())
+						.build())
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public ProductStockBreakdown getStockBreakdownByProduct(Long productId) {
+		java.math.BigDecimal totalStock = stockLevelRepository.getTotalStockByProductId(productId);
+		if (totalStock == null) totalStock = java.math.BigDecimal.ZERO;
+
+		List<StockLevelRepository.WarehouseStockProjection> projections =
+				stockLevelRepository.getStockByProductGroupedByWarehouse(productId);
+
+		List<ProductStockBreakdown.WarehouseStockEntry> entries = projections.stream()
+				.map(p -> ProductStockBreakdown.WarehouseStockEntry.builder()
+						.warehouseId(p.getWarehouseId())
+						.warehouseName(p.getWarehouseName())
+						.currentStock(p.getCurrentStock() != null ? p.getCurrentStock() : java.math.BigDecimal.ZERO)
+						.pendingStock(p.getPendingStock() != null ? p.getPendingStock() : java.math.BigDecimal.ZERO)
+						.build())
+				.toList();
+
+		java.math.BigDecimal totalPending = entries.stream()
+				.map(ProductStockBreakdown.WarehouseStockEntry::getPendingStock)
+				.reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+		return ProductStockBreakdown.builder()
+				.productId(productId)
+				.totalStock(totalStock)
+				.totalPendingStock(totalPending)
+				.warehouses(entries)
+				.build();
+	}
+
+	@Transactional(readOnly = true)
+	public List<WarehouseStockSummary> getGlobalStockSummary() {
+		List<StockLevelRepository.WarehouseStockProjection> projections =
+				stockLevelRepository.getGlobalStockByWarehouse();
+
+		return projections.stream()
+				.map(p -> WarehouseStockSummary.builder()
+						.warehouseId(p.getWarehouseId())
+						.warehouseName(p.getWarehouseName())
+						.totalStock(p.getCurrentStock() != null ? p.getCurrentStock() : java.math.BigDecimal.ZERO)
+						.totalPendingStock(p.getPendingStock() != null ? p.getPendingStock() : java.math.BigDecimal.ZERO)
+						.build())
+				.toList();
 	}
 
 	private GoodReceiptResponse toResponse(GoodReceipt receipt) {

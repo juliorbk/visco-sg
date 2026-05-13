@@ -1,6 +1,7 @@
 package com.visco.backend.services;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -52,26 +53,34 @@ public class ProductService {
         return stock != null ? stock : BigDecimal.ZERO;
     }
 
+    private BigDecimal getTotalPendingStock(Long productId) {
+        List<com.visco.backend.models.entities.StockLevel> levels = stockLevelRepository.findByProductId(productId);
+        if (levels.isEmpty()) return BigDecimal.ZERO;
+        return levels.stream()
+                .map(com.visco.backend.models.entities.StockLevel::getPendingStock)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     // Busca un producto por su código interno (VIS-000001).
     public ProductDTO getProductByInternalCode(String internalCode) {
         Product product = productRepository.findByInternalCode(internalCode)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Producto no encontrado con código interno: " + internalCode));
-        return ProductDTO.fromEntity(product, getTotalStock(product.getId()));
+        return ProductDTO.fromEntity(product, getTotalStock(product.getId()), getTotalPendingStock(product.getId()));
     }
 
     // Lista paginada de todos los productos.
     // GET /api/inventory/products?page=0&size=10
     public Page<ProductDTO> getAllProducts(Pageable pageable) {
         return productRepository.findAll(pageable)
-                .map(p -> ProductDTO.fromEntity(p, getTotalStock(p.getId())));
+                .map(p -> ProductDTO.fromEntity(p, getTotalStock(p.getId()), getTotalPendingStock(p.getId())));
     }
 
     // Busca un producto por su ID numérico.
     public ProductDTO getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + id));
-        return ProductDTO.fromEntity(product, getTotalStock(product.getId()));
+        return ProductDTO.fromEntity(product, getTotalStock(product.getId()), getTotalPendingStock(product.getId()));
     }
 
     // Actualiza los campos editables de un producto.
@@ -96,7 +105,7 @@ public class ProductService {
         existing.setCategory(updated.getCategory());
 
         Product saved = productRepository.save(existing);
-        return ProductDTO.fromEntity(saved, getTotalStock(saved.getId()));
+        return ProductDTO.fromEntity(saved, getTotalStock(saved.getId()), getTotalPendingStock(saved.getId()));
     }
 
     // Eliminación lógica: desactiva el producto sin borrarlo de la DB.

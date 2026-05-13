@@ -5,11 +5,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -17,6 +12,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -27,9 +26,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private static final long CLEANUP_INTERVAL_MS = 300000;
   private static final long STALE_THRESHOLD_MS = 600000;
   private long lastCleanup = System.currentTimeMillis();
+  private final Object cleanupLock = new Object();
 
   private enum RateLimitedRoute {
-    LOGIN("/api/auth/login", 5, 1),
+    LOGIN("/api/auth/login", 8, 1),
     REGISTER("/api/auth/register", 3, 5),
     ADMIN_OPERATIONS("/api/admin", 30, 1),
     INVENTORY("/api/inventory", 60, 1),
@@ -62,12 +62,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private void cleanupOldBuckets() {
     long now = System.currentTimeMillis();
     if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
-      buckets.keySet().removeIf(key -> {
-        Long lastAccess = lastAccessTime.get(key);
-        return lastAccess != null && (now - lastAccess > STALE_THRESHOLD_MS);
-      });
-      lastAccessTime.keySet().removeIf(key -> !buckets.containsKey(key));
-      lastCleanup = now;
+      synchronized (cleanupLock) {
+        buckets.keySet().removeIf(key -> {
+          Long lastAccess = lastAccessTime.get(key);
+          return lastAccess != null && (now - lastAccess > STALE_THRESHOLD_MS);
+        });
+        lastAccessTime.keySet().removeIf(key -> !buckets.containsKey(key));
+        lastCleanup = now;
+      }
     }
   }
 
