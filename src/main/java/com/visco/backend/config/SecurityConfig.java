@@ -39,7 +39,7 @@ public class SecurityConfig {
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(
-        List.of("http://localhost:3000", "http://localhost:5173")); // Add your React ports
+        List.of("http://localhost:3000", "http://localhost:5173", "http://192.168.88.38:3000")); // Add your React ports
     configuration.setAllowedMethods(
         List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));

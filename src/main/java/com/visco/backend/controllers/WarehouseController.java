@@ -21,16 +21,14 @@ import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.services.WarehouseService;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/warehouse")
+@RequiredArgsConstructor
 public class WarehouseController {
 
 	private final WarehouseService warehouseService;
-
-	public WarehouseController(WarehouseService warehouseService) {
-		this.warehouseService = warehouseService;
-	}
 
 	// ─── Warehouses ─────────────────────────────────────────────────
 

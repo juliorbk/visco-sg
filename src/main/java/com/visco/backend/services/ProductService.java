@@ -25,7 +25,7 @@ public class ProductService {
     private final StockLevelRepository stockLevelRepository;
 
     // Crea un producto nuevo.
-    // Valida SKU único (internalCode se genera automáticamente en @PrePersist).
+    // Valida SKU único (internalCode se genera automáticamente después del save).
     @Transactional
     public Product createProduct(Product product) {
 
@@ -45,7 +45,11 @@ public class ProductService {
                 .supplier(product.getSupplier())
                 .build();
 
-        return productRepository.save(newProduct);
+        Product saved = productRepository.save(newProduct);
+        if (saved.getInternalCode() == null || saved.getInternalCode().isBlank()) {
+            saved.setInternalCode(String.format("%06d", saved.getId())); //-> Code: 000001+
+        }
+        return saved;
     }
 
     private BigDecimal getTotalStock(Long productId) {

@@ -12,17 +12,15 @@ import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.SupplierRepository;
 
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SupplierService {
 
 	private final SupplierRepository supplierRepository;
-
-	public SupplierService(SupplierRepository supplierRepository) {
-		this.supplierRepository = supplierRepository;
-	}
 
 	// ------ CRUD ------
 

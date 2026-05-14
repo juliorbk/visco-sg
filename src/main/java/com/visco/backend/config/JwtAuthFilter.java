@@ -6,6 +6,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -22,6 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+  private static final String JWT_COOKIE_NAME = "visco_auth_token";
+
   private final JwtService jwtService;
   private final UserRepository userRepository;
 
@@ -31,14 +34,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     HttpServletResponse response,
     FilterChain filterChain
   ) throws ServletException, IOException {
-    final String authHeader = request.getHeader("Authorization");
+    final String token = extractToken(request);
 
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    if (token == null) {
       filterChain.doFilter(request, response);
       return;
     }
-
-    final String token = authHeader.substring(7);
 
     try {
       final String email = jwtService.extractEmail(token);
@@ -70,5 +71,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  /** Extrae el JWT del header Authorization o del cookie HttpOnly */
+  private String extractToken(HttpServletRequest request) {
+    String authHeader = request.getHeader("Authorization");
+    if (authHeader != null && authHeader.startsWith("Bearer ")) {
+      return authHeader.substring(7);
+    }
+    if (request.getCookies() != null) {
+      for (Cookie cookie : request.getCookies()) {
+        if (JWT_COOKIE_NAME.equals(cookie.getName())) {
+          String value = cookie.getValue();
+          if (value != null && !value.isBlank()) {
+            return value;
+          }
+        }
+      }
+    }
+    return null;
   }
 }

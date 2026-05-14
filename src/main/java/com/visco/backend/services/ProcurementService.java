@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
-
 import org.springframework.stereotype.Service;
 
 import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
@@ -26,6 +23,8 @@ import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import com.visco.backend.repositories.UserRepository;
 
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -144,14 +143,14 @@ public class ProcurementService {
 	// Consultas
 	// ─────────────────────────────────────────────────────────────
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public List<PurchaseOrderResponse> getAllOrders() {
 		return purchaseOrderRepository.findAll().stream()
 				.map(this::toResponse)
 				.toList();
 	}
 
-	@Transactional
+	@Transactional(readOnly = true)
 	public PurchaseOrderResponse getOrderById(Long id) {
 		PurchaseOrder order = purchaseOrderRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + id));

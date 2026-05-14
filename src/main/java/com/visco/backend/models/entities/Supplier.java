@@ -8,6 +8,7 @@ import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -19,6 +20,8 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -29,6 +32,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
+@SQLDelete(sql = "UPDATE suppliers SET is_active = false, deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("is_active = true")
 @Table(name = "suppliers")
 @Getter
 @Setter
@@ -44,7 +50,7 @@ public class Supplier {
   @Column(nullable = false, unique = true)
   private String name;
 
-  @Column(nullable = false)
+  @Column(nullable = false, columnDefinition = "TEXT")
   private String address;
 
   @Column(nullable = false, unique = true)
@@ -52,23 +58,17 @@ public class Supplier {
 
   // Colección para manejar múltiples teléfonos (sin problemas de equals/hashCode)
   @ElementCollection(fetch = FetchType.LAZY)
-  @CollectionTable(
-    name = "supplier_phones",
-    joinColumns = @JoinColumn(name = "supplier_id")
-  )
+  @CollectionTable(name = "supplier_phones", joinColumns = @JoinColumn(name = "supplier_id"))
+  @Builder.Default
   @Column(name = "phone_number", nullable = false)
   private Set<String> phoneNumbers = new HashSet<>();
 
-
+  @Builder.Default
   @ManyToMany(fetch = FetchType.LAZY)
-  @JoinTable(
-    name = "supplier_representatives",
-    joinColumns = @JoinColumn(name = "supplier_id"),
-    inverseJoinColumns = @JoinColumn(name = "representative_id")
-  )
+  @JoinTable(name = "supplier_representatives", joinColumns = @JoinColumn(name = "supplier_id"), inverseJoinColumns = @JoinColumn(name = "representative_id"))
   private Set<LegalRepresentative> representatives = new HashSet<>();
 
-  @Column(nullable = false)
+  @Column(nullable = false, columnDefinition = "TEXT")
   private String description;
 
   @Column(name = "created_at", nullable = false, updatable = false)

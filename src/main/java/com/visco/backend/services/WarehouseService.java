@@ -31,23 +31,17 @@ import com.visco.backend.repositories.WarehouseRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import lombok.RequiredArgsConstructor;
+
 //DIGITAL KARDEX
 @Service
+@RequiredArgsConstructor
 public class WarehouseService {
 
 	private final PurchaseOrderRepository purchaseOrderRepository;
 	private final GoodReceiptRepository goodReceiptRepository;
 	private final StockLevelRepository stockLevelRepository;
 	private final WarehouseRepository warehouseRepository;
-
-	public WarehouseService(PurchaseOrderRepository purchaseOrderRepository,
-			GoodReceiptRepository goodReceiptRepository, StockLevelRepository stockLevelRepository,
-			WarehouseRepository warehouseRepository) {
-		this.purchaseOrderRepository = purchaseOrderRepository;
-		this.goodReceiptRepository = goodReceiptRepository;
-		this.stockLevelRepository = stockLevelRepository;
-		this.warehouseRepository = warehouseRepository;
-	}
 
 	@Transactional
 	public GoodReceiptResponse receiveGoods(Long orderId, ReceiveGoodsRequest request) {

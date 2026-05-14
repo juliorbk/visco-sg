@@ -36,7 +36,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     PROCUREMENT("/api/procurement", 60, 1),
     USERS("/api/users", 30, 1),
     SUPPLIERS("/api/suppliers", 60, 1),
-    WAREHOUSES("/api/warehouses", 60, 1),
+    WAREHOUSES("/api/warehouse", 60, 1),
     DASHBOARD("/api/dashboard", 30, 1);
 
     final String path;

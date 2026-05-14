@@ -33,7 +33,7 @@ public class ProductDTO {
 	public static ProductDTO fromEntity(Product product, BigDecimal totalStock, BigDecimal totalPendingStock) {
 		return ProductDTO.builder()
 				.id(product.getId())
-				.internalCode(product.getInternalCode())
+				.internalCode(product.getInternalCode()) // -> 000001 +
 				.sku(product.getSku())
 				.name(product.getName())
 				.description(product.getDescription())

@@ -17,14 +17,13 @@ import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.services.ProductService;
 
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/inventory")
+@RequiredArgsConstructor
 public class ProductController {
 	private final ProductService productService;
-
-	public ProductController(ProductService productService) {
-		this.productService = productService;
-	}
 
 	// GET /api/inventory/products?page=0&size=10
 	// Lista paginada de productos. Retorna ProductDTO (no expone la entidad).

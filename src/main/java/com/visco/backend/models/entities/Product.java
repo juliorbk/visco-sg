@@ -12,7 +12,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 
@@ -35,14 +34,6 @@ public class Product {
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_seq")
   @SequenceGenerator(name = "product_seq", sequenceName = "product_code_seq", allocationSize = 1)
   private Long id;
-
-  // Agregar método
-  @PrePersist
-  public void generateInternalCode() {
-    if (internalCode == null || internalCode.isBlank()) {
-      this.internalCode = String.format("VIS-%06d", this.id);
-    }
-  }
 
   @Column(name = "internal_code", unique = true, nullable = false)
   private String internalCode;
