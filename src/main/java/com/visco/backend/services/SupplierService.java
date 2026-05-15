@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import com.visco.backend.models.dtos.CreateSupplierRequest;
 import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceDTO;
@@ -22,6 +25,7 @@ import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.SupplierRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -148,22 +152,19 @@ public class SupplierService {
 		LocalDateTime from = LocalDateTime.now().minusMonths(months).withDayOfMonth(1).withHour(0)
 				.withMinute(0).withSecond(0);
 
-		List<PurchaseOrderRepository.SupplierPerformanceProjection> rows =
-				orderRepository.getSupplierPerformance(from);
+		List<PurchaseOrderRepository.SupplierPerformanceProjection> rows = orderRepository.getSupplierPerformance(from);
 
 		// Agrupar por proveedor
-		Map<Long, List<PurchaseOrderRepository.SupplierPerformanceProjection>> bySupplier =
-				rows.stream().collect(Collectors.groupingBy(
+		Map<Long, List<PurchaseOrderRepository.SupplierPerformanceProjection>> bySupplier = rows.stream()
+				.collect(Collectors.groupingBy(
 						PurchaseOrderRepository.SupplierPerformanceProjection::getSupplierId));
 
 		return bySupplier.entrySet().stream().map(entry -> {
-			List<PurchaseOrderRepository.SupplierPerformanceProjection> supplierRows =
-					entry.getValue();
+			List<PurchaseOrderRepository.SupplierPerformanceProjection> supplierRows = entry.getValue();
 
 			String supplierName = supplierRows.get(0).getSupplierName();
 			long totalOrders = supplierRows.stream().mapToLong(r -> r.getTotalOrders()).sum();
-			long totalDelivered =
-					supplierRows.stream().mapToLong(r -> r.getDeliveredOrders()).sum();
+			long totalDelivered = supplierRows.stream().mapToLong(r -> r.getDeliveredOrders()).sum();
 			BigDecimal totalSpend = supplierRows.stream()
 					.map(r -> r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO)
 					.reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -171,19 +172,17 @@ public class SupplierService {
 					: BigDecimal.valueOf(totalDelivered * 100.0 / totalOrders)
 							.setScale(1, RoundingMode.HALF_UP).doubleValue();
 
-			List<SupplierPerformanceDTO.MonthlyEntry> monthlyEntries =
-					supplierRows.stream().map(r -> {
-						long mo = r.getTotalOrders();
-						long md = r.getDeliveredOrders();
-						BigDecimal ms =
-								r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO;
-						double mRate = mo == 0 ? 0.0
-								: BigDecimal.valueOf(md * 100.0 / mo)
-										.setScale(1, RoundingMode.HALF_UP).doubleValue();
-						return SupplierPerformanceDTO.MonthlyEntry.builder()
-								.month(r.getMonth().toString().substring(0, 7)).totalOrders(mo)
-								.deliveredOrders(md).totalSpend(ms).fulfillmentRate(mRate).build();
-					}).toList();
+			List<SupplierPerformanceDTO.MonthlyEntry> monthlyEntries = supplierRows.stream().map(r -> {
+				long mo = r.getTotalOrders();
+				long md = r.getDeliveredOrders();
+				BigDecimal ms = r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO;
+				double mRate = mo == 0 ? 0.0
+						: BigDecimal.valueOf(md * 100.0 / mo)
+								.setScale(1, RoundingMode.HALF_UP).doubleValue();
+				return SupplierPerformanceDTO.MonthlyEntry.builder()
+						.month(r.getMonth().toString().substring(0, 7)).totalOrders(mo)
+						.deliveredOrders(md).totalSpend(ms).fulfillmentRate(mRate).build();
+			}).toList();
 
 			return SupplierPerformanceDTO.builder().supplierId(entry.getKey())
 					.supplierName(supplierName).months(monthlyEntries).totalOrders(totalOrders)
@@ -197,13 +196,12 @@ public class SupplierService {
 		LocalDateTime from = LocalDateTime.now().minusMonths(months).withDayOfMonth(1).withHour(0)
 				.withMinute(0).withSecond(0);
 
-		List<PurchaseOrderRepository.MonthlySupplierStatsProjection> rows =
-				orderRepository.getMonthlySupplierStats(from);
+		List<PurchaseOrderRepository.MonthlySupplierStatsProjection> rows = orderRepository
+				.getMonthlySupplierStats(from);
 
 		// Agrupar por mes
-		Map<String, List<PurchaseOrderRepository.MonthlySupplierStatsProjection>> byMonth =
-				rows.stream().collect(
-						Collectors.groupingBy(r -> r.getMonth().toString().substring(0, 7)));
+		Map<String, List<PurchaseOrderRepository.MonthlySupplierStatsProjection>> byMonth = rows.stream().collect(
+				Collectors.groupingBy(r -> r.getMonth().toString().substring(0, 7)));
 
 		// Por mes: calcular volumen total por proveedor para separar Tier 1 vs Tier 2-3
 		// Tier 1 = proveedores en el top 33% por volumen de órdenes globales
@@ -216,27 +214,23 @@ public class SupplierService {
 				.limit(Math.max(1, globalVolume.size() / 3)).min(Comparator.naturalOrder())
 				.orElse(1L);
 
-		Set<Long> tier1Suppliers =
-				globalVolume.entrySet().stream().filter(e -> e.getValue() >= threshold)
-						.map(Map.Entry::getKey).collect(Collectors.toSet());
+		Set<Long> tier1Suppliers = globalVolume.entrySet().stream().filter(e -> e.getValue() >= threshold)
+				.map(Map.Entry::getKey).collect(Collectors.toSet());
 
 		return byMonth.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(entry -> {
-			List<PurchaseOrderRepository.MonthlySupplierStatsProjection> monthRows =
-					entry.getValue();
+			List<PurchaseOrderRepository.MonthlySupplierStatsProjection> monthRows = entry.getValue();
 
 			// Tier 1
-			double aRate =
-					monthRows.stream().filter(r -> tier1Suppliers.contains(r.getSupplierId()))
-							.mapToDouble(r -> r.getTotalOrders() == 0 ? 0.0
-									: r.getDeliveredOrders() * 100.0 / r.getTotalOrders())
-							.average().orElse(0.0);
+			double aRate = monthRows.stream().filter(r -> tier1Suppliers.contains(r.getSupplierId()))
+					.mapToDouble(r -> r.getTotalOrders() == 0 ? 0.0
+							: r.getDeliveredOrders() * 100.0 / r.getTotalOrders())
+					.average().orElse(0.0);
 
 			// Tier 2-3
-			double bRate =
-					monthRows.stream().filter(r -> !tier1Suppliers.contains(r.getSupplierId()))
-							.mapToDouble(r -> r.getTotalOrders() == 0 ? 0.0
-									: r.getDeliveredOrders() * 100.0 / r.getTotalOrders())
-							.average().orElse(0.0);
+			double bRate = monthRows.stream().filter(r -> !tier1Suppliers.contains(r.getSupplierId()))
+					.mapToDouble(r -> r.getTotalOrders() == 0 ? 0.0
+							: r.getDeliveredOrders() * 100.0 / r.getTotalOrders())
+					.average().orElse(0.0);
 
 			return SupplierPerformanceMonthlyDTO.builder().month(entry.getKey())
 					.a(BigDecimal.valueOf(aRate).setScale(1, RoundingMode.HALF_UP).doubleValue())

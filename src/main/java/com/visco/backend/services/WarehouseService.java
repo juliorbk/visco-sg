@@ -41,6 +41,17 @@ public class WarehouseService {
 	private final StockLevelRepository stockLevelRepository;
 	private final WarehouseRepository warehouseRepository;
 
+
+public WarehouseDTO createWarehouse(WarehouseRequest request) {
+
+	Warehouse warehouse = Warehouse.builder()
+			.name(request.name())
+			.sapCenterCode(request.sapCenterCode())
+			.build();
+	warehouseRepository.save(warehouse);
+	
+}
+
 	@Transactional
 	public GoodReceiptResponse receiveGoods(Long orderId, ReceiveGoodsRequest request) {
 		// 1. Buscar la orden de compra
