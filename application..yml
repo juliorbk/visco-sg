@@ -3,3 +3,6 @@ spring:
     properties:
       hibernate:
         default_batch_fetch_size: 100
+  datasource:
+    url: jdbc:postgresql://localhost:5432/visco_db
+    password: admin123

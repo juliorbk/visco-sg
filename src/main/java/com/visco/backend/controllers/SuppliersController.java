@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.visco.backend.models.dtos.CreateSupplierRequest;
 import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceMonthlyDTO;
 import com.visco.backend.models.entities.Supplier;
@@ -35,8 +36,8 @@ public class SuppliersController {
 	}
 
 	@PostMapping
-	public ResponseEntity<SupplierDTO> createSupplier(@RequestBody Supplier supplier) {
-		return ResponseEntity.ok(supplierService.createSupplier(supplier));
+	public ResponseEntity<SupplierDTO> createSupplier(@RequestBody CreateSupplierRequest request) {
+		return ResponseEntity.ok(supplierService.createSupplier(request));
 	}
 
 	@GetMapping

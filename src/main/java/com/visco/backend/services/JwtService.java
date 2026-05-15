@@ -19,15 +19,15 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    @Value("${app.jwt.secret}")
-    private String secret;
+    @Value("${app.jwt.secret}") // Must match the key in application.properties exactly
+    private String secretKey;
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
     private SecretKey getSigningKey() {
         // This correctly decodes a Base64 string from your properties file
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -36,13 +36,9 @@ public class JwtService {
         claims.put("role", user.getRole().name());
         claims.put("name", user.getName());
 
-        return Jwts.builder()
-                .claims(claims)
-                .subject(user.getEmail())
-                .issuedAt(new Date())
+        return Jwts.builder().claims(claims).subject(user.getEmail()).issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getSigningKey())
-                .compact();
+                .signWith(getSigningKey()).compact();
     }
 
     public String extractEmail(String token) {
@@ -63,10 +59,7 @@ public class JwtService {
     }
 
     private Claims extractClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
+        return Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token)
                 .getPayload();
     }
 }
