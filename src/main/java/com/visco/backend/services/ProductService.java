@@ -10,12 +10,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Category;
 import com.visco.backend.models.entities.Product;
+import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.CategoryRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.StockLevelRepository;
+import com.visco.backend.repositories.SupplierRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,33 +29,47 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
     private final CategoryRepository categoryRepository;
+    private final SupplierRepository supplierRepository;
 
     // Crea un producto nuevo.
     // Valida SKU único (internalCode se genera automáticamente después del save).
     @Transactional
-    public Product createProduct(Product product) {
+    public ProductDTO createProduct(CreateProductRequest request) {
 
-        if (productRepository.findBySku(product.getSku()).isPresent()) {
+        if (productRepository.findBySku(request.sku()).isPresent()) {
             throw new IllegalArgumentException("El SKU ya existe");
         }
 
+        Supplier supplier = null;
+        if (request.supplierId() != null) {
+            supplier = supplierRepository.findById(request.supplierId())
+                    .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + request.supplierId()));
+        }
+
+        Category category = null;
+        if (request.categoryId() != null) {
+            category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found: " + request.categoryId()));
+        }
+
         Product newProduct = Product.builder()
-                .name(product.getName())
-                .category(product.getCategory())
-                .description(product.getDescription())
-                .sapCode(product.getSapCode())
-                .uom(product.getUom())
+                .name(request.name())
+                .category(category)
+                .description(request.description())
+                .sapCode(request.sapCode())
+                .uom(request.uom())
                 .active(true)
-                .reorderPoint(product.getReorderPoint())
-                .sku(product.getSku())
-                .supplier(product.getSupplier())
+                .reorderPoint(request.reorderPoint())
+                .sku(request.sku())
+                .supplier(supplier)
                 .build();
 
         Product saved = productRepository.save(newProduct);
         if (saved.getInternalCode() == null || saved.getInternalCode().isBlank()) {
             saved.setInternalCode(String.format("%06d", saved.getId())); // -> Code: 000001+
         }
-        return saved;
+        saved = productRepository.save(saved);
+        return ProductDTO.fromEntity(saved, getTotalStock(saved.getId()), getTotalPendingStock(saved.getId()));
     }
 
     private BigDecimal getTotalStock(Long productId) {

@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
-import com.visco.backend.models.entities.Product;
 import com.visco.backend.services.ProductService;
 
 import lombok.RequiredArgsConstructor;
@@ -34,16 +34,10 @@ public class ProductController {
 
 	// POST /api/inventory/products
 	// Crea un producto. Retorna 201 Created con el DTO.
-	// Si hay duplicado de SKU → 400 Bad Request.
 	@PostMapping("/products")
-	public ResponseEntity<ProductDTO> createProduct(@RequestBody Product product) {
-		try {
-			Product createdProduct = productService.createProduct(product);
-			ProductDTO dto = productService.getProductById(createdProduct.getId());
-			return ResponseEntity.status(HttpStatus.CREATED).body(dto);
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-		}
+	public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody CreateProductRequest request) {
+		ProductDTO created = productService.createProduct(request);
+		return ResponseEntity.status(HttpStatus.CREATED).body(created);
 	}
 
 	// GET /api/inventory/products/{id}
