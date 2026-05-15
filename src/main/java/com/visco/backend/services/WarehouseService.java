@@ -14,16 +14,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.GoodReceiptItem;
+import com.visco.backend.models.entities.InventoryMovement;
 import com.visco.backend.models.entities.Location;
+import com.visco.backend.models.entities.MovementType;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
@@ -32,6 +36,7 @@ import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.User;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.GoodReceiptRepository;
+import com.visco.backend.repositories.InventoryMovementRepository;
 import com.visco.backend.repositories.LocationRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
@@ -54,6 +59,7 @@ public class WarehouseService {
 
 	private final LocationRepository locationRepository;
 	private final ProductRepository productRepository;
+	private final InventoryMovementRepository inventoryMovementRepository;
 
 	@Transactional
 	public WarehouseResponse createWarehouse(CreateWarehouseRequest request) {
@@ -179,6 +185,72 @@ public class WarehouseService {
 				receipt.getReceivedAt(),
 				receipt.getNotes(),
 				itemResponses);
+	}
+
+	// ─── Inventory Transfers ────────────────────────────────────
+
+	@Transactional
+	public void transferStock(TransferStockRequest request) {
+		Product product = productRepository.findById(request.productId())
+				.orElseThrow(() -> new EntityNotFoundException("Product not found: " + request.productId()));
+
+		Location fromLocation = locationRepository.findById(request.fromLocationId())
+				.orElseThrow(() -> new EntityNotFoundException("Source location not found: " + request.fromLocationId()));
+
+		Location toLocation = locationRepository.findById(request.toLocationId())
+				.orElseThrow(() -> new EntityNotFoundException("Destination location not found: " + request.toLocationId()));
+
+		User createdBy = userRepository.findById(request.createdById())
+				.orElseThrow(() -> new EntityNotFoundException("User not found: " + request.createdById()));
+
+		if (fromLocation.getId().equals(toLocation.getId())) {
+			throw new IllegalArgumentException("Source and destination locations must be different");
+		}
+
+		substractCurrentStock(product.getId(), fromLocation.getId(), request.quantity());
+		addCurrentStock(product.getId(), toLocation.getId(), request.quantity());
+
+		InventoryMovement movement = InventoryMovement.builder()
+				.product(product)
+				.fromLocation(fromLocation)
+				.toLocation(toLocation)
+				.quantity(request.quantity())
+				.type(MovementType.TRANSFER)
+				.createdAt(LocalDateTime.now())
+				.createdBy(createdBy)
+				.build();
+
+		inventoryMovementRepository.save(movement);
+	}
+
+	// ─── Stock Adjustment ───────────────────────────────────────
+
+	@Transactional
+	public void adjustStock(AdjustStockRequest request) {
+		Product product = productRepository.findById(request.productId())
+				.orElseThrow(() -> new EntityNotFoundException("Product not found: " + request.productId()));
+
+		Location location = locationRepository.findById(request.locationId())
+				.orElseThrow(() -> new EntityNotFoundException("Location not found: " + request.locationId()));
+
+		User createdBy = userRepository.findById(request.createdById())
+				.orElseThrow(() -> new EntityNotFoundException("User not found: " + request.createdById()));
+
+		StockLevel level = getOrCreateStockLevel(product.getId(), location.getId());
+		level.setCurrentStock(request.newStock());
+		stockLevelRepository.save(level);
+
+		InventoryMovement movement = InventoryMovement.builder()
+				.product(product)
+				.toLocation(location)
+				.quantity(request.newStock())
+				.type(MovementType.ADJUSTMENT)
+				.reason(request.reason())
+				.createdAt(LocalDateTime.now())
+				.createdBy(createdBy)
+				.build();
+
+		inventoryMovementRepository.save(movement);
 	}
 
 	// ─────────────────────────────────────────────────────────────

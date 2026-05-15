@@ -2,8 +2,6 @@ package com.visco.backend.controllers;
 
 import java.util.List;
 
-import jakarta.validation.Valid;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -15,16 +13,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.visco.backend.models.dtos.CreateWarehouseRequest;
+import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
-import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.services.WarehouseService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -35,12 +34,6 @@ public class WarehouseController {
 	private final WarehouseService warehouseService;
 
 	// ─── Warehouses ─────────────────────────────────────────────────
-	@PostMapping()
-	public ResponseEntity<WarehouseDTO> createWarehouse(@Valid @RequestBody CreateWarehouseRequest request) {
-
-		Warehouse newWarehouse = warehouseService.createWarehouse(request);
-		return ResponseEntity.status(HttpStatus.CREATED).body(new WarehouseDTO(newWarehouse));
-	}
 
 	@GetMapping
 	public ResponseEntity<List<WarehouseResponse>> getAllWarehouses() {
@@ -67,6 +60,22 @@ public class WarehouseController {
 	@GetMapping("/stock-summary")
 	public ResponseEntity<List<WarehouseStockSummary>> getGlobalStockSummary() {
 		return ResponseEntity.ok(warehouseService.getGlobalStockSummary());
+	}
+
+	// ─── Inventory transfers ────────────────────────────────────────
+
+	@PostMapping("/stock/transfer")
+	public ResponseEntity<Void> transferStock(@Valid @RequestBody TransferStockRequest request) {
+		warehouseService.transferStock(request);
+		return ResponseEntity.ok().build();
+	}
+
+	// ─── Stock adjustment ───────────────────────────────────────────
+
+	@PostMapping("/stock/adjust")
+	public ResponseEntity<Void> adjustStock(@Valid @RequestBody AdjustStockRequest request) {
+		warehouseService.adjustStock(request);
+		return ResponseEntity.ok().build();
 	}
 
 	// ─── Goods receiving ────────────────────────────────────────────
