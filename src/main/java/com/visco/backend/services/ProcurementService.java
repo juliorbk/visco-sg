@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.stereotype.Service;
@@ -170,10 +173,9 @@ public class ProcurementService {
 	// ─────────────────────────────────────────────────────────────
 
 	@Transactional(readOnly = true)
-	public List<PurchaseOrderResponse> getAllOrders() {
-		return purchaseOrderRepository.findAll().stream()
-				.map(this::toResponse)
-				.toList();
+	public Page<PurchaseOrderResponse> getAllOrders(Pageable pageable) {
+		return purchaseOrderRepository.findAll(pageable)
+				.map(this::toResponse);
 	}
 
 	@Transactional(readOnly = true)
