@@ -85,11 +85,16 @@ public class PurchaseOrder {
   protected void onUpdate() {
     updatedAt = LocalDateTime.now();
   }
+  // Dentro de tu clase PurchaseOrder.java
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "destination_warehouse_id", nullable = false)
+  private Warehouse destinationWarehouse;
   // Relación bidireccional con los items de la orden
   @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private List<PurchaseOrderItem> items = new ArrayList<>();
+
 }

@@ -11,7 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.visco.backend.models.dtos.ProductDTO;
+import com.visco.backend.models.entities.Category;
 import com.visco.backend.models.entities.Product;
+import com.visco.backend.repositories.CategoryRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 
@@ -23,6 +25,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final StockLevelRepository stockLevelRepository;
+    private final CategoryRepository categoryRepository;
 
     // Crea un producto nuevo.
     // Valida SKU único (internalCode se genera automáticamente después del save).
@@ -120,5 +123,9 @@ public class ProductService {
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado: " + id));
         product.setActive(false);
         productRepository.save(product);
+    }
+
+    public Category createCategory(Category category) {
+        return categoryRepository.save(category);
     }
 }

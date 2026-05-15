@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+
+import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,12 +20,13 @@ import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.models.entities.User;
+import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import com.visco.backend.repositories.UserRepository;
+import com.visco.backend.repositories.WarehouseRepository;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -38,6 +40,7 @@ public class ProcurementService {
 	private final ProductRepository productRepository;
 	private final UserRepository userRepository;
 	private final WarehouseService warehouseService;
+	private final WarehouseRepository warehouseRepository;
 
 	// ─────────────────────────────────────────────────────────────
 	// Creación de orden de compra
@@ -51,6 +54,9 @@ public class ProcurementService {
 				.orElseThrow(() -> new EntityNotFoundException(
 						"Supplier not found: " + request.supplierId()));
 
+		Warehouse destinationWarehouse = warehouseRepository.findById(request.destinationWarehouse()).orElseThrow(
+				() -> new EntityNotFoundException("Warehouse not found: " + request.destinationWarehouse()));
+
 		User createdBy = userRepository.findById(request.createdById())
 				.orElseThrow(() -> new EntityNotFoundException(
 						"User not found: " + request.createdById()));
@@ -59,6 +65,7 @@ public class ProcurementService {
 				.orderNumber(request.orderNumber())
 				.description(request.description())
 				.createdBy(createdBy)
+				.destinationWarehouse(destinationWarehouse)
 				.status(PurchaseOrderStatus.PENDING)
 				.paymentMethod(request.paymentMethod())
 				.type(request.type())
@@ -74,9 +81,10 @@ public class ProcurementService {
 		// 2. Fetch all products in ONE database query
 		List<Product> products = productRepository.findAllById(productIds);
 
-		// 3. Create a map for quick lookup
+		// 3. Create a map for quick lookup (Usa java.util.stream.Collectors si no
+		// tienes el import)
 		Map<Long, Product> productMap = products.stream()
-				.collect(Collectors.toMap(Product::getId, p -> p));
+				.collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
 
 		// 4. Now loop through your items
 		for (PurchaseOrderItemRequest itemReq : request.items()) {
@@ -92,10 +100,19 @@ public class ProcurementService {
 					.build();
 
 			order.getItems().add(item);
-			warehouseService.addPendingStock(product.getId(),
-					BigDecimal.valueOf(itemReq.quantity()));
+
+			// CORRECCIÓN: Convertir la cantidad a BigDecimal para cumplir con la firma del
+			// WarehouseService
+			BigDecimal pendingQuantity = BigDecimal.valueOf(itemReq.quantity());
+
+			warehouseService.addPendingStockByWarehouse(product.getId(), request.destinationWarehouse(),
+					pendingQuantity);
 		}
 
+		// Importante: Asegúrate de que la relación @OneToMany en PurchaseOrder tenga
+		// cascade = CascadeType.ALL
+		// para que al guardar la orden se guarden automáticamente todos los
+		// PurchaseOrderItem.
 		PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
 		return toResponse(savedOrder);
 	}
@@ -115,12 +132,21 @@ public class ProcurementService {
 			throw new IllegalStateException(
 					"Only pending or in-transit orders can be cancelled");
 		}
+
 		log.info("Cancelling order ID: {}, current status: {}", orderId, order.getStatus());
 		order.setStatus(PurchaseOrderStatus.CANCELLED);
 		purchaseOrderRepository.save(order);
+
 		for (PurchaseOrderItem item : order.getItems()) {
-			warehouseService.substractPendingStock(item.getProduct().getId(),
-					BigDecimal.valueOf(item.getQuantity()));
+			// Convertimos la cantidad a BigDecimal
+			BigDecimal quantityToSubstract = BigDecimal.valueOf(item.getQuantity());
+
+			// CORRECCIÓN: Llamamos al helper que entiende "Almacén" en lugar de ubicación
+			// exacta
+			warehouseService.substractPendingStockByWarehouse(
+					item.getProduct().getId(),
+					order.getDestinationWarehouse().getId(),
+					quantityToSubstract);
 		}
 	}
 

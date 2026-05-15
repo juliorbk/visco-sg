@@ -52,6 +52,12 @@ public class GoodReceipt {
   @Column(length = 1000)
   private String notes; // Observaciones (opcional)
 
+  @Column(nullable = false)
+  private boolean closed;
+
+  @Column(nullable = false)
+  private Long destinationWarehouseId; // Almacén destino
+
   // Items recibidos (cascade = ALL para que se guarden automáticamente)
   @OneToMany(mappedBy = "goodReceipt", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default

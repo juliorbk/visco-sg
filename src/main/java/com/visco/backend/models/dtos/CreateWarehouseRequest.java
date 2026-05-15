@@ -1,6 +1,7 @@
 package com.visco.backend.models.dtos;
 
 import java.util.Set;
+import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -12,7 +13,7 @@ public record CreateWarehouseRequest(
 
 		@NotBlank(message = "La descripción es obligatoria") @NotBlank(message = "El email es obligatorio") String description,
 
-		@NotBlank Long responsibleUserId,
+		@NotBlank UUID responsibleUserId,
 
 		@NotBlank(message = "La descripción es obligatoria") String sapCenterCode,
 

@@ -7,18 +7,24 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
-// Request para recibir mercancía contra una orden de compra
+// Request para recibir mercancía físicamente en el WMS
 // Ej: POST /api/procurement/orders/1/receive
-// Body: { "items": [{ "productId": 5, "receivedQuantity": 100 }], "notes": "Todo en orden" }
+// Body: { "items": [{ "productId": 5, "receivedQuantity": 100 }], "notes": "Todo en orden", "destinationLocationId": 15 }
 public record ReceiveGoodsRequest(
-    @NotEmpty(message = "At least one item is required") @Valid List<ReceiveItem> items,
 
-    String notes) {
+    @NotEmpty(message = "Al menos un item es requerido") @Valid List<ReceiveItem> items,
 
-  // Producto recibido y cantidad que realmente llegó
+    String notes,
+
+    @NotNull(message = "El ID de la ubicación destino (estante/zona) es obligatorio") Long destinationLocationId
+
+) {
+  // Anidado CORRECTAMENTE dentro de las llaves del record principal.
+  // Usamos 'record' en lugar de 'class' para mantenerlo conciso y generar los
+  // getters automáticamente.
   public record ReceiveItem(
-      @NotNull(message = "Product ID is required") Long productId,
+      @NotNull(message = "El ID del producto es obligatorio") Long productId,
 
-      @NotNull(message = "Received quantity is required") BigDecimal receivedQuantity) {
+      @NotNull(message = "La cantidad recibida es obligatoria") BigDecimal receivedQuantity) {
   }
 }
