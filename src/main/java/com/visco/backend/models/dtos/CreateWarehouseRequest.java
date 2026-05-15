@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record CreateWarehouseRequest(
 
@@ -11,11 +12,11 @@ public record CreateWarehouseRequest(
 
 		@NotBlank(message = "La dirección es obligatoria") String physicalAddress,
 
-		@NotBlank(message = "La descripción es obligatoria") @NotBlank(message = "El email es obligatorio") String description,
+		@NotBlank(message = "La descripción es obligatoria") String description,
 
-		@NotBlank UUID responsibleUserId,
+		@NotNull(message = "El usuario responsable es obligatorio") UUID responsibleUserId,
 
-		@NotBlank(message = "La descripción es obligatoria") String sapCenterCode,
+		String sapCenterCode,
 
 		Set<Long> locationIds) {
 

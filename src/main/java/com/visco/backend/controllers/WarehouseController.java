@@ -16,10 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
+import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
-import com.visco.backend.models.dtos.WarehouseDTO;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.Warehouse;
@@ -45,6 +45,13 @@ public class WarehouseController {
 	@GetMapping
 	public ResponseEntity<List<WarehouseResponse>> getAllWarehouses() {
 		return ResponseEntity.ok(warehouseService.getAllWarehouses());
+	}
+
+	@PostMapping
+	public ResponseEntity<WarehouseResponse> createWarehouse(
+			@Valid @RequestBody CreateWarehouseRequest request) {
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(warehouseService.createWarehouse(request));
 	}
 
 	// ─── Stock breakdown by warehouse for a product ─────────────────
