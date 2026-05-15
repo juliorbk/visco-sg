@@ -21,6 +21,7 @@ import com.visco.backend.models.dtos.CreateSupplierRequest;
 import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceMonthlyDTO;
+import com.visco.backend.models.dtos.UpdateSupplierRequest;
 import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.repositories.PurchaseOrderRepository;
@@ -64,19 +65,22 @@ public class SupplierService {
 
 	// Update Supplier
 	@Transactional
-	public SupplierDTO updateSupplier(Long id, Supplier supplier) {
+	public SupplierDTO updateSupplier(Long id, UpdateSupplierRequest request) {
 		Supplier existing = supplierRepository.findById(id)
 				.orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + id));
 
-		existing.setName(supplier.getName());
-		existing.setEmail(supplier.getEmail());
-		existing.setPhoneNumbers(supplier.getPhoneNumbers());
-		existing.setDescription(supplier.getDescription());
-		existing.setAddress(supplier.getAddress());
-		existing.setCurrency(supplier.getCurrency());
-		existing.setRepresentatives(supplier.getRepresentatives());
-		existing.setSapCode(supplier.getSapCode());
+		existing.setName(request.name());
+		existing.setEmail(request.email());
+		existing.setPhoneNumbers(request.phoneNumbers());
+		existing.setDescription(request.description());
+		existing.setAddress(request.address());
+		existing.setCurrency(request.currency());
+		existing.setSapCode(request.sapCode());
 		existing.setUpdatedAt(LocalDateTime.now());
+
+		if (request.representativeIds() != null && !request.representativeIds().isEmpty()) {
+			existing.setRepresentatives(new HashSet<>());
+		}
 
 		return SupplierDTO.fromSupplier(supplierRepository.save(existing));
 	}

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.visco.backend.models.dtos.CreateSupplierRequest;
 import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceMonthlyDTO;
-import com.visco.backend.models.entities.Supplier;
+import com.visco.backend.models.dtos.UpdateSupplierRequest;
 import com.visco.backend.services.SupplierService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -61,8 +61,8 @@ public class SuppliersController {
 	}
 
 	@PutMapping("/{id}")
-	public ResponseEntity<SupplierDTO> updateSupplier(@PathVariable Long id, @RequestBody Supplier supplier) {
-		return ResponseEntity.ok(supplierService.updateSupplier(id, supplier));
+	public ResponseEntity<SupplierDTO> updateSupplier(@PathVariable Long id, @Valid @RequestBody UpdateSupplierRequest request) {
+		return ResponseEntity.ok(supplierService.updateSupplier(id, request));
 	}
 
 	@DeleteMapping("/{id}")
