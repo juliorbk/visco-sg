@@ -14,7 +14,7 @@ import com.visco.backend.models.dtos.UserDTO;
 import com.visco.backend.models.dtos.UserRegisterRequest;
 import com.visco.backend.models.entities.RequestingArea;
 import com.visco.backend.models.entities.User;
-import com.visco.backend.repositories.AreaRepository;
+import com.visco.backend.repositories.RequestingAreaRepository;
 import com.visco.backend.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthService {
 
   private final UserRepository userRepository;
-  private final AreaRepository areaRepository;
+  private final RequestingAreaRepository areaRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final EmailService emailService;
