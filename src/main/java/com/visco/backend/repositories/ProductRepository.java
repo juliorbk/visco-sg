@@ -1,10 +1,13 @@
 package com.visco.backend.repositories;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import com.visco.backend.models.entities.Product;
 
@@ -18,4 +21,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Repository method automatically supports pagination
     Page<Product> findAll(Pageable pageable);
 
+    @Query("SELECT COUNT(p) FROM Product p " +
+            "JOIN StockLevel s ON s.product.id = p.id " +
+            "WHERE s.currentStock <= p.reorderPoint AND p.active = true")
+    Long countProductsBelowReorderPoint();
+
+    // Productos bajo reorder point con su stock actual
+    @Query("SELECT p FROM Product p " +
+            "JOIN StockLevel s ON s.product.id = p.id " +
+            "WHERE s.currentStock <= p.reorderPoint AND p.active = true " +
+            "ORDER BY s.currentStock ASC")
+    List<Product> findProductsBelowReorderPoint();
+
+    // Total de unidades en inventario
+    @Query("SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s")
+    BigDecimal getTotalInventoryUnits();
 }

@@ -3,6 +3,7 @@ package com.visco.backend.services;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -112,5 +113,11 @@ public class AuthService {
 
   public String refreshToken(User user) {
     return jwtService.generateToken(user);
+  }
+
+  public UserDTO getCurrentUser(String email) {
+    User user = userRepository.findByEmailWithArea(email)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+    return UserDTO.fromUser(user);
   }
 }

@@ -1,7 +1,110 @@
 package com.visco.backend.repositories;
 
-import com.visco.backend.models.entities.PurchaseOrder;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.visco.backend.models.entities.PurchaseOrder;
+import com.visco.backend.models.entities.PurchaseOrderStatus;
 
 public interface PurchaseOrderRepository
-  extends JpaRepository<PurchaseOrder, Long> {}
+    extends JpaRepository<PurchaseOrder, Long> {
+  @Query("SELECT o.status as status, COUNT(o) as count FROM PurchaseOrder o GROUP BY o.status")
+  List<OrderStatusCountProjection> countByStatus();
+
+  interface OrderStatusCountProjection {
+    PurchaseOrderStatus getStatus();
+
+    Long getCount();
+  }
+
+  // Últimas N órdenes
+  List<PurchaseOrder> findTopNByOrderByCreatedAtDesc(int n); // No funciona así con JPA
+
+  // Correcto:
+  @Query("SELECT o FROM PurchaseOrder o ORDER BY o.createdAt DESC")
+  List<PurchaseOrder> findRecentOrders(Pageable pageable);
+
+  // Gastos por mes (últimos 6 meses)
+  @Query("SELECT FUNCTION('DATE_TRUNC', 'month', o.createdAt) as month, " +
+      "SUM(i.unitPrice * i.quantity) as total " +
+      "FROM PurchaseOrder o JOIN o.items i " +
+      "WHERE o.createdAt >= :from " +
+      "GROUP BY FUNCTION('DATE_TRUNC', 'month', o.createdAt) " +
+      "ORDER BY month ASC")
+  List<MonthlySpendingProjection> getMonthlySpending(@Param("from") LocalDateTime from);
+
+  @Query("SELECT s.id as supplierId, s.name as supplierName, " +
+      "FUNCTION('DATE_TRUNC', 'month', o.createdAt) as month, " +
+      "COUNT(o) as totalOrders, " +
+      "SUM(CASE WHEN o.status = 'DELIVERED' THEN 1 ELSE 0 END) as deliveredOrders, " +
+      "SUM(i.unitPrice * i.quantity) as totalSpend " +
+      "FROM PurchaseOrder o JOIN o.supplier s JOIN o.items i " +
+      "WHERE o.createdAt >= :from " +
+      "GROUP BY s.id, s.name, FUNCTION('DATE_TRUNC', 'month', o.createdAt) " +
+      "ORDER BY month ASC, s.name ASC")
+  List<SupplierPerformanceProjection> getSupplierPerformance(@Param("from") LocalDateTime from);
+
+  interface SupplierPerformanceProjection {
+    Long getSupplierId();
+
+    String getSupplierName();
+
+    Object getMonth();
+
+    Long getTotalOrders();
+
+    Long getDeliveredOrders();
+
+    BigDecimal getTotalSpend();
+  }
+
+  // Gastos por categoría
+  @Query("SELECT p.category.name as categoryName, " +
+      "SUM(i.unitPrice * i.quantity) as total " +
+      "FROM PurchaseOrder o JOIN o.items i JOIN i.product p " +
+      "WHERE o.createdAt >= :from " +
+      "GROUP BY p.category.name")
+  List<CategorySpendingProjection> getSpendingByCategory(@Param("from") LocalDateTime from);
+
+  // Tasa de cumplimiento
+  @Query("SELECT COUNT(o) FROM PurchaseOrder o WHERE o.status = 'DELIVERED'")
+  Long countDeliveredOrders();
+
+  interface MonthlySpendingProjection {
+    Object getMonth();
+
+    BigDecimal getTotal();
+  }
+
+  interface CategorySpendingProjection {
+    String getCategoryName();
+
+    BigDecimal getTotal();
+  }
+
+  @Query("SELECT FUNCTION('DATE_TRUNC', 'month', o.createdAt) as month, " +
+      "s.id as supplierId, " +
+      "COUNT(o) as totalOrders, " +
+      "SUM(CASE WHEN o.status = 'DELIVERED' THEN 1 ELSE 0 END) as deliveredOrders " +
+      "FROM PurchaseOrder o JOIN o.supplier s " +
+      "WHERE o.createdAt >= :from " +
+      "GROUP BY FUNCTION('DATE_TRUNC', 'month', o.createdAt), s.id " +
+      "ORDER BY month ASC")
+  List<MonthlySupplierStatsProjection> getMonthlySupplierStats(@Param("from") LocalDateTime from);
+
+  interface MonthlySupplierStatsProjection {
+    Object getMonth();
+
+    Long getSupplierId();
+
+    Long getTotalOrders();
+
+    Long getDeliveredOrders();
+  }
+}

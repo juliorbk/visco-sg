@@ -47,7 +47,7 @@ public class ProductService {
 
         Product saved = productRepository.save(newProduct);
         if (saved.getInternalCode() == null || saved.getInternalCode().isBlank()) {
-            saved.setInternalCode(String.format("%06d", saved.getId())); //-> Code: 000001+
+            saved.setInternalCode(String.format("%06d", saved.getId())); // -> Code: 000001+
         }
         return saved;
     }
@@ -59,7 +59,8 @@ public class ProductService {
 
     private BigDecimal getTotalPendingStock(Long productId) {
         List<com.visco.backend.models.entities.StockLevel> levels = stockLevelRepository.findByProductId(productId);
-        if (levels.isEmpty()) return BigDecimal.ZERO;
+        if (levels.isEmpty())
+            return BigDecimal.ZERO;
         return levels.stream()
                 .map(com.visco.backend.models.entities.StockLevel::getPendingStock)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -121,7 +122,3 @@ public class ProductService {
         productRepository.save(product);
     }
 }
-
-
-
-

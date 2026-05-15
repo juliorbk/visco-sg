@@ -1,8 +1,11 @@
 package com.visco.backend.repositories;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.visco.backend.models.dtos.SupplierDTO;
@@ -18,4 +21,19 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 	Page<SupplierDTO> findByActiveFalse(Pageable pageable);
 
 	Page<SupplierDTO> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->
+
+	@Query("SELECT s.id as supplierId, s.name as supplierName, COUNT(o) as orderCount " +
+			"FROM PurchaseOrder o JOIN o.supplier s " +
+			"GROUP BY s.id, s.name ORDER BY orderCount DESC")
+	List<SupplierOrderCountProjection> findSuppliersByOrderCount(Pageable pageable);
+
+	interface SupplierOrderCountProjection {
+		Long getSupplierId();
+
+		String getSupplierName();
+
+		Long getOrderCount();
+	}
+
+	Boolean existsByName(String name);
 }

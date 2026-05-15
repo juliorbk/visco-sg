@@ -2,7 +2,6 @@ package com.visco.backend.services;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,6 @@ import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.WarehouseRepository;
 
 import jakarta.persistence.EntityNotFoundException;
-
 import lombok.RequiredArgsConstructor;
 
 //DIGITAL KARDEX
@@ -260,10 +258,11 @@ public class WarehouseService {
 	@Transactional(readOnly = true)
 	public ProductStockBreakdown getStockBreakdownByProduct(Long productId) {
 		java.math.BigDecimal totalStock = stockLevelRepository.getTotalStockByProductId(productId);
-		if (totalStock == null) totalStock = java.math.BigDecimal.ZERO;
+		if (totalStock == null)
+			totalStock = java.math.BigDecimal.ZERO;
 
-		List<StockLevelRepository.WarehouseStockProjection> projections =
-				stockLevelRepository.getStockByProductGroupedByWarehouse(productId);
+		List<StockLevelRepository.WarehouseStockProjection> projections = stockLevelRepository
+				.getStockByProductGroupedByWarehouse(productId);
 
 		List<ProductStockBreakdown.WarehouseStockEntry> entries = projections.stream()
 				.map(p -> ProductStockBreakdown.WarehouseStockEntry.builder()
@@ -288,15 +287,16 @@ public class WarehouseService {
 
 	@Transactional(readOnly = true)
 	public List<WarehouseStockSummary> getGlobalStockSummary() {
-		List<StockLevelRepository.WarehouseStockProjection> projections =
-				stockLevelRepository.getGlobalStockByWarehouse();
+		List<StockLevelRepository.WarehouseStockProjection> projections = stockLevelRepository
+				.getGlobalStockByWarehouse();
 
 		return projections.stream()
 				.map(p -> WarehouseStockSummary.builder()
 						.warehouseId(p.getWarehouseId())
 						.warehouseName(p.getWarehouseName())
 						.totalStock(p.getCurrentStock() != null ? p.getCurrentStock() : java.math.BigDecimal.ZERO)
-						.totalPendingStock(p.getPendingStock() != null ? p.getPendingStock() : java.math.BigDecimal.ZERO)
+						.totalPendingStock(
+								p.getPendingStock() != null ? p.getPendingStock() : java.math.BigDecimal.ZERO)
 						.build())
 				.toList();
 	}
