@@ -32,7 +32,7 @@ public class AuthService {
   private final JwtService jwtService;
   private final EmailService emailService;
   private final AuthenticationManager authenticationManager;
-  private final CookieService cookieService;
+  
 
   @Transactional
   public AuthResponse register(UserRegisterRequest request) {

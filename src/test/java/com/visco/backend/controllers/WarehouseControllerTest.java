@@ -107,7 +107,7 @@ class WarehouseControllerTest {
 
         mockMvc.perform(post("/api/warehouse/orders/1/receive")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"items\":[{\"productId\":1,\"receivedQuantity\":5}],\"notes\":\"Partial\"}"))
+                        .content("{\"items\":[{\"productId\":1,\"receivedQuantity\":5}],\"notes\":\"Partial\",\"destinationLocationId\":1}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.receiptNumber").value("VIS-1-12345"));
     }

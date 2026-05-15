@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
+import com.visco.backend.models.entities.Product;
 import com.visco.backend.services.ProductService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController

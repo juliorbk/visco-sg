@@ -20,9 +20,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Product;
-import com.visco.backend.models.entities.Uom;
 import com.visco.backend.repositories.UserRepository;
 import com.visco.backend.services.JwtService;
 import com.visco.backend.services.ProductService;
@@ -69,19 +69,19 @@ class ProductControllerTest {
     @Test
     @WithMockUser(authorities = "WAREHOUSEMAN")
     void createProduct_shouldReturn201() throws Exception {
-        when(productService.createProduct(any(Product.class))).thenReturn(Product.builder().id(1L).build());
-        when(productService.getProductById(anyLong())).thenReturn(createDTO(1L));
+        when(productService.createProduct(any(CreateProductRequest.class))).thenReturn(createDTO(1L));
 
         mockMvc.perform(post("/api/inventory/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sku\":\"SKU-NEW\",\"name\":\"New\",\"sapCode\":\"SAP\",\"uom\":\"UNIDAD\",\"reorderPoint\":10}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sku").value("SKU-1"));
     }
 
     @Test
     @WithMockUser(authorities = "WAREHOUSEMAN")
     void createProduct_shouldReturn400_whenDuplicateSku() throws Exception {
-        when(productService.createProduct(any(Product.class)))
+        when(productService.createProduct(any(CreateProductRequest.class)))
                 .thenThrow(new IllegalArgumentException("El SKU ya existe"));
 
         mockMvc.perform(post("/api/inventory/products")

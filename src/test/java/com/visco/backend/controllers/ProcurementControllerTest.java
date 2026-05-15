@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -55,6 +57,7 @@ class ProcurementControllerTest {
         when(procurementService.createPurchaseOrder(any())).thenReturn(createResponse());
 
         String body = "{\"orderNumber\":\"PO-001\",\"description\":\"Test order\",\"supplierId\":1,"
+                + "\"destinationWarehouse\":1,"
                 + "\"paymentMethod\":\"BANK_TRANSFER\",\"type\":\"MATERIALS\","
                 + "\"createdById\":\"" + UUID.randomUUID() + "\","
                 + "\"items\":[{\"productId\":1,\"quantity\":10,\"unitPrice\":100}]}";
@@ -69,11 +72,12 @@ class ProcurementControllerTest {
     @Test
     @WithMockUser(authorities = "PROCUREMENT")
     void getAllOrders_shouldReturn200() throws Exception {
-        when(procurementService.getAllOrders()).thenReturn(List.of(createResponse()));
+        when(procurementService.getAllOrders(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(createResponse())));
 
         mockMvc.perform(get("/api/procurement/orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].orderNumber").value("PO-001"));
+                .andExpect(jsonPath("$.content[0].orderNumber").value("PO-001"));
     }
 
     @Test

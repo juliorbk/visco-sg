@@ -23,6 +23,7 @@ import com.visco.backend.models.dtos.UpdateSupplierRequest;
 import com.visco.backend.services.SupplierService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/suppliers")
