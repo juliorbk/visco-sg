@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.visco.backend.models.dtos.CreateSupplierRequest;
 import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.dtos.SupplierPerformanceMonthlyDTO;
-import com.visco.backend.models.entities.Supplier;
+import com.visco.backend.models.dtos.UpdateSupplierRequest;
 import com.visco.backend.repositories.UserRepository;
 import com.visco.backend.services.JwtService;
 import com.visco.backend.services.SupplierService;
@@ -112,10 +112,10 @@ class SuppliersControllerTest {
     @Test
     @WithMockUser(authorities = "PROCUREMENT")
     void updateSupplier_shouldReturn200() throws Exception {
-        when(supplierService.updateSupplier(eq(1L), any(Supplier.class))).thenReturn(createDTO(1L));
+        when(supplierService.updateSupplier(eq(1L), any(UpdateSupplierRequest.class))).thenReturn(createDTO(1L));
         mockMvc.perform(put("/api/suppliers/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Updated\",\"email\":\"u@t.com\",\"address\":\"a\",\"currency\":\"USD\",\"description\":\"d\"}"))
+                        .content("{\"name\":\"Updated\",\"email\":\"u@t.com\",\"address\":\"a\",\"currency\":\"USD\",\"description\":\"d\",\"phoneNumbers\":[\"123\"]}"))
                 .andExpect(status().isOk());
     }
 

@@ -1,7 +1,7 @@
 package com.visco.backend.controllers;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,10 +34,10 @@ public class ProcurementController {
                 .body(procurementService.createPurchaseOrder(request));
     }
 
-    // Lista todas las órdenes de compra
+    // Lista paginada de órdenes de compra
     @GetMapping("/orders")
-    public ResponseEntity<List<PurchaseOrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(procurementService.getAllOrders());
+    public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(Pageable pageable) {
+        return ResponseEntity.ok(procurementService.getAllOrders(pageable));
     }
 
     // Obtiene una orden de compra por ID

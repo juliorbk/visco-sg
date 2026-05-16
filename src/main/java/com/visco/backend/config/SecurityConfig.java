@@ -62,7 +62,7 @@ public class SecurityConfig {
             .requestMatchers("/api/users/**").hasAuthority("ADMIN")
 
             // ADMIN, MANAGER y PROCUREMENT
-            .requestMatchers("/api/suppliers/**", "/api/procurement/**")
+            .requestMatchers("/api/suppliers/**", "/api/procurement/**", "/api/requesting-areas/**")
             .hasAnyAuthority("ADMIN", "MANAGER", "PROCUREMENT")
 
             // ADMIN, MANAGER, PROCUREMENT y WAREHOUSEMAN

@@ -21,6 +21,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
@@ -50,9 +51,21 @@ class WarehouseControllerTest {
     @MockitoBean
     private UserRepository userRepository;
 
-    @Test
-    @WithMockUser(authorities = "WAREHOUSEMAN")
-    void getAllWarehouses_shouldReturn200() throws Exception {
+	@Test
+	@WithMockUser(authorities = "MANAGER")
+	void createWarehouse_shouldReturn201() throws Exception {
+		when(warehouseService.createWarehouse(any(CreateWarehouseRequest.class)))
+				.thenReturn(WarehouseResponse.builder().id(1L).name("New Warehouse").sapCenterCode("WH02").build());
+		mockMvc.perform(post("/api/warehouse")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"name\":\"New Warehouse\",\"physicalAddress\":\"Addr 123\",\"description\":\"Desc\",\"responsibleUserId\":\"00000000-0000-0000-0000-000000000001\",\"sapCenterCode\":\"WH02\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.name").value("New Warehouse"));
+	}
+
+	@Test
+	@WithMockUser(authorities = "WAREHOUSEMAN")
+	void getAllWarehouses_shouldReturn200() throws Exception {
         when(warehouseService.getAllWarehouses()).thenReturn(List.of(
                 WarehouseResponse.builder().id(1L).name("Main").sapCenterCode("WH01").build()));
         mockMvc.perform(get("/api/warehouse"))
@@ -94,7 +107,7 @@ class WarehouseControllerTest {
 
         mockMvc.perform(post("/api/warehouse/orders/1/receive")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"items\":[{\"productId\":1,\"receivedQuantity\":5}],\"notes\":\"Partial\"}"))
+                        .content("{\"items\":[{\"productId\":1,\"receivedQuantity\":5}],\"notes\":\"Partial\",\"destinationLocationId\":1}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.receiptNumber").value("VIS-1-12345"));
     }

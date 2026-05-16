@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.visco.backend.models.dtos.AdjustStockRequest;
+import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.services.WarehouseService;
@@ -37,6 +40,13 @@ public class WarehouseController {
 		return ResponseEntity.ok(warehouseService.getAllWarehouses());
 	}
 
+	@PostMapping
+	public ResponseEntity<WarehouseResponse> createWarehouse(
+			@Valid @RequestBody CreateWarehouseRequest request) {
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body(warehouseService.createWarehouse(request));
+	}
+
 	// ─── Stock breakdown by warehouse for a product ─────────────────
 
 	@GetMapping("/products/{productId}/stock-breakdown")
@@ -50,6 +60,22 @@ public class WarehouseController {
 	@GetMapping("/stock-summary")
 	public ResponseEntity<List<WarehouseStockSummary>> getGlobalStockSummary() {
 		return ResponseEntity.ok(warehouseService.getGlobalStockSummary());
+	}
+
+	// ─── Inventory transfers ────────────────────────────────────────
+
+	@PostMapping("/stock/transfer")
+	public ResponseEntity<Void> transferStock(@Valid @RequestBody TransferStockRequest request) {
+		warehouseService.transferStock(request);
+		return ResponseEntity.ok().build();
+	}
+
+	// ─── Stock adjustment ───────────────────────────────────────────
+
+	@PostMapping("/stock/adjust")
+	public ResponseEntity<Void> adjustStock(@Valid @RequestBody AdjustStockRequest request) {
+		warehouseService.adjustStock(request);
+		return ResponseEntity.ok().build();
 	}
 
 	// ─── Goods receiving ────────────────────────────────────────────

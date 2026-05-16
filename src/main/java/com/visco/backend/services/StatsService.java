@@ -17,7 +17,6 @@ import com.visco.backend.models.dtos.KpiStatsDTO;
 import com.visco.backend.models.dtos.MonthlySpendingDTO;
 import com.visco.backend.models.dtos.RecentOrderDTO;
 import com.visco.backend.models.dtos.SpendingStatsDTO;
-import com.visco.backend.models.dtos.SupplierPerformanceDTO;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
@@ -70,7 +69,6 @@ public class StatsService {
 				.build();
 	}
 
-	
 	// ── Pedidos recientes ─────────────────────────────────────────────────────
 
 	@Transactional(readOnly = true)
