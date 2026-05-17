@@ -36,4 +36,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Total de unidades en inventario
     @Query("SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s")
     BigDecimal getTotalInventoryUnits();
+
+    @Query("SELECT p.id as productId, p.name as productName, p.sku as sku, "
+        + "COALESCE(SUM(s.currentStock), 0) as currentStock, "
+        + "p.reorderPoint as reorderPoint "
+        + "FROM Product p JOIN StockLevel s ON s.product.id = p.id "
+        + "WHERE s.currentStock <= p.reorderPoint AND p.active = true "
+        + "GROUP BY p.id, p.name, p.sku, p.reorderPoint "
+        + "ORDER BY currentStock ASC")
+    List<CriticalProductProjection> findCriticalInventory();
+
+    interface CriticalProductProjection {
+        Long getProductId();
+        String getProductName();
+        String getSku();
+        BigDecimal getCurrentStock();
+        BigDecimal getReorderPoint();
+    }
 }
