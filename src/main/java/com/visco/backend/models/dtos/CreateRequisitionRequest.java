@@ -11,6 +11,6 @@ public record CreateRequisitionRequest(
     @NotBlank(message = "Requisition number is required") String requisitionNumber,
     @NotBlank(message = "Description is required") String description,
     @NotNull(message = "Requested by is required") UUID requestedById,
-    @NotNull(message = "Area ID is required") Long areaId,
+    @NotNull(message = "Area ID is required") Long costCenterId,
     @NotEmpty(message = "At least one item is required") @Valid List<RequisitionItemRequest> items
 ) {}

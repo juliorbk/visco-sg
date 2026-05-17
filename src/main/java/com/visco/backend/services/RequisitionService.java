@@ -4,14 +4,14 @@ import com.visco.backend.models.dtos.CreateRequisitionRequest;
 import com.visco.backend.models.dtos.RequisitionItemRequest;
 import com.visco.backend.models.dtos.RequisitionItemResponse;
 import com.visco.backend.models.dtos.RequisitionResponse;
+import com.visco.backend.models.entities.CostCenter;
 import com.visco.backend.models.entities.Product;
-import com.visco.backend.models.entities.RequestingArea;
 import com.visco.backend.models.entities.Requisition;
 import com.visco.backend.models.entities.RequisitionItem;
 import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.models.entities.User;
+import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.ProductRepository;
-import com.visco.backend.repositories.RequestingAreaRepository;
 import com.visco.backend.repositories.RequisitionRepository;
 import com.visco.backend.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -34,29 +34,36 @@ public class RequisitionService {
 
     private final RequisitionRepository requisitionRepository;
     private final UserRepository userRepository;
-    private final RequestingAreaRepository areaRepository;
+    private final CostCenterRepository costCenterRepository;
     private final ProductRepository productRepository;
 
     @Transactional
     public RequisitionResponse createRequisition(CreateRequisitionRequest request) {
-        User requestedBy = userRepository.findById(request.requestedById())
-            .orElseThrow(() -> new EntityNotFoundException("User not found: " + request.requestedById()));
+        User requestedBy = userRepository
+            .findById(request.requestedById())
+            .orElseThrow(() ->
+                new EntityNotFoundException("User not found: " + request.requestedById())
+            );
 
-        RequestingArea area = areaRepository.findById(request.areaId())
-            .orElseThrow(() -> new EntityNotFoundException("Area not found: " + request.areaId()));
+        CostCenter costCenter = costCenterRepository
+            .findById(request.costCenterId())
+            .orElseThrow(() ->
+                new EntityNotFoundException("Area not found: " + request.costCenterId())
+            );
 
         Requisition requisition = Requisition.builder()
             .requisitionNumber(request.requisitionNumber())
             .description(request.description())
             .requestedBy(requestedBy)
-            .area(area)
+            .costCenter(costCenter)
             .status(RequisitionStatus.PENDING)
             .createdAt(LocalDateTime.now())
             .build();
 
-        Map<Long, Product> productMap = productRepository.findAllById(
-            request.items().stream().map(RequisitionItemRequest::productId).toList()
-        ).stream().collect(Collectors.toMap(Product::getId, p -> p));
+        Map<Long, Product> productMap = productRepository
+            .findAllById(request.items().stream().map(RequisitionItemRequest::productId).toList())
+            .stream()
+            .collect(Collectors.toMap(Product::getId, (p) -> p));
 
         for (RequisitionItemRequest itemReq : request.items()) {
             Product product = productMap.get(itemReq.productId());
@@ -73,15 +80,24 @@ public class RequisitionService {
         }
 
         Requisition saved = requisitionRepository.save(requisition);
-        log.info("Created requisition: {} by user: {}", saved.getRequisitionNumber(), requestedBy.getName());
+        log.info(
+            "Created requisition: {} by user: {}",
+            saved.getRequisitionNumber(),
+            requestedBy.getName()
+        );
         return toResponse(saved);
     }
 
     @Transactional
     public RequisitionResponse submitForApproval(Long id) {
         Requisition req = findById(id);
-        if (req.getStatus() != RequisitionStatus.PENDING && req.getStatus() != RequisitionStatus.DRAFT) {
-            throw new IllegalStateException("Only PENDING or DRAFT requisitions can be submitted for approval");
+        if (
+            req.getStatus() != RequisitionStatus.PENDING &&
+            req.getStatus() != RequisitionStatus.DRAFT
+        ) {
+            throw new IllegalStateException(
+                "Only PENDING or DRAFT requisitions can be submitted for approval"
+            );
         }
         req.setStatus(RequisitionStatus.AWAITING_APPROVAL);
         Requisition saved = requisitionRepository.save(req);
@@ -95,14 +111,19 @@ public class RequisitionService {
         if (req.getStatus() != RequisitionStatus.AWAITING_APPROVAL) {
             throw new IllegalStateException("Only requisitions awaiting approval can be approved");
         }
-        User approver = userRepository.findById(approverUserId)
+        User approver = userRepository
+            .findById(approverUserId)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + approverUserId));
         req.setStatus(RequisitionStatus.APPROVED);
         req.setApprovedBy(approver);
         req.setApprovedAt(LocalDateTime.now());
         req.setApprovalNotes(notes);
         Requisition saved = requisitionRepository.save(req);
-        log.info("Requisition {} approved by: {}", saved.getRequisitionNumber(), approver.getName());
+        log.info(
+            "Requisition {} approved by: {}",
+            saved.getRequisitionNumber(),
+            approver.getName()
+        );
         return toResponse(saved);
     }
 
@@ -115,8 +136,7 @@ public class RequisitionService {
         req.setStatus(RequisitionStatus.REJECTED);
         req.setRejectionReason(reason);
         if (rejecterUserId != null) {
-            userRepository.findById(rejecterUserId)
-                .ifPresent(req::setApprovedBy);
+            userRepository.findById(rejecterUserId).ifPresent(req::setApprovedBy);
         }
         Requisition saved = requisitionRepository.save(req);
         log.info("Requisition {} rejected. Reason: {}", saved.getRequisitionNumber(), reason);
@@ -126,7 +146,10 @@ public class RequisitionService {
     @Transactional
     public RequisitionResponse cancelRequisition(Long id) {
         Requisition req = findById(id);
-        if (req.getStatus() == RequisitionStatus.CONVERTED || req.getStatus() == RequisitionStatus.CANCELLED) {
+        if (
+            req.getStatus() == RequisitionStatus.CONVERTED ||
+            req.getStatus() == RequisitionStatus.CANCELLED
+        ) {
             throw new IllegalStateException("Cannot cancel a " + req.getStatus() + " requisition");
         }
         req.setStatus(RequisitionStatus.CANCELLED);
@@ -140,7 +163,10 @@ public class RequisitionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<RequisitionResponse> getRequisitionsByStatus(RequisitionStatus status, Pageable pageable) {
+    public Page<RequisitionResponse> getRequisitionsByStatus(
+        RequisitionStatus status,
+        Pageable pageable
+    ) {
         return requisitionRepository.findByStatus(status, pageable).map(this::toResponse);
     }
 
@@ -150,7 +176,8 @@ public class RequisitionService {
     }
 
     private Requisition findById(Long id) {
-        return requisitionRepository.findById(id)
+        return requisitionRepository
+            .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Requisition not found: " + id));
     }
 
@@ -166,14 +193,18 @@ public class RequisitionService {
     }
 
     private RequisitionResponse toResponse(Requisition req) {
-        List<RequisitionItemResponse> itemResponses = req.getItems().stream()
-            .map(item -> new RequisitionItemResponse(
-                item.getProduct().getId(),
-                item.getProduct().getName(),
-                item.getProduct().getSku(),
-                item.getQuantity(),
-                item.getNotes()
-            ))
+        List<RequisitionItemResponse> itemResponses = req
+            .getItems()
+            .stream()
+            .map((item) ->
+                new RequisitionItemResponse(
+                    item.getProduct().getId(),
+                    item.getProduct().getName(),
+                    item.getProduct().getSku(),
+                    item.getQuantity(),
+                    item.getNotes()
+                )
+            )
             .toList();
 
         return new RequisitionResponse(
@@ -181,7 +212,7 @@ public class RequisitionService {
             req.getRequisitionNumber(),
             req.getDescription(),
             req.getRequestedBy().getName(),
-            req.getArea().getName(),
+            req.getCostCenter().getFullDescription(),
             req.getStatus(),
             req.getRejectionReason(),
             req.getApprovalNotes(),
