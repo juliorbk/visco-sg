@@ -1,5 +1,12 @@
 package com.visco.backend.controllers;
 
+import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
+import com.visco.backend.models.dtos.PurchaseOrderResponse;
+import com.visco.backend.services.ProcurementService;
+import jakarta.validation.Valid;
+import java.util.Map;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,13 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
-import com.visco.backend.models.dtos.PurchaseOrderResponse;
-import com.visco.backend.services.ProcurementService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
 @RestController
 @RequestMapping("/api/procurement")
 @RequiredArgsConstructor
@@ -26,7 +26,6 @@ public class ProcurementController {
 
     private final ProcurementService procurementService;
 
-    // Crea una nueva orden de compra
     @PostMapping("/orders")
     public ResponseEntity<PurchaseOrderResponse> createOrder(
             @Valid @RequestBody CreatePurchaseOrderRequest request) {
@@ -34,28 +33,55 @@ public class ProcurementController {
                 .body(procurementService.createPurchaseOrder(request));
     }
 
-    // Lista paginada de órdenes de compra
     @GetMapping("/orders")
     public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(Pageable pageable) {
         return ResponseEntity.ok(procurementService.getAllOrders(pageable));
     }
 
-    // Obtiene una orden de compra por ID
     @GetMapping("/orders/{id}")
     public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
         return ResponseEntity.ok(procurementService.getOrderById(id));
     }
 
-    // Aprueba una orden (solo si está PENDING)
-    @PatchMapping("/orders/{id}/approve")
-    public ResponseEntity<PurchaseOrderResponse> markApproved(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.markAsApproved(id));
+    @PatchMapping("/orders/{id}/submit-for-approval")
+    public ResponseEntity<PurchaseOrderResponse> submitForApproval(@PathVariable Long id) {
+        return ResponseEntity.ok(procurementService.submitOrderForApproval(id));
     }
 
-    // Cancela una orden (solo si está PENDING o IN_TRANSIT)
+    @PatchMapping("/orders/{id}/approve")
+    public ResponseEntity<PurchaseOrderResponse> markApproved(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        UUID approverId = body.get("userId") != null
+            ? UUID.fromString(body.get("userId").toString())
+            : null;
+        String notes = body.get("notes") != null ? body.get("notes").toString() : null;
+        return ResponseEntity.ok(procurementService.markAsApproved(id, approverId, notes));
+    }
+
+    @PatchMapping("/orders/{id}/reject")
+    public ResponseEntity<PurchaseOrderResponse> rejectOrder(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        UUID rejecterId = body.get("userId") != null
+            ? UUID.fromString(body.get("userId").toString())
+            : null;
+        String reason = body.get("reason") != null ? body.get("reason").toString() : null;
+        return ResponseEntity.ok(procurementService.rejectPurchaseOrder(id, rejecterId, reason));
+    }
+
+    @PatchMapping("/orders/{id}/send-to-supplier")
+    public ResponseEntity<PurchaseOrderResponse> sendToSupplier(@PathVariable Long id) {
+        return ResponseEntity.ok(procurementService.markAsSentToSupplier(id));
+    }
+
     @PatchMapping("/orders/{id}/cancel")
-    public ResponseEntity<PurchaseOrderResponse> cancelOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.cancelOrder(id));
+    public ResponseEntity<PurchaseOrderResponse> cancelOrder(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body != null && body.get("reason") != null
+            ? body.get("reason").toString() : null;
+        return ResponseEntity.ok(procurementService.cancelOrder(id, reason));
     }
 
 }

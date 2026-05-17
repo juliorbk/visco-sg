@@ -21,9 +21,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -124,20 +127,76 @@ public class ProcurementService {
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
-    public void cancelOrderById(Long orderId) {
-        PurchaseOrder order = purchaseOrderRepository
-            .findById(orderId)
-            .orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + orderId));
+    public void submitForApproval(Long orderId) {
+        PurchaseOrder order = findOrderById(orderId);
+        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
+            throw new IllegalStateException("Only pending orders can be submitted for approval");
+        }
+        log.info("Submitting order ID: {} for approval", orderId);
+        order.setStatus(PurchaseOrderStatus.AWAITING_APPROVAL);
+        order.setUpdatedAt(LocalDateTime.now());
+        purchaseOrderRepository.save(order);
+    }
 
-        if (
-            order.getStatus() != PurchaseOrderStatus.PENDING &&
-            order.getStatus() != PurchaseOrderStatus.IN_TRANSIT
-        ) {
-            throw new IllegalStateException("Only pending or in-transit orders can be cancelled");
+    @Transactional
+    public void approveOrder(Long orderId, UUID approverUserId, String notes) {
+        PurchaseOrder order = findOrderById(orderId);
+        if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Only orders awaiting approval can be approved");
+        }
+        User approver = userRepository.findById(approverUserId)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + approverUserId));
+        log.info("Approving order ID: {} by user: {}", orderId, approver.getName());
+        order.setStatus(PurchaseOrderStatus.APPROVED);
+        order.setApprovedBy(approver);
+        order.setApprovedAt(LocalDateTime.now());
+        order.setApprovalNotes(notes);
+        order.setUpdatedAt(LocalDateTime.now());
+        purchaseOrderRepository.save(order);
+    }
+
+    @Transactional
+    public void rejectOrder(Long orderId, UUID rejecterUserId, String reason) {
+        PurchaseOrder order = findOrderById(orderId);
+        if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
+            throw new IllegalStateException("Only orders awaiting approval can be rejected");
+        }
+        log.info("Rejecting order ID: {}. Reason: {}", orderId, reason);
+        order.setStatus(PurchaseOrderStatus.REJECTED);
+        order.setRejectionReason(reason);
+        if (rejecterUserId != null) {
+            userRepository.findById(rejecterUserId).ifPresent(order::setApprovedBy);
+        }
+        order.setUpdatedAt(LocalDateTime.now());
+        purchaseOrderRepository.save(order);
+    }
+
+    @Transactional
+    public void sendToSupplier(Long orderId) {
+        PurchaseOrder order = findOrderById(orderId);
+        if (order.getStatus() != PurchaseOrderStatus.APPROVED) {
+            throw new IllegalStateException("Only approved orders can be sent to supplier");
+        }
+        log.info("Sending order ID: {} to supplier", orderId);
+        order.setStatus(PurchaseOrderStatus.IN_TRANSIT);
+        order.setUpdatedAt(LocalDateTime.now());
+        purchaseOrderRepository.save(order);
+    }
+
+    @Transactional
+    public void cancelOrderById(Long orderId, String reason) {
+        PurchaseOrder order = findOrderById(orderId);
+
+        if (order.getStatus() == PurchaseOrderStatus.DELIVERED ||
+            order.getStatus() == PurchaseOrderStatus.CANCELLED ||
+            order.getStatus() == PurchaseOrderStatus.REJECTED) {
+            throw new IllegalStateException("Cannot cancel an order with status: " + order.getStatus());
         }
 
         log.info("Cancelling order ID: {}, current status: {}", orderId, order.getStatus());
         order.setStatus(PurchaseOrderStatus.CANCELLED);
+        order.setRejectionReason(reason);
+        order.setUpdatedAt(LocalDateTime.now());
         purchaseOrderRepository.save(order);
 
         for (PurchaseOrderItem item : order.getItems()) {
@@ -148,49 +207,53 @@ public class ProcurementService {
         }
     }
 
-    @Transactional
-    public void approveOrder(Long orderId) {
-        PurchaseOrder order = purchaseOrderRepository
-            .findById(orderId)
-            .orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + orderId));
-
-        if (order.getStatus() != PurchaseOrderStatus.PENDING) {
-            throw new IllegalStateException("Only pending orders can be approved");
-        }
-
-        log.info("Approving order ID: {}, current status: {}", orderId, order.getStatus());
-        order.setStatus(PurchaseOrderStatus.IN_TRANSIT);
-        order.setUpdatedAt(LocalDateTime.now());
-        purchaseOrderRepository.save(order);
-    }
-
     // ─────────────────────────────────────────────────────────────
     // Consultas
     // ─────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<PurchaseOrderResponse> getAllOrders() {
-        return purchaseOrderRepository.findAll().stream().map(this::toResponse).toList();
+    public Page<PurchaseOrderResponse> getAllOrders(Pageable pageable) {
+        return purchaseOrderRepository.findAll(pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public PurchaseOrderResponse getOrderById(Long id) {
-        PurchaseOrder order = purchaseOrderRepository
-            .findById(id)
+        return toResponse(findOrderById(id));
+    }
+
+    @Transactional
+    public PurchaseOrderResponse submitOrderForApproval(Long id) {
+        submitForApproval(id);
+        return getOrderById(id);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse markAsApproved(Long id, UUID approverUserId, String notes) {
+        approveOrder(id, approverUserId, notes);
+        return getOrderById(id);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse rejectPurchaseOrder(Long id, UUID rejecterUserId, String reason) {
+        rejectOrder(id, rejecterUserId, reason);
+        return getOrderById(id);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse markAsSentToSupplier(Long id) {
+        sendToSupplier(id);
+        return getOrderById(id);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse cancelOrder(Long id, String reason) {
+        cancelOrderById(id, reason);
+        return getOrderById(id);
+    }
+
+    private PurchaseOrder findOrderById(Long id) {
+        return purchaseOrderRepository.findById(id)
             .orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + id));
-        return toResponse(order);
-    }
-
-    @Transactional
-    public PurchaseOrderResponse markAsApproved(Long id) {
-        approveOrder(id);
-        return getOrderById(id);
-    }
-
-    @Transactional
-    public PurchaseOrderResponse cancelOrder(Long id) {
-        cancelOrderById(id);
-        return getOrderById(id);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -223,6 +286,10 @@ public class ProcurementService {
             order.getType(),
             order.getCreatedBy() != null ? order.getCreatedBy().getName() : "Unknown",
             order.getCreatedAt(),
+            order.getApprovalNotes(),
+            order.getRejectionReason(),
+            order.getApprovedBy() != null ? order.getApprovedBy().getName() : null,
+            order.getApprovedAt(),
             itemResponses
         );
     }

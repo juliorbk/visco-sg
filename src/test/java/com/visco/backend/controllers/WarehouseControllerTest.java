@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
@@ -26,6 +25,7 @@ import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.WarehouseDTO;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
@@ -55,7 +55,7 @@ class WarehouseControllerTest {
 	@WithMockUser(authorities = "MANAGER")
 	void createWarehouse_shouldReturn201() throws Exception {
 		when(warehouseService.createWarehouse(any(CreateWarehouseRequest.class)))
-				.thenReturn(WarehouseResponse.builder().id(1L).name("New Warehouse").sapCenterCode("WH02").build());
+				.thenReturn(WarehouseDTO.builder().id(1L).name("New Warehouse").sapCenterCode("WH02").active(true).build());
 		mockMvc.perform(post("/api/warehouse")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"name\":\"New Warehouse\",\"physicalAddress\":\"Addr 123\",\"description\":\"Desc\",\"responsibleUserId\":\"00000000-0000-0000-0000-000000000001\",\"sapCenterCode\":\"WH02\"}"))

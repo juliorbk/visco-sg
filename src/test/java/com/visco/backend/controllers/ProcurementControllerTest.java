@@ -48,7 +48,7 @@ class ProcurementControllerTest {
         return new PurchaseOrderResponse(1L, "PO-001", "Test order",
                 PurchaseOrderStatus.PENDING, "Test Supplier",
                 PaymentMethod.BANK_TRANSFER, PurchaseOrderType.MATERIALS,
-                "Test User", LocalDateTime.now(), List.of());
+                "Test User", LocalDateTime.now(), null, null, null, null, List.of());
     }
 
     @Test
@@ -92,26 +92,45 @@ class ProcurementControllerTest {
 
     @Test
     @WithMockUser(authorities = "PROCUREMENT")
-    void markApproved_shouldReturn200() throws Exception {
-        when(procurementService.markAsApproved(1L)).thenReturn(new PurchaseOrderResponse(
-                1L, "PO-001", "Test", PurchaseOrderStatus.IN_TRANSIT, "Supplier",
+    void submitForApproval_shouldReturn200() throws Exception {
+        when(procurementService.submitOrderForApproval(1L)).thenReturn(new PurchaseOrderResponse(
+                1L, "PO-001", "Test", PurchaseOrderStatus.AWAITING_APPROVAL, "Supplier",
                 PaymentMethod.BANK_TRANSFER, PurchaseOrderType.MATERIALS, "User",
-                LocalDateTime.now(), List.of()));
+                LocalDateTime.now(), null, null, null, null, List.of()));
 
-        mockMvc.perform(patch("/api/procurement/orders/1/approve"))
+        mockMvc.perform(patch("/api/procurement/orders/1/submit-for-approval"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("IN_TRANSIT"));
+                .andExpect(jsonPath("$.status").value("AWAITING_APPROVAL"));
+    }
+
+    @Test
+    @WithMockUser(authorities = "PROCUREMENT")
+    void markApproved_shouldReturn200() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(procurementService.markAsApproved(eq(1L), any(UUID.class), anyString()))
+                .thenReturn(new PurchaseOrderResponse(
+                1L, "PO-001", "Test", PurchaseOrderStatus.APPROVED, "Supplier",
+                PaymentMethod.BANK_TRANSFER, PurchaseOrderType.MATERIALS, "User",
+                LocalDateTime.now(), "Approved", null, "Approver", LocalDateTime.now(), List.of()));
+
+        mockMvc.perform(patch("/api/procurement/orders/1/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"" + userId + "\",\"notes\":\"Approved\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
     @Test
     @WithMockUser(authorities = "PROCUREMENT")
     void cancelOrder_shouldReturn200() throws Exception {
-        when(procurementService.cancelOrder(1L)).thenReturn(new PurchaseOrderResponse(
+        when(procurementService.cancelOrder(eq(1L), anyString())).thenReturn(new PurchaseOrderResponse(
                 1L, "PO-001", "Test", PurchaseOrderStatus.CANCELLED, "Supplier",
                 PaymentMethod.BANK_TRANSFER, PurchaseOrderType.MATERIALS, "User",
-                LocalDateTime.now(), List.of()));
+                LocalDateTime.now(), null, "Cancelled", null, null, List.of()));
 
-        mockMvc.perform(patch("/api/procurement/orders/1/cancel"))
+        mockMvc.perform(patch("/api/procurement/orders/1/cancel")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Cancelled\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }

@@ -112,6 +112,11 @@ public class WarehouseService {
             );
         }
 
+        Location destLocation = locationRepository
+            .findById(request.destinationLocationId())
+            .orElseThrow(() ->
+                new EntityNotFoundException("Location not found: " + request.destinationLocationId()));
+
         GoodReceipt receipt = GoodReceipt.builder()
             .receiptNumber("VIS-" + orderId + "-" + System.currentTimeMillis())
             .purchaseOrder(order)
@@ -129,6 +134,10 @@ public class WarehouseService {
                 );
             }
         }
+
+        User createdBy = userRepository
+            .findById(order.getCreatedBy().getId())
+            .orElse(order.getCreatedBy());
 
         for (ReceiveGoodsRequest.ReceiveItem itemReq : request.items()) {
             PurchaseOrderItem poItem = order
@@ -153,8 +162,34 @@ public class WarehouseService {
                 .build();
 
             receipt.getItems().add(item);
-            addCurrentStock(poItem.getProduct().getId(), received);
+
+            // Put-away: find or create StockLevel at the destination location
+            StockLevel stockLevel = stockLevelRepository
+                .findByProductIdAndLocationId(poItem.getProduct().getId(), request.destinationLocationId())
+                .orElseGet(() -> StockLevel.builder()
+                    .product(poItem.getProduct())
+                    .location(destLocation)
+                    .currentStock(BigDecimal.ZERO)
+                    .pendingStock(BigDecimal.ZERO)
+                    .build());
+
+            stockLevel.setCurrentStock(stockLevel.getCurrentStock().add(received));
+            stockLevelRepository.save(stockLevel);
+
+            // Remove from pending stock (from whichever level it was added)
             substractPendingStock(poItem.getProduct().getId(), received);
+
+            // Record inventory movement (INPUT)
+            InventoryMovement movement = InventoryMovement.builder()
+                .product(poItem.getProduct())
+                .toLocation(destLocation)
+                .quantity(received)
+                .type(MovementType.INPUT)
+                .reason("Goods receipt - PO: " + order.getOrderNumber())
+                .createdAt(LocalDateTime.now())
+                .createdBy(createdBy)
+                .build();
+            inventoryMovementRepository.save(movement);
         }
 
         goodReceiptRepository.save(receipt);
@@ -234,39 +269,24 @@ public class WarehouseService {
     // stockLevelRepository.save(level);
     // }
 
-	public void addPendingStockByWarehouse(Long productId, Long warehouseId, BigDecimal quantity) {
-		StockLevel level = getFirstStockLevel(productId);
-		level.setPendingStock(level.getPendingStock().add(quantity));
-	}
-
-	public void addCurrentStock(Long productId, BigDecimal quantity) {
-		StockLevel level = getFirstStockLevel(productId);
-		level.setCurrentStock(level.getCurrentStock().add(quantity));
-	}
-
-	public void substractCurrentStock(Long productId, BigDecimal quantity) {
-		StockLevel level = getFirstStockLevel(productId);
-		level.setCurrentStock(level.getCurrentStock().subtract(quantity));
-	}
-
-	public void substractPendingStock(Long productId, BigDecimal quantity) {
-		StockLevel level = getFirstStockLevel(productId);
-		level.setPendingStock(level.getPendingStock().subtract(quantity));
-	}
+    public void addPendingStockByWarehouse(Long productId, Long warehouseId, BigDecimal quantity) {
+        StockLevel level = getFirstStockLevel(productId);
+        level.setPendingStock(level.getPendingStock().add(quantity));
+    }
 
     public void addCurrentStock(Long productId, BigDecimal quantity) {
         StockLevel level = getFirstStockLevel(productId);
         level.setCurrentStock(level.getCurrentStock().add(quantity));
     }
 
-    public void substractCurrentStock(Long productId, BigDecimal quantity) {
-        StockLevel level = getFirstStockLevel(productId);
-        level.setCurrentStock(level.getCurrentStock().subtract(quantity));
-    }
-
     public void substractPendingStock(Long productId, BigDecimal quantity) {
         StockLevel level = getFirstStockLevel(productId);
         level.setPendingStock(level.getPendingStock().subtract(quantity));
+    }
+
+    public void substractCurrentStock(Long productId, BigDecimal quantity) {
+        StockLevel level = getFirstStockLevel(productId);
+        level.setCurrentStock(level.getCurrentStock().subtract(quantity));
     }
 
     private StockLevel getFirstStockLevel(Long productId) {

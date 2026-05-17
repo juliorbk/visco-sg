@@ -14,8 +14,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.springframework.cache.annotation.CacheEvict;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -26,8 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StatsService {
 
-	private final ProductRepository productRepository;
-	private final PurchaseOrderRepository orderRepository;
+    private final ProductRepository productRepository;
+    private final PurchaseOrderRepository orderRepository;
 
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
     private static final BigDecimal PROJECTION_FACTOR = new BigDecimal("1.10");
@@ -158,22 +158,24 @@ public class StatsService {
 
     // ── Inventario crítico ────────────────────────────────────────────────────
 
-	@Cacheable(value = "dashboard", key = "'critical'")
-	@Transactional(readOnly = true)
-	public List<CriticalInventoryItemDTO> getCriticalInventory() {
-		return productRepository.findCriticalInventory()
-				.stream()
-				.map(p -> {
-					String severity = p.getCurrentStock().compareTo(BigDecimal.ZERO) == 0 ? "CRITICAL" : "WARNING";
-					return CriticalInventoryItemDTO.builder()
-							.productId(p.getProductId())
-							.productName(p.getProductName())
-							.sku(p.getSku())
-							.currentStock(p.getCurrentStock())
-							.reorderPoint(p.getReorderPoint())
-							.severity(severity)
-							.build();
-				})
-				.toList();
-	}
+    @Cacheable(value = "dashboard", key = "'critical'")
+    @Transactional(readOnly = true)
+    public List<CriticalInventoryItemDTO> getCriticalInventory() {
+        return productRepository
+            .findCriticalInventory()
+            .stream()
+            .map((p) -> {
+                String severity =
+                    p.getCurrentStock().compareTo(BigDecimal.ZERO) == 0 ? "CRITICAL" : "WARNING";
+                return CriticalInventoryItemDTO.builder()
+                    .productId(p.getProductId())
+                    .productName(p.getProductName())
+                    .sku(p.getSku())
+                    .currentStock(p.getCurrentStock())
+                    .reorderPoint(p.getReorderPoint())
+                    .severity(severity)
+                    .build();
+            })
+            .toList();
+    }
 }
