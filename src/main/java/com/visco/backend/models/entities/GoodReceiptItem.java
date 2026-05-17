@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,7 +21,10 @@ import lombok.NoArgsConstructor;
 // Item individual dentro de una nota de recepción
 // Guarda cuánto se esperaba (según la PO) y cuánto realmente llegó
 @Entity
-@Table(name = "good_receipt_items")
+@Table(name = "good_receipt_items", indexes = {
+    @Index(name = "idx_gri_good_receipt", columnList = "good_receipt_id"),
+    @Index(name = "idx_gri_product", columnList = "product_id")
+})
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

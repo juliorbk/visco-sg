@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -22,7 +23,11 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_product_supplier", columnList = "supplier_id"),
+    @Index(name = "idx_product_category", columnList = "category_id"),
+    @Index(name = "idx_product_active", columnList = "is_active")
+})
 @Getter
 @Setter
 @AllArgsConstructor

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -20,7 +21,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "inventory_movements")
+@Table(name = "inventory_movements", indexes = {
+    @Index(name = "idx_im_product", columnList = "product_id"),
+    @Index(name = "idx_im_from_location", columnList = "from_location_id"),
+    @Index(name = "idx_im_to_location", columnList = "to_location_id"),
+    @Index(name = "idx_im_created_by", columnList = "created_by_id")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,7 +22,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "stock_levels")
+@Table(name = "stock_levels", indexes = {
+    @Index(name = "idx_sl_product", columnList = "product_id"),
+    @Index(name = "idx_sl_location", columnList = "location_id"),
+    @Index(name = "idx_sl_product_location", columnList = "product_id,location_id")
+})
 public class StockLevel {
 
   @Id

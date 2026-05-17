@@ -7,6 +7,7 @@ import java.util.List;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -27,7 +28,9 @@ import lombok.ToString;
 // Nota de recepción — se crea cuando llega mercancía al warehouse
 // Registra qué productos llegaron y en qué cantidad contra una orden de compra
 @Entity
-@Table(name = "good_receipts")
+@Table(name = "good_receipts", indexes = {
+    @Index(name = "idx_gr_purchase_order", columnList = "purchase_order_id")
+})
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
