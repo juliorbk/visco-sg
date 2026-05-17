@@ -1,6 +1,5 @@
 package com.visco.backend.config;
 
-import com.visco.backend.repositories.UserRepository;
 import com.visco.backend.services.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -10,10 +9,13 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -26,7 +28,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   private static final String JWT_COOKIE_NAME = "visco_auth_token";
 
   private final JwtService jwtService;
-  private final UserRepository userRepository;
 
   @Override
   protected void doFilterInternal(
@@ -48,21 +49,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         email != null &&
         SecurityContextHolder.getContext().getAuthentication() == null
       ) {
-        userRepository
-          .findByEmail(email)
-          .ifPresent(user -> {
-            if (jwtService.isTokenValid(token, user)) {
-              var authToken = new UsernamePasswordAuthenticationToken(
-                user,
-                null,
-                user.getAuthorities()
-              );
-              authToken.setDetails(
-                new WebAuthenticationDetailsSource().buildDetails(request)
-              );
-              SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
-          });
+        if (jwtService.isTokenValid(token, email)) {
+          var authToken = new UsernamePasswordAuthenticationToken(
+            new User(email, "", List.of(new SimpleGrantedAuthority(jwtService.extractRole(token)))),
+            null,
+            List.of(new SimpleGrantedAuthority(jwtService.extractRole(token)))
+          );
+          authToken.setDetails(
+            new WebAuthenticationDetailsSource().buildDetails(request)
+          );
+          SecurityContextHolder.getContext().setAuthentication(authToken);
+        }
       }
     } catch (ExpiredJwtException e) {
       log.warn("Token expirado para la ruta: {}", request.getRequestURI());
