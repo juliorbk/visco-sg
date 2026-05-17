@@ -14,8 +14,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class StatsService {
 
     // ── KPIs ──────────────────────────────────────────────────────────────────
 
+    @Cacheable(value = "dashboard", key = "'kpis'")
     @Transactional(readOnly = true)
     public KpiStatsDTO getKpis() {
         long totalOrders = orderRepository.count();
@@ -86,6 +88,7 @@ public class StatsService {
 
     // ── Gastos ────────────────────────────────────────────────────────────────
 
+    @Cacheable(value = "dashboard", key = "'spending'")
     @Transactional(readOnly = true)
     public SpendingStatsDTO getSpendingStats() {
         LocalDateTime sixMonthsAgo = LocalDateTime.now()
@@ -155,6 +158,7 @@ public class StatsService {
 
     // ── Inventario crítico ────────────────────────────────────────────────────
 
+	@Cacheable(value = "dashboard", key = "'critical'")
 	@Transactional(readOnly = true)
 	public List<CriticalInventoryItemDTO> getCriticalInventory() {
 		return productRepository.findCriticalInventory()
