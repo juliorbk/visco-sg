@@ -24,8 +24,11 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     List<PurchaseOrder> findTopNByOrderByCreatedAtDesc(int n); // No funciona así con JPA
 
     // Correcto:
-    @Query("SELECT o FROM PurchaseOrder o ORDER BY o.createdAt DESC")
-    List<PurchaseOrder> findRecentOrders(Pageable pageable);
+  @Query("SELECT o FROM PurchaseOrder o "
+      + "JOIN FETCH o.supplier "
+      + "JOIN FETCH o.createdBy "
+      + "ORDER BY o.createdAt DESC")
+  List<PurchaseOrder> findRecentOrders(Pageable pageable);
 
     // Gastos por mes (últimos 6 meses)
     @Query(
