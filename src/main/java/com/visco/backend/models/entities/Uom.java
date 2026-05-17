@@ -1,13 +1,6 @@
 package com.visco.backend.models.entities;
 
 public enum Uom {
-    UNIDAD,
-    CAJA,
-    PAQUETE,
-    LITRO,
-    KILOGRAMO,
-    GALON,
-    METRO,
-    PULGADA,
-    CENTIMETRO
+    EA, LB, ROL, CJ, TF, M, KIT, CIL, G, PAA, GLN, L, KG, LTS, YD, PAQ, CM, CTE, CA, UN, CL, FC, M2, TM, TO, BTO, PI3, M3, PI2, BOL, BOT, CTO, TON, PAI, MIL, AM, PUL, LOT, MTL, CEN, BL, GL, SB,
+
 }

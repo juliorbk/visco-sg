@@ -1,7 +1,7 @@
 package com.visco.backend.controllers;
 
 import java.util.List;
-
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -12,18 +12,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
+import com.visco.backend.models.dtos.WarehouseDTO;
 import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.services.WarehouseService;
-
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -41,7 +39,7 @@ public class WarehouseController {
 	}
 
 	@PostMapping
-	public ResponseEntity<WarehouseResponse> createWarehouse(
+	public ResponseEntity<WarehouseDTO> createWarehouse(
 			@Valid @RequestBody CreateWarehouseRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(warehouseService.createWarehouse(request));
@@ -81,8 +79,7 @@ public class WarehouseController {
 	// ─── Goods receiving ────────────────────────────────────────────
 
 	@PostMapping("/orders/{id}/receive")
-	public ResponseEntity<GoodReceiptResponse> receiveGoods(
-			@PathVariable Long id,
+	public ResponseEntity<GoodReceiptResponse> receiveGoods(@PathVariable Long id,
 			@Valid @RequestBody ReceiveGoodsRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(warehouseService.receiveGoods(id, request));
@@ -94,7 +91,8 @@ public class WarehouseController {
 	}
 
 	@GetMapping("/orders/{orderId}/receipts")
-	public ResponseEntity<List<GoodReceiptResponse>> getReceiptsByOrderId(@PathVariable Long orderId) {
+	public ResponseEntity<List<GoodReceiptResponse>> getReceiptsByOrderId(
+			@PathVariable Long orderId) {
 		return ResponseEntity.ok(warehouseService.getReceiptsByOrderId(orderId));
 	}
 

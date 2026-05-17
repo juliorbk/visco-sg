@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# .gitignore
+.env
+
+backups/
+*.sql.gz

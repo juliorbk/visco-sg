@@ -1,18 +1,69 @@
-version: '3.8'
-
 services:
-  visco-db:
-    image: postgres:16-alpine # Usamos alpine porque es súper ligera
-    container_name: visco_database
-    restart: always
+
+  # ── Base de datos ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: visco_db
+    env_file: .env
     environment:
       POSTGRES_DB: visco_db
-      POSTGRES_USER: visco_admin
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - visco_pg_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/visco_db.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d visco_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Backend Spring Boot ──────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: visco_backend
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+  # ── Backup automático ────────────────────────────────────────────────────────
+  # Imagen minimalista con pg_dump + crond.
+  # Cron: todos los días a las 2:00 AM.
+  # Los backups se guardan en ./backups/ en tu máquina (volumen bind-mount).
+  backup:
+    image: postgres:16-alpine
+    container_name: visco_backup
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: visco_db
+      DB_USER: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backups:/backups                    # carpeta local → persiste en tu laptop
+      - ./scripts/backup.sh:/backup.sh:ro     # script montado como read-only
+    # Instala el cron, registra el job y arranca el daemon
+    entrypoint: >
+      sh -c "
+        chmod +x /backup.sh &&
+        echo '0 2 * * * /backup.sh >> /backups/backup.log 2>&1' | crontab - &&
+        echo '✅ Cron de backup registrado (diario a las 02:00 AM)' &&
+        crond -f -l 8
+      "
+    restart: unless-stopped
 
 volumes:
-  visco_pg_data:
+  postgres_data:

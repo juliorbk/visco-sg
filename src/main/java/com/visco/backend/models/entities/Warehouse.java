@@ -14,7 +14,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -39,8 +38,6 @@ public class Warehouse {
   @Column(unique = true, nullable = false)
   private String name;
 
-  // Esta es la dirección física del edificio en Ciudad Guayana (ej. Zona
-  // Industrial Matanzas)
   @Column(nullable = false)
   private String physicalAddress;
 
@@ -48,21 +45,19 @@ public class Warehouse {
   private String description;
 
   @Column(name = "sap_center_code")
-  private String sapCenterCode; // Código del almacén en SAP, si aplica
+  private String sapCenterCode;
 
   @Column(name = "is_active", nullable = false)
   private boolean active;
 
+  // Relación con el usuario responsable del almacén
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "responsible_user_id", nullable = false)
+  @JoinColumn(name = "responsible_user_id")
+  private User responsibleUser;
+
+  @OneToMany(mappedBy = "warehouse", cascade = CascadeType.ALL, orphanRemoval = true)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
-  private User responsibleUser;
-  // Relación Bidireccional: Un almacén tiene muchas ubicaciones internas
-  // (pasillos/estantes)
-  @OneToMany(mappedBy = "warehouse", cascade = CascadeType.ALL, orphanRemoval = true)
-  @EqualsAndHashCode.Exclude // Evita ciclos infinitos en Lombok
-  @ToString.Exclude // Evita ciclos infinitos al imprimir el objeto
   @Builder.Default
   private Set<Location> storageLocations = new HashSet<>();
 }

@@ -1,0 +1,23 @@
+# Compilados de Maven — el builder los genera dentro del contenedor
+target/
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.class
+
+# Variables de entorno locales (nunca al contenedor)
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Documentación y archivos de test (opcionales en imagen)
+*.md

@@ -1,6 +1,5 @@
 package com.visco.backend.models.dtos;
 
-import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
@@ -16,8 +15,5 @@ public record CreateWarehouseRequest(
 
 		@NotNull(message = "El usuario responsable es obligatorio") UUID responsibleUserId,
 
-		String sapCenterCode,
-
-		Set<Long> locationIds) {
-
+		String sapCenterCode) {
 }
