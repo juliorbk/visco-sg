@@ -20,6 +20,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   @Query("SELECT u.role as role, COUNT(u) as count FROM User u GROUP BY u.role")
   List<UserRoleCountProjection> countByRole();
 
+  @Query("SELECT u.email FROM User u WHERE u.active = true AND u.role IN ('ADMIN', 'MANAGER')")
+  List<String> findActiveAdminAndManagerEmails();
+
   interface UserRoleCountProjection {
     UserRole getRole();
 

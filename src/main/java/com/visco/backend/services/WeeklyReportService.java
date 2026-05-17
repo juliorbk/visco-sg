@@ -80,15 +80,10 @@ public class WeeklyReportService {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private List<String> resolveRecipients() {
-        // 1. Primero intenta la variable de entorno report.recipients
         if (reportRecipients != null && !reportRecipients.isBlank()) {
             return List.of(reportRecipients.split(","));
         }
-        // 2. Fallback: todos los MANAGER y ADMIN activos de la DB
-        return userRepository.findAll().stream().filter(u -> Boolean.TRUE.equals(u.getActive()))
-                .filter(u -> u.getRole().name().equals("ADMIN")
-                        || u.getRole().name().equals("MANAGER"))
-                .map(u -> u.getEmail()).toList();
+        return userRepository.findActiveAdminAndManagerEmails();
     }
 
     private void sendEmail(String to, String subject, String html) {
