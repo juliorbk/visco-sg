@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./src/main/resources/visco_backup.sql:/docker-entrypoint-initdb.d/01_seed.sql
@@ -62,3 +62,5 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: system_visco_pg_data
