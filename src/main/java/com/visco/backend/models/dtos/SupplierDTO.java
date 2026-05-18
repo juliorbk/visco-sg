@@ -36,9 +36,7 @@ public class SupplierDTO {
 	}
 
 	public static SupplierDTO fromSupplier(Supplier supplier) {
-		if (supplier.getId() == null) {
-			supplier.setId(0L);
-		}
+		Long id = supplier.getId() != null ? supplier.getId() : 0L;
 
 		List<String> phones = supplier.getPhoneNumbers() != null
 				? new ArrayList<>(supplier.getPhoneNumbers())
@@ -51,7 +49,7 @@ public class SupplierDTO {
 				: Collections.emptyList();
 
 		return SupplierDTO.builder()
-				.id(supplier.getId())
+				.id(id)
 				.name(supplier.getName())
 				.description(supplier.getDescription())
 				.address(supplier.getAddress())
