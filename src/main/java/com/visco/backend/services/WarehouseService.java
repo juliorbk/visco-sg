@@ -130,7 +130,14 @@ public class WarehouseService {
       );
 
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber("VIS-" + orderId + "-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8))
+      .receiptNumber(
+        "VIS-" +
+          orderId +
+          "-" +
+          System.currentTimeMillis() +
+          "-" +
+          UUID.randomUUID().toString().substring(0, 8)
+      )
       .purchaseOrder(order)
       .destinationWarehouseId(order.getDestinationWarehouse().getId())
       .receivedAt(LocalDateTime.now())
@@ -304,7 +311,11 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    List<StockLevel> levels = stockLevelRepository.findByProductIdAndLocationWarehouseId(productId, warehouseId);
+    List<StockLevel> levels =
+      stockLevelRepository.findByProductIdAndLocationWarehouseId(
+        productId,
+        warehouseId
+      );
     if (levels.isEmpty()) {
       return;
     }
