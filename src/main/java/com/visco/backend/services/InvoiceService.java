@@ -93,10 +93,13 @@ public class InvoiceService {
                 .stream()
                 .filter((i) -> i.getProduct().getId().equals(itemReq.productId()))
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() ->
+                    new IllegalArgumentException(
+                        "Product ID " + itemReq.productId() + " is not in purchase order " + order.getOrderNumber()
+                    )
+                );
 
-            BigDecimal poQty =
-                poItem != null ? BigDecimal.valueOf(poItem.getQuantity()) : BigDecimal.ZERO;
+            BigDecimal poQty = BigDecimal.valueOf(poItem.getQuantity());
             BigDecimal receivedQty = receivedQtys.getOrDefault(
                 itemReq.productId(),
                 BigDecimal.ZERO
@@ -104,8 +107,7 @@ public class InvoiceService {
             BigDecimal invQty = itemReq.quantity();
 
             boolean qtyMatch = invQty.compareTo(poQty) == 0;
-            boolean priceMatch =
-                poItem != null && itemReq.unitPrice().compareTo(poItem.getUnitPrice()) == 0;
+            boolean priceMatch = itemReq.unitPrice().compareTo(poItem.getUnitPrice()) == 0;
 
             if (!qtyMatch || !priceMatch) {
                 anyMismatch = true;
@@ -134,8 +136,10 @@ public class InvoiceService {
             purchaseOrderRepository.save(order);
         } else if (anyMismatch) {
             invoice.setStatus(InvoiceStatus.PARTIALLY_MATCHED);
+            invoice.setMatchingNotes("One or more items have quantity or price mismatches");
         } else {
             invoice.setStatus(InvoiceStatus.UNMATCHED);
+            invoice.setMatchingNotes("No items matched the purchase order");
         }
 
         Invoice saved = invoiceRepository.save(invoice);
@@ -171,6 +175,12 @@ public class InvoiceService {
     @Transactional
     public InvoiceResponse markAsPaid(Long id, LocalDate paymentDate) {
         Invoice invoice = findById(id);
+        if (invoice.getStatus() == InvoiceStatus.PAID) {
+            throw new IllegalStateException("Invoice is already paid");
+        }
+        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot mark a cancelled invoice as paid");
+        }
         invoice.setStatus(InvoiceStatus.PAID);
         invoice.setPaymentDate(paymentDate);
         Invoice saved = invoiceRepository.save(invoice);

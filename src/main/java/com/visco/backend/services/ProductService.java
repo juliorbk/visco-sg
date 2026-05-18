@@ -151,7 +151,7 @@ public class ProductService {
   // Actualiza los campos editables de un producto.
   // Valida SKU único si el valor cambió. No modifica internalCode.
   @Transactional
-  public ProductDTO updateProduct(Long id, Product updated) {
+  public ProductDTO updateProduct(Long id, ProductDTO dto) {
     Product existing = productRepository
       .findById(id)
       .orElseThrow(() ->
@@ -159,21 +159,33 @@ public class ProductService {
       );
 
     if (
-      updated.getSku() != null &&
-      !updated.getSku().equals(existing.getSku()) &&
-      productRepository.findBySku(updated.getSku()).isPresent()
+      dto.getSku() != null &&
+      !dto.getSku().equals(existing.getSku()) &&
+      productRepository.findBySku(dto.getSku()).isPresent()
     ) {
       throw new IllegalArgumentException("El SKU ya existe");
     }
 
-    existing.setName(updated.getName());
-    existing.setSku(updated.getSku());
-    existing.setDescription(updated.getDescription());
-    existing.setSapCode(updated.getSapCode());
-    existing.setUom(updated.getUom());
-    existing.setReorderPoint(updated.getReorderPoint());
-    existing.setSupplier(updated.getSupplier());
-    existing.setCategory(updated.getCategory());
+    Supplier supplier = null;
+    if (dto.getSupplierId() != null) {
+      supplier = supplierRepository.findById(dto.getSupplierId())
+        .orElseThrow(() -> new IllegalArgumentException("Supplier not found"));
+    }
+
+    Category category = null;
+    if (dto.getCategoryId() != null) {
+      category = categoryRepository.findById(dto.getCategoryId())
+        .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+    }
+
+    existing.setName(dto.getName());
+    existing.setSku(dto.getSku());
+    existing.setDescription(dto.getDescription());
+    existing.setSapCode(dto.getSapCode());
+    existing.setUom(Uom.valueOf(dto.getUom()));
+    existing.setReorderPoint(dto.getReorderPoint());
+    existing.setSupplier(supplier);
+    existing.setCategory(category);
 
     Product saved = productRepository.save(existing);
     return ProductDTO.fromEntity(

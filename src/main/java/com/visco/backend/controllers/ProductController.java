@@ -53,13 +53,9 @@ public class ProductController {
   @PutMapping("/products/{id}")
   public ResponseEntity<ProductDTO> updateProduct(
     @PathVariable Long id,
-    @RequestBody Product product
+    @RequestBody ProductDTO request
   ) {
-    try {
-      return ResponseEntity.ok(productService.updateProduct(id, product));
-    } catch (IllegalArgumentException e) {
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-    }
+    return ResponseEntity.ok(productService.updateProduct(id, request));
   }
 
   // DELETE /api/inventory/products/{id}
