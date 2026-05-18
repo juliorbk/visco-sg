@@ -302,8 +302,13 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    StockLevel level = getFirstStockLevel(productId);
+    List<StockLevel> levels = stockLevelRepository.findByProductIdAndLocationWarehouseId(productId, warehouseId);
+    if (levels.isEmpty()) {
+      return;
+    }
+    StockLevel level = levels.get(0);
     level.setPendingStock(level.getPendingStock().add(quantity));
+    stockLevelRepository.save(level);
   }
 
   public void addCurrentStock(Long productId, BigDecimal quantity) {
