@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -24,7 +25,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import jakarta.persistence.Id;
 
 @Entity
 @Table(
@@ -85,7 +85,7 @@ public class PurchaseOrder {
   private LocalDateTime updatedAt;
 
   @Column(name = "lead_time")
-  private Integer leadTime;
+  private Integer leadTime = 0;
 
   private LocalDateTime deletedAt;
 

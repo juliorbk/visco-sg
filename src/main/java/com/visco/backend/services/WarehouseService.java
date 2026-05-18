@@ -556,12 +556,15 @@ public class WarehouseService {
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
+    BigDecimal currentStock = stock.getCurrentStock();
+    BigDecimal difference = request.newStock().subtract(currentStock);
+
     // 2. Record the movement in the audit trail
     InventoryMovement movement = InventoryMovement.builder()
       .product(stock.getProduct())
       .fromLocation(stock.getLocation()) //Original location
       .toLocation(stock.getLocation()) //New location
-      .quantity(request.newStock())
+      .quantity(difference)
       .type(MovementType.ADJUSTMENT) // Type
       .reason(request.reason() != null ? request.reason() : "Adjust stock") //Reason
       .entryUnitPrice(request.unitCost())

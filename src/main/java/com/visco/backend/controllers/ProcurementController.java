@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,64 +25,84 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProcurementController {
 
-    private final ProcurementService procurementService;
+  private final ProcurementService procurementService;
 
-    @PostMapping("/orders")
-    public ResponseEntity<PurchaseOrderResponse> createOrder(
-            @Valid @RequestBody CreatePurchaseOrderRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(procurementService.createPurchaseOrder(request));
-    }
+  @PostMapping("/orders")
+  public ResponseEntity<PurchaseOrderResponse> createOrder(
+    @Valid @RequestBody CreatePurchaseOrderRequest request
+  ) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(
+      procurementService.createPurchaseOrder(request)
+    );
+  }
 
-    @GetMapping("/orders")
-    public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(Pageable pageable) {
-        return ResponseEntity.ok(procurementService.getAllOrders(pageable));
-    }
+  @GetMapping("/orders")
+  public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(procurementService.getAllOrders(pageable));
+  }
 
-    @GetMapping("/orders/{id}")
-    public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.getOrderById(id));
-    }
+  @GetMapping("/orders/{id}")
+  public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
+    return ResponseEntity.ok(procurementService.getOrderById(id));
+  }
 
-    @PatchMapping("/orders/{id}/submit-for-approval")
-    public ResponseEntity<PurchaseOrderResponse> submitForApproval(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.submitOrderForApproval(id));
-    }
+  @PatchMapping("/orders/{id}/submit-for-approval")
+  public ResponseEntity<PurchaseOrderResponse> submitForApproval(
+    @PathVariable Long id
+  ) {
+    return ResponseEntity.ok(procurementService.submitOrderForApproval(id));
+  }
 
-    @PatchMapping("/orders/{id}/approve")
-    public ResponseEntity<PurchaseOrderResponse> markApproved(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> body) {
-        UUID approverId = body.get("userId") != null
-            ? UUID.fromString(body.get("userId").toString())
-            : null;
-        String notes = body.get("notes") != null ? body.get("notes").toString() : null;
-        return ResponseEntity.ok(procurementService.markAsApproved(id, approverId, notes));
-    }
+  public record ApproveOrderRequest(String notes) {}
 
-    @PatchMapping("/orders/{id}/reject")
-    public ResponseEntity<PurchaseOrderResponse> rejectOrder(
-            @PathVariable Long id,
-            @RequestBody Map<String, Object> body) {
-        UUID rejecterId = body.get("userId") != null
-            ? UUID.fromString(body.get("userId").toString())
-            : null;
-        String reason = body.get("reason") != null ? body.get("reason").toString() : null;
-        return ResponseEntity.ok(procurementService.rejectPurchaseOrder(id, rejecterId, reason));
-    }
+  @PatchMapping("/orders/{id}/approve")
+  public ResponseEntity<PurchaseOrderResponse> markApproved(
+    @PathVariable Long id,
+    @AuthenticationPrincipal UserDetails currentUser, // Get user from token!
+    @RequestBody(required = false) ApproveOrderRequest request
+  ) {
+    UUID approverId = extractUuidFrom(currentUser);
+    String notes = request != null ? request.getNotes() : null;
 
-    @PatchMapping("/orders/{id}/send-to-supplier")
-    public ResponseEntity<PurchaseOrderResponse> sendToSupplier(@PathVariable Long id) {
-        return ResponseEntity.ok(procurementService.markAsSentToSupplier(id));
-    }
+    return ResponseEntity.ok(
+      procurementService.markAsApproved(id, approverId, notes)
+    );
+  }
 
-    @PatchMapping("/orders/{id}/cancel")
-    public ResponseEntity<PurchaseOrderResponse> cancelOrder(
-            @PathVariable Long id,
-            @RequestBody(required = false) Map<String, Object> body) {
-        String reason = body != null && body.get("reason") != null
-            ? body.get("reason").toString() : null;
-        return ResponseEntity.ok(procurementService.cancelOrder(id, reason));
-    }
+  @PatchMapping("/orders/{id}/reject")
+  public ResponseEntity<PurchaseOrderResponse> rejectOrder(
+    @PathVariable Long id,
+    @RequestBody Map<String, Object> body
+  ) {
+    UUID rejecterId =
+      body.get("userId") != null
+        ? UUID.fromString(body.get("userId").toString())
+        : null;
+    String reason =
+      body.get("reason") != null ? body.get("reason").toString() : null;
+    return ResponseEntity.ok(
+      procurementService.rejectPurchaseOrder(id, rejecterId, reason)
+    );
+  }
 
+  @PatchMapping("/orders/{id}/send-to-supplier")
+  public ResponseEntity<PurchaseOrderResponse> sendToSupplier(
+    @PathVariable Long id
+  ) {
+    return ResponseEntity.ok(procurementService.markAsSentToSupplier(id));
+  }
+
+  @PatchMapping("/orders/{id}/cancel")
+  public ResponseEntity<PurchaseOrderResponse> cancelOrder(
+    @PathVariable Long id,
+    @RequestBody(required = false) Map<String, Object> body
+  ) {
+    String reason =
+      body != null && body.get("reason") != null
+        ? body.get("reason").toString()
+        : null;
+    return ResponseEntity.ok(procurementService.cancelOrder(id, reason));
+  }
 }
