@@ -20,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.visco.backend.models.dtos.InventoryMovementResponse;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
@@ -142,6 +143,34 @@ class WarehouseControllerTest {
     void getReceipt_shouldReturn404() throws Exception {
         when(warehouseService.getReceiptById(99L)).thenThrow(new EntityNotFoundException("Not found"));
         mockMvc.perform(get("/api/warehouse/receipts/99")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(authorities = "WAREHOUSEMAN")
+    void getMovements_shouldReturn200() throws Exception {
+        when(warehouseService.getMovements(eq(1L), any(), any(), any(), any()))
+                .thenReturn(List.of(
+                        new InventoryMovementResponse(1L, 1L, "Product", "SKU-001", "INPUT",
+                                BigDecimal.TEN, BigDecimal.valueOf(25.50), null,
+                                null, "Main Warehouse", "Goods receipt - PO: PO-001",
+                                LocalDateTime.now(), "John Doe", BigDecimal.TEN)
+                ));
+        mockMvc.perform(get("/api/warehouse/movements")
+                        .param("productId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].productId").value(1))
+                .andExpect(jsonPath("$[0].type").value("INPUT"))
+                .andExpect(jsonPath("$[0].entryUnitPrice").value(25.50));
+    }
+
+    @Test
+    @WithMockUser(authorities = "WAREHOUSEMAN")
+    void getMovements_noFilters_shouldReturn200() throws Exception {
+        when(warehouseService.getMovements(null, null, null, null, null))
+                .thenReturn(List.of());
+        mockMvc.perform(get("/api/warehouse/movements"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
 }

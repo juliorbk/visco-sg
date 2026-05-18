@@ -59,6 +59,12 @@ public class InventoryMovement {
 	@Column(length = 500)
 	private String reason;
 
+	@Column(name = "entry_unit_price", precision = 38, scale = 2)
+	private BigDecimal entryUnitPrice;
+
+	@Column(name = "exit_unit_price", precision = 38, scale = 2)
+	private BigDecimal exitUnitPrice;
+
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 

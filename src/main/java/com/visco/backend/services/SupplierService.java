@@ -169,15 +169,15 @@ public class SupplierService {
     }
 
     public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
-        return supplierRepository.findByActiveTrue(pageable);
+        return supplierRepository.findByActiveTrue(pageable).map(SupplierDTO::fromSupplier);
     }
 
     public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
-        return supplierRepository.findByActiveFalse(pageable);
+        return supplierRepository.findByActiveFalse(pageable).map(SupplierDTO::fromSupplier);
     }
 
     public Page<SupplierDTO> getSuppliersByCurrency(Currency currency, Pageable pageable) {
-        return supplierRepository.findByCurrency(currency, pageable);
+        return supplierRepository.findByCurrency(currency, pageable).map(SupplierDTO::fromSupplier);
     }
 
     @Transactional(readOnly = true)

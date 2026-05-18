@@ -16,5 +16,7 @@ public record AdjustStockRequest(
 
 		String reason,
 
-		@NotNull(message = "El usuario que realiza el ajuste es obligatorio") UUID createdById) {
+		@NotNull(message = "El usuario que realiza el ajuste es obligatorio") UUID createdById,
+
+		BigDecimal unitCost) {
 }

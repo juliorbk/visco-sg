@@ -26,12 +26,10 @@ public class ProductMigrationService {
 
   private final JdbcTemplate jdbcTemplate;
 
-  // Tamaño del lote: cada 1000 registros hace un INSERT masivo a la BD
-  // (reducido de 5000 porque TEXTO LARGO MATERIAL puede ser extenso)
   private static final int BATCH_SIZE = 1000;
 
-  // Tamaño máximo permitido del archivo (50 MB)
-  private static final long MAX_FILE_SIZE_BYTES = 75 * 1024 * 1024L;
+  // LÍMITE AUMENTADO A 150 MB reales
+  private static final long MAX_FILE_SIZE_BYTES = 150 * 1024 * 1024L;
 
   public ProductMigrationService(JdbcTemplate jdbcTemplate) {
     this.jdbcTemplate = jdbcTemplate;
@@ -39,28 +37,24 @@ public class ProductMigrationService {
 
   @Transactional
   public MigrationResult importProductsFromCsv(MultipartFile file) {
-    // ── Validaciones previas ──────────────────────────────────────────────
     validateFile(file);
 
-    String sql = """
-      INSERT INTO products
-      (internal_code, sap_code, name, sku, uom, description, category_id, is_active, reorder_point)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (internal_code) DO NOTHING
-      """;
+    String sql =
+      "INSERT INTO products (internal_code, sap_code, name, sku, uom, description, category_id, is_active, reorder_point, max_stock, created_at, updated_at) " +
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) " +
+      "ON CONFLICT (sap_code) DO UPDATE SET " +
+      "reorder_point = EXCLUDED.reorder_point, " +
+      "max_stock = EXCLUDED.max_stock, " +
+      "sku = COALESCE(products.sku, EXCLUDED.sku), " +
+      "updated_at = NOW()";
 
     List<Object[]> batch = new ArrayList<>();
     int totalInserted = 0;
     int totalIgnored = 0;
 
-    // Set para deduplicar por SKU en memoria antes del INSERT
-    // El mismo producto aparece en múltiples filas por estar en distintos almacenes;
-    // solo nos interesa insertar uno.
     java.util.Set<String> seenSkus = new java.util.HashSet<>();
 
     try (
-      // BOMInputStream stripea el BOM antes de que el parser lea los headers,
-      // evitando que la primera columna quede como "﻿NEW CODE" en vez de "NEW CODE"
       BOMInputStream bomStream = BOMInputStream.builder()
         .setInputStream(file.getInputStream())
         .setByteOrderMarks(ByteOrderMark.UTF_8)
@@ -80,53 +74,34 @@ public class ProductMigrationService {
         .parse(reader)
     ) {
       for (CSVRecord csvRecord : csvParser) {
-        // 1. Extraer el código limpiando comillas residuales del Excel
-        // BOM ya fue removido por BOMInputStream
         String rawCode = csvRecord.get("NEW CODE").replace("\"", "").trim();
+        if (rawCode.isEmpty()) continue;
 
-        // Saltar filas vacías (basura al final del archivo Excel exportado)
-        if (rawCode.isEmpty()) {
-          continue;
-        }
-
-        // Normalizar el código: Excel elimina ceros a la izquierda al exportar CSV
-        // (000001 → 1). Los reponemos dejando siempre mínimo 6 dígitos (000001, 000002…)
-        // Si el código ya tiene más de 6 dígitos, se respeta tal cual.
         String internalCode = normalizeCode(rawCode);
 
-        // 2. Extraer y limpiar el Category ID
-        String categoryIdStr = csvRecord
-          .get("CATEGORY ID")
-          .replace("\"", "")
-          .trim();
+        // --- CORRECCIÓN: Categoría tolerante a fallos (Comodín) ---
+        Long categoryId = 144L; // <-- ID POR DEFECTO: "POR CLASIFICAR"
 
-        if (categoryIdStr.isEmpty()) {
-          log.warn(
-            "Fila {} ignorada: CATEGORY ID vacío -> Producto: {}",
-            csvParser.getCurrentLineNumber(),
-            internalCode
-          );
-          totalIgnored++;
-          continue;
-        }
-
-        // 3. Parsear el Category ID de forma segura
-        //    El split("\\.") cubre casos como "1234.0" que exporta Excel
-        long categoryId;
         try {
-          categoryId = Long.parseLong(categoryIdStr.split("\\.")[0]);
-        } catch (NumberFormatException e) {
-          log.warn(
-            "Fila {} ignorada: CATEGORY ID inválido '{}' -> Producto: {}",
+          if (
+            csvRecord.isMapped("CATEGORY ID") &&
+            !csvRecord.get("CATEGORY ID").trim().isEmpty()
+          ) {
+            String categoryIdStr = csvRecord
+              .get("CATEGORY ID")
+              .replace("\"", "")
+              .trim();
+            categoryId = Long.parseLong(categoryIdStr.split("\\.")[0]);
+          }
+        } catch (Exception e) {
+          log.debug(
+            "Fila {}: Sin categoría válida, se enviará a POR CLASIFICAR. Producto: {}",
             csvParser.getCurrentLineNumber(),
-            categoryIdStr,
             internalCode
           );
-          totalIgnored++;
-          continue;
         }
+        // ----------------------------------------------------------
 
-        // 4. Extraer columnas requeridas (NOT NULL en la tabla)
         String sapCode = csvRecord.get("CODIGO OLD").replace("\"", "").trim();
         String name = csvRecord
           .get("DESCRIPCION + N° PARTE")
@@ -135,63 +110,74 @@ public class ProductMigrationService {
         String sku = csvRecord.get("N° PARTE").replace("\"", "").trim();
         String uom = csvRecord.get("U/M").replace("\"", "").trim();
 
-        // Validar que ninguna columna NOT NULL venga vacía desde el CSV
-        if (
-          sapCode.isEmpty() || name.isEmpty() || sku.isEmpty() || uom.isEmpty()
-        ) {
+        // VALIDACIÓN RELAJADA: Solo exigimos NOMBRE y UNIDAD DE MEDIDA
+        if (name.isEmpty() || uom.isEmpty()) {
           log.warn(
-            "Fila {} ignorada: columna obligatoria vacía (sap_code='{}', name='{}', sku='{}', uom='{}') -> Producto: {}",
+            "Fila {} ignorada: Falta nombre o unidad de medida -> Producto: {}",
             csvParser.getCurrentLineNumber(),
-            sapCode,
-            name,
-            sku,
-            uom,
             internalCode
           );
           totalIgnored++;
           continue;
         }
 
-        // Deduplicar por SKU: el mismo producto puede aparecer N veces en el CSV
-        // porque está en distintos almacenes. Solo insertamos la primera ocurrencia.
-        if (!seenSkus.add(sku)) {
+        // Si hay SKU, verificamos que no esté duplicado en esta misma carga
+        if (!sku.isEmpty() && !seenSkus.add(sku)) {
+          totalIgnored++;
+          continue;
+        }
+
+        // LECTURA DE LOS NUEVOS CAMPOS (Punto de reorden y stock máximo)
+        double reorderPoint = 0.0;
+        double maxStock = 0.0;
+        try {
+          if (
+            csvRecord.isMapped("REORDER_POINT") &&
+            !csvRecord.get("REORDER_POINT").isEmpty()
+          ) {
+            reorderPoint = Double.parseDouble(
+              csvRecord.get("REORDER_POINT").trim()
+            );
+          }
+          if (
+            csvRecord.isMapped("MAX_STOCK") &&
+            !csvRecord.get("MAX_STOCK").isEmpty()
+          ) {
+            maxStock = Double.parseDouble(csvRecord.get("MAX_STOCK").trim());
+          }
+        } catch (Exception e) {
           log.debug(
-            "Fila {} ignorada: SKU '{}' duplicado (producto: {})",
-            csvParser.getCurrentLineNumber(),
-            sku,
+            "No se pudieron parsear los límites de stock para {}. Se usarán 0.0",
             internalCode
           );
-          totalIgnored++;
-          continue;
         }
 
-        // 5. Mapear columnas al orden exacto del INSERT
-        //    Las columnas FAMILIA, SUBFAMILIA, BUSCADOR, Centro y ALMACEN
-        //    están disponibles en el CSV pero no se persisten en esta tabla.
+        // ARRAY CON LOS 10 CAMPOS EXACTOS
         Object[] values = new Object[] {
-          internalCode, // internal_code
-          sapCode, // sap_code
-          name, // name
-          sku, // sku
-          uom, // uom
-          csvRecord.get("TEXTO LARGO MATERIAL"), // description (nullable)
-          categoryId, // category_id
-          true, // is_active
-          0.00, // reorder_point
+          internalCode,
+          sapCode.isEmpty() ? null : sapCode,
+          name,
+          sku.isEmpty() ? null : sku,
+          uom,
+          csvRecord.isMapped("TEXTO LARGO MATERIAL")
+            ? csvRecord.get("TEXTO LARGO MATERIAL")
+            : null,
+          categoryId,
+          true,
+          reorderPoint,
+          maxStock,
         };
 
         batch.add(values);
 
-        // 5. Flush del lote cada BATCH_SIZE registros
         if (batch.size() >= BATCH_SIZE) {
           jdbcTemplate.batchUpdate(sql, batch);
           totalInserted += batch.size();
-          log.info("Progreso: {} registros insertados...", totalInserted);
+          log.info("Progreso: {} registros procesados...", totalInserted);
           batch.clear();
         }
       }
 
-      // 6. Flush del último lote (registros restantes por debajo de BATCH_SIZE)
       if (!batch.isEmpty()) {
         jdbcTemplate.batchUpdate(sql, batch);
         totalInserted += batch.size();
@@ -199,13 +185,12 @@ public class ProductMigrationService {
       }
 
       log.info(
-        "Migración completada. Insertados: {} | Ignorados: {}",
+        "Migración completada. Procesados: {} | Ignorados: {}",
         totalInserted,
         totalIgnored
       );
       return new MigrationResult(totalInserted, totalIgnored);
     } catch (Exception e) {
-      // Incluir número de línea en el mensaje para facilitar el debug
       throw new RuntimeException(
         "Error procesando el archivo CSV: " + e.getMessage(),
         e
@@ -213,26 +198,14 @@ public class ProductMigrationService {
     }
   }
 
-  // ── Normalización del código interno ─────────────────────────────────────
-
-  /**
-   * Garantiza que el código tenga siempre el formato de 6 dígitos con ceros a la izquierda.
-   * Excel elimina los ceros al exportar CSV: "000001" → "1".
-   * Este método revierte ese comportamiento: "1" → "000001", "12345" → "012345".
-   * Si el valor ya supera los 6 dígitos (ej: "1234567"), se deja intacto.
-   * Si el valor no es numérico (ej: código alfanumérico), se devuelve tal cual.
-   */
   private String normalizeCode(String raw) {
     try {
       long numeric = Long.parseLong(raw);
       return String.format("%06d", numeric);
     } catch (NumberFormatException e) {
-      // Código alfanumérico: no se puede repadear, se usa tal cual
       return raw;
     }
   }
-
-  // ── Validación del archivo entrante ──────────────────────────────────────
 
   private void validateFile(MultipartFile file) {
     if (file == null || file.isEmpty()) {
@@ -240,25 +213,18 @@ public class ProductMigrationService {
         "El archivo está vacío o no fue enviado."
       );
     }
-
     String filename = file.getOriginalFilename();
     if (filename == null || !filename.toLowerCase().endsWith(".csv")) {
       throw new IllegalArgumentException(
         "Solo se aceptan archivos con extensión .csv."
       );
     }
-
     if (file.getSize() > MAX_FILE_SIZE_BYTES) {
       throw new IllegalArgumentException(
-        "El archivo supera el tamaño máximo permitido de 50 MB."
+        "El archivo supera el tamaño máximo permitido de 150 MB."
       );
     }
   }
 
-  // ── DTO de resultado ─────────────────────────────────────────────────────
-
-  /**
-   * Resumen de la migración devuelto al llamador (controller).
-   */
   public record MigrationResult(int inserted, int ignored) {}
 }

@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import com.visco.backend.models.dtos.SupplierDTO;
 import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.Supplier;
 
@@ -16,11 +15,11 @@ import com.visco.backend.models.entities.Supplier;
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 	Page<Supplier> findAll(Pageable pageable);
 
-	Page<SupplierDTO> findByActiveTrue(Pageable pageable);
+	Page<Supplier> findByActiveTrue(Pageable pageable);
 
-	Page<SupplierDTO> findByActiveFalse(Pageable pageable);
+	Page<Supplier> findByActiveFalse(Pageable pageable);
 
-	Page<SupplierDTO> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->
+	Page<Supplier> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->
 
 	@Query("SELECT s.id as supplierId, s.name as supplierName, COUNT(o) as orderCount " +
 			"FROM PurchaseOrder o JOIN o.supplier s " +

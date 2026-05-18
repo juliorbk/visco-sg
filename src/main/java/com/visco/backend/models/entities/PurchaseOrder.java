@@ -3,13 +3,12 @@ package com.visco.backend.models.entities;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -25,100 +24,110 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import jakarta.persistence.Id;
 
 @Entity
-@Table(name = "purchase_orders", indexes = {
+@Table(
+  name = "purchase_orders",
+  indexes = {
     @Index(name = "idx_po_supplier", columnList = "supplier_id"),
     @Index(name = "idx_po_created_by", columnList = "created_by_id"),
     @Index(name = "idx_po_warehouse", columnList = "destination_warehouse_id"),
     @Index(name = "idx_po_status", columnList = "status"),
-    @Index(name = "idx_po_created_at", columnList = "created_at")
-})
+    @Index(name = "idx_po_created_at", columnList = "created_at"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class PurchaseOrder {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment
+  private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String orderNumber;
+  @Column(unique = true, nullable = false)
+  private String orderNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_id", nullable = false)
-    private User createdBy;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "created_by_id", nullable = false)
+  private User createdBy;
 
-    @Column(nullable = false)
-    private String description;
+  @Column(nullable = false)
+  private String description;
 
-    // Corregido: Usamos tu Enum en lugar de un String
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PaymentMethod paymentMethod;
+  // Corregido: Usamos tu Enum en lugar de un String
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PaymentMethod paymentMethod;
 
-    // Corregido: Usamos tu Enum en lugar de un String
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PurchaseOrderType type;
+  // Corregido: Usamos tu Enum en lugar de un String
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PurchaseOrderType type;
 
-    // Corregido: Usamos tu Enum en lugar de un String
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PurchaseOrderStatus status;
+  // Corregido: Usamos tu Enum en lugar de un String
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private PurchaseOrderStatus status;
 
-    // Relación con el Proveedor
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", nullable = false)
-    private Supplier supplier;
+  // Relación con el Proveedor
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "supplier_id", nullable = false)
+  private Supplier supplier;
 
-    // Auditoría básica
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+  // Auditoría básica
+  @Column(name = "created_at", updatable = false)
+  private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", updatable = true)
-    private LocalDateTime updatedAt;
+  @Column(name = "updated_at", updatable = true)
+  private LocalDateTime updatedAt;
 
-    @Column(name = "lead_time", nullable = false)
-    private Integer leadTime;
+  @Column(name = "lead_time", nullable = false)
+  private Integer leadTime;
 
-    private LocalDateTime deletedAt;
+  private LocalDateTime deletedAt;
 
-    @Column(name = "approval_notes", length = 1000)
-    private String approvalNotes;
+  @Column(name = "approval_notes", length = 1000)
+  private String approvalNotes;
 
-    @Column(name = "rejection_reason", length = 1000)
-    private String rejectionReason;
+  @Column(name = "rejection_reason", length = 1000)
+  private String rejectionReason;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by_id")
-    private User approvedBy;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "approved_by_id")
+  private User approvedBy;
 
-    @Column(name = "approved_at")
-    private LocalDateTime approvedAt;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "requisition_id")
+  private Requisition requisition;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
+  @Column(name = "approved_at")
+  private LocalDateTime approvedAt;
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
+  @PrePersist
+  protected void onCreate() {
+    createdAt = LocalDateTime.now();
+  }
 
-    // Dentro de tu clase PurchaseOrder.java
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "destination_warehouse_id", nullable = false)
-    private Warehouse destinationWarehouse;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "destination_warehouse_id", nullable = false)
+  private Warehouse destinationWarehouse;
 
-    // Relación bidireccional con los items de la orden
-    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private List<PurchaseOrderItem> items = new ArrayList<>();
+  // Relación bidireccional con los items de la orden
+  @OneToMany(
+    mappedBy = "purchaseOrder",
+    cascade = CascadeType.ALL,
+    orphanRemoval = true
+  )
+  @Builder.Default
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private List<PurchaseOrderItem> items = new ArrayList<>();
 }
