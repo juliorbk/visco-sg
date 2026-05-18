@@ -84,7 +84,7 @@ public class PurchaseOrder {
   @Column(name = "updated_at", updatable = true)
   private LocalDateTime updatedAt;
 
-  @Column(name = "lead_time", nullable = false)
+  @Column(name = "lead_time")
   private Integer leadTime;
 
   private LocalDateTime deletedAt;
