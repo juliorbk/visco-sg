@@ -20,7 +20,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   Page<Product> findAll(Pageable pageable);
 
   @Query(
-    "SELECT COUNT(p) FROM Product p " +
+    "SELECT COUNT(DISTINCT p) FROM Product p " +
       "JOIN StockLevel s ON s.product.id = p.id " +
       "WHERE s.currentStock <= p.reorderPoint AND p.active = true"
   )

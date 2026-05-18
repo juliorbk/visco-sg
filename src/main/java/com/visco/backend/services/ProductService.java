@@ -11,7 +11,7 @@ import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -159,7 +159,8 @@ public class ProductService {
       );
 
     if (
-      !existing.getSku().equals(updated.getSku()) &&
+      updated.getSku() != null &&
+      !updated.getSku().equals(existing.getSku()) &&
       productRepository.findBySku(updated.getSku()).isPresent()
     ) {
       throw new IllegalArgumentException("El SKU ya existe");

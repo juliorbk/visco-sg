@@ -117,7 +117,7 @@ public class SupplierService {
             .findById(Id)
             .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + Id));
 
-        if (supplier.getActive()) {
+        if (Boolean.TRUE.equals(supplier.getActive())) {
             throw new IllegalStateException(
                 "Supplier with id: " + Id + " is active, cannot be deleted"
             );
