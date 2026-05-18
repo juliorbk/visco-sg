@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./src/main/resources/visco_db.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
+      - ./src/main/resources/visco_db.sql:/docker-entrypoint-initdb.d/01_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d visco_db"]
       interval: 5s
@@ -35,9 +35,6 @@ services:
     restart: on-failure
 
   # ── Backup automático ────────────────────────────────────────────────────────
-  # Imagen minimalista con pg_dump + crond.
-  # Cron: todos los días a las 2:00 AM.
-  # Los backups se guardan en ./backups/ en tu máquina (volumen bind-mount).
   backup:
     image: postgres:16-alpine
     container_name: visco_backup
@@ -53,9 +50,8 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backups:/backups                    # carpeta local → persiste en tu laptop
-      - ./scripts/backup.sh:/backup.sh:ro     # script montado como read-only
-    # Instala el cron, registra el job y arranca el daemon
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh
     entrypoint: >
       sh -c "
         chmod +x /backup.sh &&

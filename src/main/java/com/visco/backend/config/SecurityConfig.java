@@ -58,6 +58,7 @@ public class SecurityConfig {
                     // Público
                     .requestMatchers(
                         "/api/auth/**",
+                        "/api/cost-centers/**",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/api/migration/**"

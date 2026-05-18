@@ -115,7 +115,7 @@ public class AuthService {
 
     public UserDTO getCurrentUser(String email) {
         User user = userRepository
-            .findByEmailWithArea(email)
+            .findByEmailWithCostCenter(email)
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
         return UserDTO.fromUser(user);
     }

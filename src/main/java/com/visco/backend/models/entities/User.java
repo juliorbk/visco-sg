@@ -81,7 +81,7 @@ public class User implements UserDetails {
     private UserRole role;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cost_center_id", nullable = false)
+    @JoinColumn(name = "cost_center_id")
     private CostCenter costCenter;
 
     @Column(name = "is_active")
