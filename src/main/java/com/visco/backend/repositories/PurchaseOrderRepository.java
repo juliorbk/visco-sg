@@ -20,9 +20,6 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
         Long getCount();
     }
 
-    // Últimas N órdenes
-    List<PurchaseOrder> findTopNByOrderByCreatedAtDesc(int n); // No funciona así con JPA
-
     // Correcto:
   @Query("SELECT o FROM PurchaseOrder o "
       + "JOIN FETCH o.supplier "
