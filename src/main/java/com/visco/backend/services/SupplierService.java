@@ -100,8 +100,11 @@ public class SupplierService {
         existing.setSapCode(request.sapCode());
         existing.setUpdatedAt(LocalDateTime.now());
 
-        if (request.representativeIds() != null && !request.representativeIds().isEmpty()) {
-            existing.setRepresentatives(new HashSet<>());
+        if (request.representativeIds() != null) {
+            Set<LegalRepresentative> filtered = existing.getRepresentatives().stream()
+                .filter(r -> request.representativeIds().contains(r.getId()))
+                .collect(Collectors.toSet());
+            existing.setRepresentatives(filtered);
         }
 
         return SupplierDTO.fromSupplier(supplierRepository.save(existing));
