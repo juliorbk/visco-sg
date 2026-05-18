@@ -35,6 +35,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -129,7 +130,7 @@ public class WarehouseService {
       );
 
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber("VIS-" + orderId + "-" + System.currentTimeMillis())
+      .receiptNumber("VIS-" + orderId + "-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8))
       .purchaseOrder(order)
       .destinationWarehouseId(order.getDestinationWarehouse().getId())
       .receivedAt(LocalDateTime.now())
@@ -460,7 +461,6 @@ public class WarehouseService {
     );
   }
 
-  // Inside WarehouseService.java
   @Transactional
   public void transferStock(TransferStockRequest request) {
     // 1. Fetch the source stock level
@@ -534,6 +534,7 @@ public class WarehouseService {
     inventoryMovementRepository.save(movement);
   }
 
+  @Transactional
   public void adjustStock(AdjustStockRequest request) {
     // 1. Fetch the stock level
     StockLevel stock = stockLevelRepository
