@@ -131,6 +131,7 @@ public class WarehouseService {
     GoodReceipt receipt = GoodReceipt.builder()
       .receiptNumber("VIS-" + orderId + "-" + System.currentTimeMillis())
       .purchaseOrder(order)
+      .destinationWarehouseId(order.getDestinationWarehouse().getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
