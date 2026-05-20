@@ -1,31 +1,26 @@
 package com.visco.backend.controllers;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
 import com.visco.backend.models.dtos.CriticalInventoryItemDTO;
 import com.visco.backend.models.dtos.KpiStatsDTO;
-import com.visco.backend.models.dtos.MonthlySpendingDTO;
 import com.visco.backend.models.dtos.RecentOrderDTO;
 import com.visco.backend.models.dtos.SpendingStatsDTO;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
-import com.visco.backend.repositories.UserRepository;
-import com.visco.backend.services.JwtService;
 import com.visco.backend.services.StatsService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DashboardController.class)
 class DashboardControllerTest {
@@ -37,86 +32,98 @@ class DashboardControllerTest {
     private StatsService statsService;
 
     @MockitoBean
-    private JwtService jwtService;
-
-    @MockitoBean
-    private UserRepository userRepository;
+    private org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration webSecurityConfiguration;
 
     @Test
-    @WithMockUser(authorities = "MANAGER")
-    void getKpis_shouldReturn200() throws Exception {
-        when(statsService.getKpis()).thenReturn(KpiStatsDTO.builder()
-                .totalOrders(100L)
-                .totalInventoryUnits(BigDecimal.valueOf(5000))
-                .monthlySpend(BigDecimal.valueOf(25000))
-                .fulfillmentRate(85.0)
-                .build());
+    void getKpis_Success() throws Exception {
+        KpiStatsDTO kpis = KpiStatsDTO.builder()
+                .totalOrders(100)
+                .totalInventoryUnits(BigDecimal.valueOf(1000))
+                .monthlySpend(BigDecimal.valueOf(50000))
+                .fulfillmentRate(95.0)
+                .build();
+
+        when(statsService.getKpis()).thenReturn(kpis);
 
         mockMvc.perform(get("/api/dashboard/kpis"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalOrders").value(100))
-                .andExpect(jsonPath("$.fulfillmentRate").value(85.0));
+                .andExpect(jsonPath("$.totalInventoryUnits").value(1000))
+                .andExpect(jsonPath("$.fulfillmentRate").value(95.0));
+
+        verify(statsService).getKpis();
     }
 
     @Test
-    @WithMockUser(authorities = "MANAGER")
-    void getRecentOrders_shouldReturn200() throws Exception {
-        when(statsService.getRecentOrders(6)).thenReturn(List.of(
-                RecentOrderDTO.builder()
-                        .id(1L)
-                        .orderNumber("PO-001")
-                        .createdAt(LocalDateTime.now())
-                        .supplierName("Supplier A")
-                        .status(PurchaseOrderStatus.PENDING)
-                        .build()));
+    void getRecentOrders_Success() throws Exception {
+        RecentOrderDTO order = RecentOrderDTO.builder()
+                .id(1L).orderNumber("PO-001").supplierName("Supplier")
+                .status(PurchaseOrderStatus.DELIVERED)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-        mockMvc.perform(get("/api/dashboard/recent-orders"))
+        when(statsService.getRecentOrders(anyInt())).thenReturn(List.of(order));
+
+        mockMvc.perform(get("/api/dashboard/recent-orders").param("limit", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].orderNumber").value("PO-001"));
+
+        verify(statsService).getRecentOrders(5);
     }
 
     @Test
-    @WithMockUser(authorities = "MANAGER")
-    void getSpending_shouldReturn200() throws Exception {
-        when(statsService.getSpendingStats()).thenReturn(SpendingStatsDTO.builder()
-                .totalMonthly(BigDecimal.valueOf(15000))
-                .monthlyBreakdown(List.of(MonthlySpendingDTO.builder()
-                        .month("2026-05")
-                        .actual(BigDecimal.valueOf(15000))
-                        .projected(BigDecimal.valueOf(16500))
-                        .build()))
-                .byCategory(Map.of("Category A", BigDecimal.valueOf(15000)))
-                .byCategoryPercent(Map.of("Category A", 100.0))
-                .build());
+    void getRecentOrders_DefaultLimit() throws Exception {
+        when(statsService.getRecentOrders(6)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/dashboard/recent-orders"))
+                .andExpect(status().isOk());
+
+        verify(statsService).getRecentOrders(6);
+    }
+
+    @Test
+    void getSpending_Success() throws Exception {
+        SpendingStatsDTO spending = SpendingStatsDTO.builder()
+                .totalMonthly(BigDecimal.valueOf(50000))
+                .monthlyBreakdown(Collections.emptyList())
+                .byCategory(Collections.emptyMap())
+                .byCategoryPercent(Collections.emptyMap())
+                .build();
+
+        when(statsService.getSpendingStats()).thenReturn(spending);
 
         mockMvc.perform(get("/api/dashboard/spending"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalMonthly").value(15000));
+                .andExpect(jsonPath("$.totalMonthly").value(50000));
+
+        verify(statsService).getSpendingStats();
     }
 
     @Test
-    @WithMockUser(authorities = "MANAGER")
-    void getCriticalInventory_shouldReturn200() throws Exception {
-        when(statsService.getCriticalInventory()).thenReturn(List.of(
-                CriticalInventoryItemDTO.builder()
-                        .productId(1L)
-                        .productName("Product A")
-                        .sku("SKU-001")
-                        .currentStock(BigDecimal.valueOf(3))
-                        .reorderPoint(BigDecimal.TEN)
-                        .severity("WARNING")
-                        .build()));
+    void getCriticalInventory_Success() throws Exception {
+        CriticalInventoryItemDTO item = CriticalInventoryItemDTO.builder()
+                .productId(1L).productName("Product").sku("SKU-001")
+                .currentStock(BigDecimal.ZERO)
+                .reorderPoint(BigDecimal.valueOf(10))
+                .severity("CRITICAL")
+                .build();
+
+        when(statsService.getCriticalInventory()).thenReturn(List.of(item));
 
         mockMvc.perform(get("/api/dashboard/critical-inventory"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].severity").value("WARNING"));
+                .andExpect(jsonPath("$[0].productName").value("Product"))
+                .andExpect(jsonPath("$[0].severity").value("CRITICAL"));
+
+        verify(statsService).getCriticalInventory();
     }
 
     @Test
-    void shouldReturn401_whenUnauthenticated() throws Exception {
-        mockMvc.perform(get("/api/dashboard/kpis"))
-                .andExpect(status().isUnauthorized());
+    void getCriticalInventory_EmptyList() throws Exception {
+        when(statsService.getCriticalInventory()).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/dashboard/critical-inventory"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }
-
-

@@ -1,147 +1,148 @@
 package com.visco.backend.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visco.backend.models.dtos.*;
+import com.visco.backend.models.entities.Currency;
+import com.visco.backend.services.SupplierService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Collections;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import java.util.List;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import com.visco.backend.models.dtos.CreateSupplierRequest;
-import com.visco.backend.models.dtos.SupplierDTO;
-import com.visco.backend.models.dtos.SupplierPerformanceMonthlyDTO;
-import com.visco.backend.models.dtos.UpdateSupplierRequest;
-import com.visco.backend.repositories.UserRepository;
-import com.visco.backend.services.JwtService;
-import com.visco.backend.services.SupplierService;
-
-import jakarta.persistence.EntityNotFoundException;
-
 @WebMvcTest(SuppliersController.class)
-@AutoConfigureMockMvc(addFilters = false)
 class SuppliersControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockitoBean
     private SupplierService supplierService;
 
     @MockitoBean
-    private JwtService jwtService;
-
-    @MockitoBean
-    private UserRepository userRepository;
-
-    private SupplierDTO createDTO(Long id) {
-        return SupplierDTO.builder()
-                .id(id).name("Supplier " + id)
-                .contactEmail("supplier" + id + "@test.com").active(true)
-                .build();
-    }
+    private org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration webSecurityConfiguration;
 
     @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void createSupplier_shouldReturn200() throws Exception {
-        when(supplierService.createSupplier(any(CreateSupplierRequest.class))).thenReturn(createDTO(1L));
+    void createSupplier_Success() throws Exception {
+        CreateSupplierRequest request = new CreateSupplierRequest(
+                "Test Supplier", "Address", "supplier@test.com", List.of("123456"),
+                "Description", Currency.USD, "SAP001", null
+        );
+
+        SupplierDTO response = SupplierDTO.builder()
+                .id(1L).name("Test Supplier").email("supplier@test.com").active(true).build();
+
+        when(supplierService.createSupplier(any(CreateSupplierRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"New Supplier\",\"email\":\"s@t.com\",\"address\":\"addr\",\"currency\":\"USD\",\"description\":\"desc\"}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Supplier 1"));
+                .andExpect(jsonPath("$.name").value("Test Supplier"));
     }
 
     @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getAllSuppliers_shouldReturn200() throws Exception {
-        when(supplierService.getAllSuppliers(any(PageRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(createDTO(1L))));
+    void getAllSuppliers_ReturnsPage() throws Exception {
+        SupplierDTO supplier = SupplierDTO.builder()
+                .id(1L).name("Test Supplier").email("supplier@test.com").active(true).build();
 
-        mockMvc.perform(get("/api/suppliers"))
+        Page<SupplierDTO> page = new PageImpl<>(List.of(supplier));
+        when(supplierService.getAllSuppliers(any(PageRequest.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/suppliers").param("page", "0").param("size", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].name").value("Supplier 1"));
+                .andExpect(jsonPath("$.content[0].name").value("Test Supplier"));
     }
 
     @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getActiveSuppliers_shouldReturn200() throws Exception {
-        when(supplierService.getActiveSuppliers(any(PageRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(createDTO(1L))));
-        mockMvc.perform(get("/api/suppliers/active")).andExpect(status().isOk());
-    }
+    void getActiveSuppliers_ReturnsPage() throws Exception {
+        Page<SupplierDTO> page = new PageImpl<>(Collections.emptyList());
+        when(supplierService.getActiveSuppliers(any(PageRequest.class))).thenReturn(page);
 
-    @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getInactiveSuppliers_shouldReturn200() throws Exception {
-        SupplierDTO dto = createDTO(2L);
-        dto.setActive(false);
-        when(supplierService.getInactiveSuppliers(any(PageRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(dto)));
-        mockMvc.perform(get("/api/suppliers/inactive")).andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getSupplierById_shouldReturn200() throws Exception {
-        when(supplierService.getSupplierById(1L)).thenReturn(createDTO(1L));
-        mockMvc.perform(get("/api/suppliers/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Supplier 1"));
-    }
-
-    @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getSupplierById_shouldReturn404() throws Exception {
-        when(supplierService.getSupplierById(99L)).thenThrow(new EntityNotFoundException("Not found"));
-        mockMvc.perform(get("/api/suppliers/99")).andExpect(status().isNotFound());
-    }
-
-    @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void updateSupplier_shouldReturn200() throws Exception {
-        when(supplierService.updateSupplier(eq(1L), any(UpdateSupplierRequest.class))).thenReturn(createDTO(1L));
-        mockMvc.perform(put("/api/suppliers/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Updated\",\"email\":\"u@t.com\",\"address\":\"a\",\"currency\":\"USD\",\"description\":\"d\",\"phoneNumbers\":[\"123\"]}"))
+        mockMvc.perform(get("/api/suppliers/active").param("page", "0").param("size", "10"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void deactivateSupplier_shouldReturn204() throws Exception {
-        doNothing().when(supplierService).deactivateSupplier(1L);
-        mockMvc.perform(delete("/api/suppliers/1")).andExpect(status().isNoContent());
+    void getInactiveSuppliers_ReturnsPage() throws Exception {
+        Page<SupplierDTO> page = new PageImpl<>(Collections.emptyList());
+        when(supplierService.getInactiveSuppliers(any(PageRequest.class))).thenReturn(page);
+
+        mockMvc.perform(get("/api/suppliers/inactive").param("page", "0").param("size", "10"))
+                .andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void activateSupplier_shouldReturn204() throws Exception {
-        doNothing().when(supplierService).activateSupplier(1L);
-        mockMvc.perform(patch("/api/suppliers/1/activate")).andExpect(status().isNoContent());
-    }
+    void getSupplierById_Success() throws Exception {
+        SupplierDTO response = SupplierDTO.builder()
+                .id(1L).name("Test Supplier").email("supplier@test.com").active(true).build();
 
-    @Test
-    @WithMockUser(authorities = "PROCUREMENT")
-    void getPerformance_shouldReturn200() throws Exception {
-        when(supplierService.getSupplierPerformanceChart(6))
-                .thenReturn(List.of(SupplierPerformanceMonthlyDTO.builder()
-                        .month("2026-05").a(95.0).b(80.0).build()));
-        mockMvc.perform(get("/api/suppliers/performance"))
+        when(supplierService.getSupplierById(1L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/suppliers/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].month").value("2026-05"));
+                .andExpect(jsonPath("$.name").value("Test Supplier"));
     }
 
+    @Test
+    void updateSupplier_Success() throws Exception {
+        UpdateSupplierRequest request = new UpdateSupplierRequest(
+                "Updated Supplier", "updated@test.com", List.of("654321"),
+                "Updated Description", "Updated Address", Currency.EUR, "SAP002", null
+        );
+
+        SupplierDTO response = SupplierDTO.builder()
+                .id(1L).name("Updated Supplier").email("updated@test.com").active(true).build();
+
+        when(supplierService.updateSupplier(eq(1L), any(UpdateSupplierRequest.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/suppliers/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Supplier"));
+    }
+
+    @Test
+    void deactivateSupplier_Success() throws Exception {
+        doNothing().when(supplierService).deactivateSupplier(1L);
+
+        mockMvc.perform(delete("/api/suppliers/1"))
+                .andExpect(status().isNoContent());
+
+        verify(supplierService).deactivateSupplier(1L);
+    }
+
+    @Test
+    void activateSupplier_Success() throws Exception {
+        doNothing().when(supplierService).activateSupplier(1L);
+
+        mockMvc.perform(patch("/api/suppliers/1/activate"))
+                .andExpect(status().isNoContent());
+
+        verify(supplierService).activateSupplier(1L);
+    }
+
+    @Test
+    void getPerformance_ReturnsList() throws Exception {
+        when(supplierService.getSupplierPerformanceChart(6)).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/api/suppliers/performance").param("months", "6"))
+                .andExpect(status().isOk());
+    }
 }

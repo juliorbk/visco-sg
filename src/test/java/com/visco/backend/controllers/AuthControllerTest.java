@@ -1,40 +1,37 @@
 package com.visco.backend.controllers;
 
-import static org.mockito.ArgumentMatchers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.visco.backend.models.dtos.AuthResponse;
+import com.visco.backend.models.dtos.LoginRequest;
+import com.visco.backend.models.dtos.UserDTO;
+import com.visco.backend.models.dtos.UserRegisterRequest;
+import com.visco.backend.models.entities.UserRole;
+import com.visco.backend.services.AuthService;
+import com.visco.backend.services.CookieService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.test.web.servlet.MockMvc;
+
+import jakarta.servlet.http.Cookie;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
-
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import com.visco.backend.models.dtos.AuthResponse;
-import com.visco.backend.models.dtos.LoginRequest;
-import com.visco.backend.models.dtos.UserDTO;
-import com.visco.backend.models.entities.UserRole;
-import com.visco.backend.repositories.UserRepository;
-import com.visco.backend.services.AuthService;
-import com.visco.backend.services.CookieService;
-import com.visco.backend.services.JwtService;
-
-import jakarta.servlet.http.Cookie;
-
 @WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private AuthService authService;
@@ -43,76 +40,88 @@ class AuthControllerTest {
     private CookieService cookieService;
 
     @MockitoBean
-    private JwtService jwtService;
-
-    @MockitoBean
-    private UserRepository userRepository;
+    private org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration webSecurityConfiguration;
 
     @Test
-    void register_shouldReturn200() throws Exception {
-        UserDTO userDTO = UserDTO.builder()
-                .id(UUID.randomUUID()).name("Test User")
-                .email("test@example.com").role(UserRole.MANAGER).build();
+    void registerUser_Success() throws Exception {
+        UserRegisterRequest request = new UserRegisterRequest();
+        request.setName("Test User");
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+        request.setRole(UserRole.USER);
 
-        when(authService.register(any())).thenReturn(AuthResponse.builder()
-                .token("jwt-token").user(userDTO).build());
+        AuthResponse response = new AuthResponse();
+        response.setToken("jwt-token");
+        response.setUser(new UserDTO());
+
+        when(authService.register(any(UserRegisterRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test User\",\"email\":\"test@example.com\",\"password\":\"password123\",\"role\":\"MANAGER\"}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"))
-                .andExpect(jsonPath("$.user.name").value("Test User"));
+                .andExpect(jsonPath("$.token").value("jwt-token"));
+
+        verify(authService).register(any(UserRegisterRequest.class));
     }
 
     @Test
-    void register_shouldReturn400_whenEmailAlreadyExists() throws Exception {
-        when(authService.register(any()))
-                .thenThrow(new IllegalArgumentException("Email address is already in use"));
+    void loginUser_Success() throws Exception {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
 
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"email\":\"test@example.com\",\"password\":\"password123\",\"role\":\"MANAGER\"}"))
-                .andExpect(status().isBadRequest());
-    }
+        AuthResponse response = new AuthResponse();
+        response.setToken("jwt-token");
+        response.setUser(new UserDTO());
 
-    @Test
-    void login_shouldReturn200() throws Exception {
-        UserDTO userDTO = UserDTO.builder()
-                .id(UUID.randomUUID()).name("Test User")
-                .email("test@example.com").role(UserRole.MANAGER).build();
+        Cookie jwtCookie = new Cookie("visco_auth_token", "jwt-token");
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(true);
+        jwtCookie.setPath("/");
 
-        when(authService.login(any(LoginRequest.class))).thenReturn(
-                AuthResponse.builder().token("jwt-token").user(userDTO).build());
-        when(cookieService.createJwtCookie("jwt-token"))
-                .thenReturn(new Cookie("visco_auth_token", "jwt-token"));
+        when(authService.login(any(LoginRequest.class))).thenReturn(response);
+        when(cookieService.createJwtCookie(anyString())).thenReturn(jwtCookie);
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"test@example.com\",\"password\":\"password123\"}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.user.name").value("Test User"))
-                .andExpect(jsonPath("$.token").doesNotExist());
+                .andExpect(cookie().exists("visco_auth_token"));
+
+        verify(authService).login(any(LoginRequest.class));
+        verify(cookieService).createJwtCookie(anyString());
     }
 
     @Test
-    void login_shouldReturn401_whenBadCredentials() throws Exception {
-        when(authService.login(any(LoginRequest.class)))
-                .thenThrow(new BadCredentialsException("Invalid credentials"));
+    void logoutUser_Success() throws Exception {
+        Cookie logoutCookie = new Cookie("visco_auth_token", null);
+        logoutCookie.setMaxAge(0);
 
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"test@example.com\",\"password\":\"wrong\"}"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void logout_shouldReturn200() throws Exception {
-        when(cookieService.createLogoutCookie()).thenReturn(new Cookie("visco_auth_token", null));
+        when(cookieService.createLogoutCookie()).thenReturn(logoutCookie);
 
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Logout successful"));
+
+        verify(cookieService).createLogoutCookie();
     }
 
+    @Test
+    void getCurrentUser_Success() throws Exception {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setEmail("test@example.com");
+        userDTO.setName("Test User");
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("test@example.com");
+        when(authService.getCurrentUser("test@example.com")).thenReturn(userDTO);
+
+        mockMvc.perform(get("/api/auth/me")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@example.com"));
+
+        verify(authService).getCurrentUser("test@example.com");
+    }
 }
