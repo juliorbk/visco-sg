@@ -260,4 +260,12 @@ public class ProductService {
   public Category createCategory(Category category) {
     return categoryRepository.save(category);
   }
+
+  public Long countTotalActiveProducts() {
+    return productRepository.countTotalActiveProducts();
+  }
+
+  public Long countOutOfStockProducts() {
+    return stockLevelRepository.countProductsOutOfStock();
+  }
 }

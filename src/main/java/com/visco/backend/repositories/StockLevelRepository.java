@@ -69,11 +69,17 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   }
 
   @Query(
-    "SELECT sl.product.id, SUM(sl.currentStock), SUM(sl.pendingStock) " +
+    "SELECT sl.product.id, SUM(sl.freeStock), SUM(sl.pendingStock) " +
       "FROM StockLevel sl WHERE sl.product.id IN :productIds " +
       "GROUP BY sl.product.id"
   )
   List<Object[]> sumStockByProductIds(
     @Param("productIds") List<Long> productIds
   );
+
+  //Productos sin stock
+  @Query(
+    "SELECT COUNT(DISTINCT s.product.id) FROM StockLevel s WHERE s.freeStock <= 0"
+  )
+  long countProductsOutOfStock();
 }

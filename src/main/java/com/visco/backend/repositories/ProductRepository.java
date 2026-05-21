@@ -77,4 +77,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     BigDecimal getCurrentStock();
     BigDecimal getReorderPoint();
   }
+
+  //Total de productos activos
+  @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true")
+  long countTotalActiveProducts();
 }
