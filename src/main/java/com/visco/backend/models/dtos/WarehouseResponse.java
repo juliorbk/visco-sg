@@ -10,7 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class WarehouseResponse {
-    private Long id;
-    private String name;
-    private String sapCenterCode;
+
+  private Long id;
+  private String name;
+  private String sapCenterCode;
 }

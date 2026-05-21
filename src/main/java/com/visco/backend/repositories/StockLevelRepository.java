@@ -23,13 +23,24 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     List<Long> warehouseIds
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // Totales por producto (usados en ProductDTO y ProductService)
+  // ─────────────────────────────────────────────────────────────
+
   @Query(
-    "SELECT SUM(s.currentStock) FROM StockLevel s WHERE s.product.id = :productId"
+    "SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
   )
   BigDecimal getTotalStockByProductId(@Param("productId") Long productId);
 
   @Query(
-    "SELECT SUM(s.currentStock) FROM StockLevel s " +
+    "SELECT COALESCE(SUM(s.pendingStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
+  )
+  BigDecimal getTotalPendingStockByProductId(
+    @Param("productId") Long productId
+  );
+
+  @Query(
+    "SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s " +
       "WHERE s.product.id = :productId AND s.warehouse.id = :warehouseId"
   )
   BigDecimal getStockByProductAndWarehouse(
@@ -37,11 +48,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("warehouseId") Long warehouseId
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // Breakdown por almacén para un producto (ProductStockBreakdown)
+  // ─────────────────────────────────────────────────────────────
+
   @Query(
-    "SELECT s.warehouse.id as warehouseId, " +
-      "s.warehouse.name as warehouseName, " +
-      "SUM(s.currentStock) as currentStock, " +
-      "SUM(s.pendingStock) as pendingStock " +
+    "SELECT s.warehouse.id               as warehouseId, " +
+      "       s.warehouse.name             as warehouseName, " +
+      "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
+      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
       "FROM StockLevel s WHERE s.product.id = :productId " +
       "GROUP BY s.warehouse.id, s.warehouse.name"
   )
@@ -49,27 +64,27 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("productId") Long productId
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // Resumen global por almacén (WarehouseStockSummary / dashboard)
+  // ─────────────────────────────────────────────────────────────
+
   @Query(
-    "SELECT s.warehouse.id as warehouseId, " +
-      "s.warehouse.name as warehouseName, " +
-      "SUM(s.currentStock) as currentStock, " +
-      "SUM(s.pendingStock) as pendingStock " +
+    "SELECT s.warehouse.id               as warehouseId, " +
+      "       s.warehouse.name             as warehouseName, " +
+      "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
+      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
       "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
   )
   List<WarehouseStockProjection> getGlobalStockByWarehouse();
 
-  interface WarehouseStockProjection {
-    Long getWarehouseId();
-
-    String getWarehouseName();
-
-    java.math.BigDecimal getCurrentStock();
-
-    java.math.BigDecimal getPendingStock();
-  }
+  // ─────────────────────────────────────────────────────────────
+  // Batch query para lista de productos (ProductService.getProducts)
+  // ─────────────────────────────────────────────────────────────
 
   @Query(
-    "SELECT sl.product.id, SUM(sl.freeStock), SUM(sl.pendingStock) " +
+    "SELECT sl.product.id, " +
+      "       COALESCE(SUM(sl.currentStock), 0), " +
+      "       COALESCE(SUM(sl.pendingStock), 0) " +
       "FROM StockLevel sl WHERE sl.product.id IN :productIds " +
       "GROUP BY sl.product.id"
   )
@@ -77,9 +92,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("productIds") List<Long> productIds
   );
 
-  //Productos sin stock
-  @Query(
-    "SELECT COUNT(DISTINCT s.product.id) FROM StockLevel s WHERE s.freeStock <= 0"
-  )
-  long countProductsOutOfStock();
+  // ─────────────────────────────────────────────────────────────
+  // Projection interface
+  // ─────────────────────────────────────────────────────────────
+
+  interface WarehouseStockProjection {
+    Long getSupplierId();
+    Long getWarehouseId();
+    String getWarehouseName();
+    BigDecimal getCurrentStock();
+    BigDecimal getPendingStock();
+  }
 }

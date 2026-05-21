@@ -14,15 +14,17 @@ import lombok.NoArgsConstructor;
 public class ProductDTO {
 
   private Long id;
-  private String internalCode; // VIS-000001
+  private String internalCode;
   private String sku;
   private String name;
   private String description;
   private String sapCode;
-  private String uom; // String para evitar exponer el enum
+  private String uom;
   private BigDecimal reorderPoint;
-  private BigDecimal totalStock;
-  private BigDecimal totalPendingStock;
+
+  private BigDecimal totalStock; // currentStock total del producto
+  private BigDecimal totalPendingStock; // pendingStock total
+
   private Boolean active;
   private Long supplierId;
   private String supplierName;
@@ -36,7 +38,7 @@ public class ProductDTO {
   ) {
     return ProductDTO.builder()
       .id(product.getId())
-      .internalCode(product.getInternalCode()) // -> 000001 +
+      .internalCode(product.getInternalCode())
       .sku(product.getSku())
       .name(product.getName())
       .description(product.getDescription())

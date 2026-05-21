@@ -1,9 +1,7 @@
 package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.CreateProductRequest;
-import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
-import com.visco.backend.models.entities.Product;
 import com.visco.backend.services.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -63,15 +61,6 @@ public class ProductController {
     return ResponseEntity.status(HttpStatus.CREATED).body(
       productService.createProduct(request)
     );
-  }
-
-  @GetMapping("/products/{sku}")
-  @Operation(
-    summary = "Get product by SKU",
-    description = "Returns a product by its SKU"
-  )
-  public ResponseEntity<ProductDTO> getProductBySku(@PathVariable String sku) {
-    return ResponseEntity.ok(productService.getProductBySku(sku));
   }
 
   @GetMapping("/products/{internalCode}")

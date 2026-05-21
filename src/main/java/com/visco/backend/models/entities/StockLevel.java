@@ -18,6 +18,21 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Representa el nivel de stock de un producto en un almacén específico.
+ *
+ * Definición de campos:
+ *
+ *   currentStock  — Unidades físicamente presentes en el almacén.
+ *                   Se incrementa al recibir mercancía (GoodReceipt).
+ *                   Se decrementa en transferencias salientes y ajustes.
+ *                   Es la fuente de verdad del inventario físico.
+ *
+ *   pendingStock  — Unidades en tránsito: órdenes de compra aprobadas
+ *                   que aún no han sido recibidas físicamente.
+ *                   Se incrementa al aprobar una PO.
+ *                   Se decrementa al recibir la mercancía.
+ */
 @Getter
 @Setter
 @Entity
@@ -29,14 +44,9 @@ import lombok.Setter;
   indexes = {
     @Index(name = "idx_sl_product", columnList = "product_id"),
     @Index(name = "idx_sl_warehouse", columnList = "warehouse_id"),
-    @Index(name = "idx_sl_location", columnList = "location_id"),
     @Index(
       name = "idx_sl_product_warehouse",
       columnList = "product_id,warehouse_id"
-    ),
-    @Index(
-      name = "idx_sl_product_warehouse_location",
-      columnList = "product_id,warehouse_id,location_id"
     ),
   }
 )
@@ -54,19 +64,16 @@ public class StockLevel {
   @JoinColumn(name = "warehouse_id")
   private Warehouse warehouse;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "location_id")
-  private Location location;
-
   @Version
   private Long version;
 
+  // Stock físico presente en el almacén
+  @Builder.Default
   @Column(nullable = false)
-  private BigDecimal currentStock;
+  private BigDecimal currentStock = BigDecimal.ZERO;
 
+  // Stock en tránsito (POs aprobadas no recibidas aún)
+  @Builder.Default
   @Column(nullable = false)
-  private BigDecimal pendingStock;
-
-  @Column(nullable = false)
-  private BigDecimal freeStock;
+  private BigDecimal pendingStock = BigDecimal.ZERO;
 }

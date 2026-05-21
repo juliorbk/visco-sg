@@ -64,6 +64,13 @@ public class SecurityConfig {
       .csrf(csrf -> csrf.disable()) // CSRF is usually disabled for stateless APIs
       .cors(cors -> cors.configurationSource(corsConfigurationSource()))
       .httpBasic(httpBasic -> httpBasic.disable())
+      .exceptionHandling(ex ->
+        ex.authenticationEntryPoint((request, response, authException) -> {
+          response.setStatus(401);
+          response.setContentType("application/json");
+          response.getWriter().write("{\"error\": \"Unauthorized\"}");
+        })
+      )
       .authorizeHttpRequests(auth ->
         auth
           // Público

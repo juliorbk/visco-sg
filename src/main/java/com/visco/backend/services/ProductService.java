@@ -30,19 +30,14 @@ public class ProductService {
   private final CategoryRepository categoryRepository;
   private final SupplierRepository supplierRepository;
 
-  // Crea un producto nuevo.
-  // Valida SKU único (internalCode se genera automáticamente después del save).
   @Transactional
   public ProductDTO createProduct(CreateProductRequest dto) {
-    // 1. Corregida la sintaxis del IF
     if (productRepository.findBySku(dto.sku()).isPresent()) {
       throw new IllegalArgumentException("The product is already registered");
     }
 
-    // 2. Generación del código incremental sin prefijos
     String nextCode = generateNextInternalCode();
 
-    // 3. Buscar relaciones (Asegúrate de tener inyectados estos repositorios en tu servicio)
     Supplier supplier = null;
     if (dto.supplierId() != null) {
       supplier = supplierRepository
@@ -57,23 +52,21 @@ public class ProductService {
         .orElseThrow(() -> new IllegalArgumentException("Category not found"));
     }
 
-    // 4. Construcción de la entidad
     Product product = Product.builder()
-      // .id(null) ← ELIMINA esta línea, Hibernate lo maneja solo
       .internalCode(nextCode)
       .sku(dto.sku())
       .name(dto.name())
       .description(dto.description())
-      .sapCode(dto.sapCode() != null ? dto.sapCode() : "") // sapCode es nullable=false
+      .sapCode(dto.sapCode() != null ? dto.sapCode() : "")
       .uom(dto.uom())
       .reorderPoint(dto.reorderPoint())
-      // .active(true) ← Tampoco necesitas esto, ya tienes @Builder.Default active = true
       .supplier(supplier)
       .category(category)
       .build();
+
     Product savedProduct = productRepository.save(product);
 
-    // Como es un producto nuevo, pasamos BigDecimal.ZERO para los stocks
+    // Producto nuevo: todos los stocks en 0
     return ProductDTO.fromEntity(
       savedProduct,
       BigDecimal.ZERO,
@@ -83,29 +76,29 @@ public class ProductService {
 
   private String generateNextInternalCode() {
     Long nextVal = productRepository.getNextInternalCodeSequence();
-
-    // %06d significa: entero, rellenado con ceros a la izquierda hasta tener mínimo 6 dígitos.
-    // Si nextVal es 230001 -> "230001"
-    // Si en un futuro pasa el millón (1000001) -> "1000001" (crece automáticamente)
     return String.format("%06d", nextVal);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Stock helpers — fuente de verdad: currentStock, pendingStock
+  // ─────────────────────────────────────────────────────────────
+
   private BigDecimal getTotalStock(Long productId) {
-    BigDecimal stock = stockLevelRepository.getTotalStockByProductId(productId);
-    return stock != null ? stock : BigDecimal.ZERO;
+    BigDecimal v = stockLevelRepository.getTotalStockByProductId(productId);
+    return v != null ? v : BigDecimal.ZERO;
   }
 
   private BigDecimal getTotalPendingStock(Long productId) {
-    List<com.visco.backend.models.entities.StockLevel> levels =
-      stockLevelRepository.findByProductId(productId);
-    if (levels.isEmpty()) return BigDecimal.ZERO;
-    return levels
-      .stream()
-      .map(com.visco.backend.models.entities.StockLevel::getPendingStock)
-      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal v = stockLevelRepository.getTotalPendingStockByProductId(
+      productId
+    );
+    return v != null ? v : BigDecimal.ZERO;
   }
 
-  // Busca un producto por su código interno (VIS-000001).
+  // ─────────────────────────────────────────────────────────────
+  // Queries públicas
+  // ─────────────────────────────────────────────────────────────
+
   public ProductDTO getProductByInternalCode(String internalCode) {
     Product product = productRepository
       .findByInternalCode(internalCode)
@@ -121,8 +114,7 @@ public class ProductService {
     );
   }
 
-  // Lista paginada de todos los productos.
-  // GET /api/inventory/products?page=0&size=10
+  // FIX: sumStockByProductIds ahora devuelve 3 campos [id, current, pending]
   public Page<ProductDTO> getProducts(
     Pageable pageable,
     String search,
@@ -134,16 +126,20 @@ public class ProductService {
       category
     );
 
-    // Obtiene todos los stocks en una sola query
     List<Long> productIds = products.stream().map(Product::getId).toList();
 
+    // row[0]=productId, row[1]=currentStock, row[2]=pendingStock
     Map<Long, BigDecimal[]> stockMap = stockLevelRepository
       .sumStockByProductIds(productIds)
       .stream()
       .collect(
         Collectors.toMap(
           row -> (Long) row[0],
-          row -> new BigDecimal[] { (BigDecimal) row[1], (BigDecimal) row[2] }
+          row ->
+            new BigDecimal[] {
+              row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
+              row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
+            }
         )
       );
 
@@ -156,7 +152,6 @@ public class ProductService {
     });
   }
 
-  // Busca un producto por su ID numérico.
   public ProductDTO getProductById(Long id) {
     Product product = productRepository
       .findById(id)
@@ -170,34 +165,6 @@ public class ProductService {
     );
   }
 
-  public ProductDTO getProductBySapCode(Long sapCode) {
-    Product product = productRepository
-      .findById(sapCode)
-      .orElseThrow(() ->
-        new EntityNotFoundException("Producto no encontrado: " + sapCode)
-      );
-    return ProductDTO.fromEntity(
-      product,
-      getTotalStock(product.getId()),
-      getTotalPendingStock(product.getId())
-    );
-  }
-
-  public ProductDTO getProductBySku(String sku) {
-    Product product = productRepository
-      .findBySku(sku)
-      .orElseThrow(() ->
-        new EntityNotFoundException("Producto no encontrado: " + sku)
-      );
-    return ProductDTO.fromEntity(
-      product,
-      getTotalStock(product.getId()),
-      getTotalPendingStock(product.getId())
-    );
-  }
-
-  // Actualiza los campos editables de un producto.
-  // Valida SKU único si el valor cambió. No modifica internalCode.
   @Transactional
   public ProductDTO updateProduct(Long id, ProductDTO dto) {
     Product existing = productRepository
@@ -245,7 +212,6 @@ public class ProductService {
     );
   }
 
-  // Eliminación lógica: desactiva el producto sin borrarlo de la DB.
   @Transactional
   public void deleteProduct(Long id) {
     Product product = productRepository
@@ -259,13 +225,5 @@ public class ProductService {
 
   public Category createCategory(Category category) {
     return categoryRepository.save(category);
-  }
-
-  public Long countTotalActiveProducts() {
-    return productRepository.countTotalActiveProducts();
-  }
-
-  public Long countOutOfStockProducts() {
-    return stockLevelRepository.countProductsOutOfStock();
   }
 }

@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -90,7 +91,9 @@ public class WarehouseService {
     return warehouseRepository
       .findById(id)
       .map(WarehouseDTO::fromEntity)
-      .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
+      .orElseThrow(() ->
+        new EntityNotFoundException("Warehouse not found: " + id)
+      );
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -119,6 +122,8 @@ public class WarehouseService {
       );
     }
 
+    // FIX #1: El warehouse de destino debe ser el del request (lo que el operador indica),
+    // no siempre el de la PO. Validamos que exista antes de usarlo.
     Warehouse destWarehouse = warehouseRepository
       .findById(request.destinationWarehouseId())
       .orElseThrow(() ->
@@ -137,7 +142,8 @@ public class WarehouseService {
           UUID.randomUUID().toString().substring(0, 8)
       )
       .purchaseOrder(order)
-      .destinationWarehouseId(order.getDestinationWarehouse().getId())
+      // FIX #1: Guardar el warehouse real de recepción, no el de la PO
+      .destinationWarehouseId(destWarehouse.getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
@@ -199,32 +205,24 @@ public class WarehouseService {
 
       receipt.getItems().add(item);
 
-      // Find or create StockLevel at the destination warehouse
-      StockLevel stockLevel = stockLevelRepository
-        .findByProductIdAndWarehouseId(
-          poItem.getProduct().getId(),
-          request.destinationWarehouseId()
-        )
-        .orElseGet(() ->
-          StockLevel.builder()
-            .product(poItem.getProduct())
-            .warehouse(destWarehouse)
-            .currentStock(BigDecimal.ZERO)
-            .pendingStock(BigDecimal.ZERO)
-            .build()
-        );
+      // FIX #2: Usar findOrCreate para evitar
+      // constraint violation en columna nullable=false
+      StockLevel stockLevel = findOrCreateStockLevel(
+        poItem.getProduct(),
+        destWarehouse
+      );
 
       stockLevel.setCurrentStock(stockLevel.getCurrentStock().add(received));
+
       stockLevelRepository.save(stockLevel);
 
-      // Remove from pending stock for this product/warehouse
+      // Descontar pending stock al recibir mercancía
       substractPendingStock(
         poItem.getProduct().getId(),
-        request.destinationWarehouseId(),
+        destWarehouse.getId(),
         received
       );
 
-      // Record inventory movement (INPUT)
       InventoryMovement movement = InventoryMovement.builder()
         .product(poItem.getProduct())
         .toWarehouse(destWarehouse)
@@ -321,6 +319,24 @@ public class WarehouseService {
   // Stock helpers
   // ─────────────────────────────────────────────────────────────
 
+  // FIX #2: Helper centralizado para buscar o crear StockLevel
+  // Evita el constraint violation en nullable=false
+  private StockLevel findOrCreateStockLevel(
+    Product product,
+    Warehouse warehouse
+  ) {
+    return stockLevelRepository
+      .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+      .orElseGet(() ->
+        StockLevel.builder()
+          .product(product)
+          .warehouse(warehouse)
+          .currentStock(BigDecimal.ZERO)
+          .pendingStock(BigDecimal.ZERO)
+          .build()
+      );
+  }
+
   public void addPendingStockByWarehouse(
     Long productId,
     Long warehouseId,
@@ -332,21 +348,14 @@ public class WarehouseService {
         new EntityNotFoundException("Warehouse not found: " + warehouseId)
       );
 
-    StockLevel level = stockLevelRepository
-      .findByProductIdAndWarehouseId(productId, warehouseId)
-      .orElseGet(() -> {
-        Product product = productRepository
-          .findById(productId)
-          .orElseThrow(() ->
-            new EntityNotFoundException("Product not found: " + productId)
-          );
-        return StockLevel.builder()
-          .product(product)
-          .warehouse(warehouse)
-          .currentStock(BigDecimal.ZERO)
-          .pendingStock(BigDecimal.ZERO)
-          .build();
-      });
+    // FIX #2: Reemplaza orElseGet inline por el helper centralizado
+    Product product = productRepository
+      .findById(productId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Product not found: " + productId)
+      );
+
+    StockLevel level = findOrCreateStockLevel(product, warehouse);
     level.setPendingStock(level.getPendingStock().add(quantity));
     stockLevelRepository.save(level);
   }
@@ -372,7 +381,9 @@ public class WarehouseService {
     stockLevelRepository
       .findByProductIdAndWarehouseId(productId, warehouseId)
       .ifPresent(level -> {
-        level.setPendingStock(level.getPendingStock().subtract(quantity));
+        // FIX #3: Evitar pending stock negativo — clamp a 0
+        BigDecimal newPending = level.getPendingStock().subtract(quantity);
+        level.setPendingStock(newPending.max(BigDecimal.ZERO));
         stockLevelRepository.save(level);
       });
   }
@@ -385,6 +396,15 @@ public class WarehouseService {
     stockLevelRepository
       .findByProductIdAndWarehouseId(productId, warehouseId)
       .ifPresent(level -> {
+        // FIX #3: Evitar stock negativo — lanzar excepción si no hay suficiente
+        if (level.getCurrentStock().compareTo(quantity) < 0) {
+          throw new IllegalArgumentException(
+            "Insufficient stock for product " +
+              productId +
+              " in warehouse " +
+              warehouseId
+          );
+        }
         level.setCurrentStock(level.getCurrentStock().subtract(quantity));
         stockLevelRepository.save(level);
       });
@@ -541,29 +561,21 @@ public class WarehouseService {
         )
       );
 
+    // FIX #3: Validar stock suficiente antes de transferir
     if (sourceStock.getCurrentStock().compareTo(request.quantity()) < 0) {
       throw new IllegalArgumentException(
         "Insufficient stock in the source warehouse for this transfer."
       );
     }
 
-    StockLevel destinationStock = stockLevelRepository
-      .findByProductIdAndWarehouseId(
-        request.productId(),
-        request.toWarehouseId()
-      )
-      .orElseGet(() ->
-        StockLevel.builder()
-          .product(sourceStock.getProduct())
-          .warehouse(toWarehouse)
-          .currentStock(BigDecimal.ZERO)
-          .pendingStock(BigDecimal.ZERO)
-          .build()
-      );
+    // FIX #2: Usar helper centralizado para destino
+    Product product = sourceStock.getProduct();
+    StockLevel destinationStock = findOrCreateStockLevel(product, toWarehouse);
 
     sourceStock.setCurrentStock(
       sourceStock.getCurrentStock().subtract(request.quantity())
     );
+
     destinationStock.setCurrentStock(
       destinationStock.getCurrentStock().add(request.quantity())
     );
@@ -616,7 +628,7 @@ public class WarehouseService {
       .product(stock.getProduct())
       .fromWarehouse(warehouse)
       .toWarehouse(warehouse)
-      .quantity(difference)
+      .quantity(difference.abs()) // FIX #4: guardar siempre valor absoluto; el tipo indica dirección
       .type(MovementType.ADJUSTMENT)
       .reason(request.reason() != null ? request.reason() : "Adjust stock")
       .entryUnitPrice(request.unitCost())
@@ -625,6 +637,7 @@ public class WarehouseService {
       .build();
 
     stock.setCurrentStock(request.newStock());
+
     stockLevelRepository.save(stock);
     inventoryMovementRepository.save(movement);
   }
@@ -648,6 +661,7 @@ public class WarehouseService {
         productId,
         startDate
       );
+      if (balanceBefore == null) balanceBefore = BigDecimal.ZERO;
     }
 
     final BigDecimal openingBalance = balanceBefore;
@@ -662,17 +676,19 @@ public class WarehouseService {
         pageable
       );
 
+    // FIX #5: El balance acumulado se calculaba mal — siempre sumaba al openingBalance fijo
+    // en lugar de acumular. Usamos AtomicReference para acumular dentro del lambda.
+    AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
+
     return movementsPage.map(m -> {
-      BigDecimal qty =
-        m.getType() == MovementType.OUTPUT ||
-        m.getType() == MovementType.ADJUSTMENT
-          ? m.getQuantity().negate()
-          : m.getQuantity();
+      // Outputs y adjustments negativos restan; inputs y transfers suman
+      BigDecimal qty = (m.getType() == MovementType.OUTPUT)
+        ? m.getQuantity().negate()
+        : m.getQuantity();
 
-      BigDecimal entryPrice = m.getEntryUnitPrice();
-      BigDecimal exitPrice = m.getExitUnitPrice();
-
-      BigDecimal runningBalance = openingBalance.add(qty);
+      BigDecimal runningBalance = running.updateAndGet(current ->
+        current.add(qty)
+      );
 
       return new InventoryMovementResponse(
         m.getId(),
@@ -681,8 +697,8 @@ public class WarehouseService {
         m.getProduct().getSku(),
         m.getType().name(),
         m.getQuantity(),
-        entryPrice,
-        exitPrice,
+        m.getEntryUnitPrice(),
+        m.getExitUnitPrice(),
         m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
         m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
         m.getReason(),

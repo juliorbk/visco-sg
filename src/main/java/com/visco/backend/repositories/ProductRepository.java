@@ -70,6 +70,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Param("category") String category
   );
 
+  @Query(
+    """
+        SELECT COUNT(p.id)
+        FROM Product p
+        WHERE (
+            SELECT COALESCE(SUM(s.currentStock), 0)
+            FROM StockLevel s
+            WHERE s.product = p
+        ) <= 0
+    """
+  )
+  long countProductsOutOfStock();
+
   interface CriticalProductProjection {
     Long getProductId();
     String getProductName();
