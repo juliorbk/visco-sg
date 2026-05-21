@@ -12,6 +12,8 @@ import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.MovementType;
 import com.visco.backend.services.WarehouseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,13 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/warehouse")
 @RequiredArgsConstructor
+@Tag(name = "Warehouse", description = "Warehouse and stock management endpoints")
 public class WarehouseController {
 
   private final WarehouseService warehouseService;
 
-  // ─── Warehouses ─────────────────────────────────────────────────
-
   @GetMapping
+  @Operation(summary = "List all warehouses", description = "Returns a paginated list of all warehouses")
   public ResponseEntity<Page<WarehouseDTO>> getAllWarehouses(
     Pageable pageable
   ) {
@@ -46,11 +48,13 @@ public class WarehouseController {
   }
 
   @GetMapping("/{id}")
+  @Operation(summary = "Get warehouse by ID", description = "Returns a warehouse by its ID")
   public ResponseEntity<WarehouseDTO> getWarehouse(@PathVariable Long id) {
     return ResponseEntity.ok(warehouseService.getWarehouse(id));
   }
 
   @PostMapping
+  @Operation(summary = "Create warehouse", description = "Creates a new warehouse")
   public ResponseEntity<WarehouseDTO> createWarehouse(
     @Valid @RequestBody CreateWarehouseRequest request
   ) {
@@ -59,9 +63,8 @@ public class WarehouseController {
     );
   }
 
-  // ─── Stock breakdown by warehouse for a product ─────────────────
-
   @GetMapping("/products/{productId}/stock-breakdown")
+  @Operation(summary = "Get stock breakdown by product", description = "Returns stock breakdown across warehouses for a specific product")
   public ResponseEntity<ProductStockBreakdown> getStockBreakdownByProduct(
     @PathVariable Long productId
   ) {
@@ -70,16 +73,14 @@ public class WarehouseController {
     );
   }
 
-  // ─── Global stock summary per warehouse ─────────────────────────
-
   @GetMapping("/stock-summary")
+  @Operation(summary = "Get global stock summary", description = "Returns stock summary per warehouse")
   public ResponseEntity<List<WarehouseStockSummary>> getGlobalStockSummary() {
     return ResponseEntity.ok(warehouseService.getGlobalStockSummary());
   }
 
-  // ─── Inventory transfers ────────────────────────────────────────
-
   @PostMapping("/stock/transfer")
+  @Operation(summary = "Transfer stock", description = "Transfers stock between warehouses")
   public ResponseEntity<Void> transferStock(
     @Valid @RequestBody TransferStockRequest request
   ) {
@@ -87,9 +88,8 @@ public class WarehouseController {
     return ResponseEntity.ok().build();
   }
 
-  // ─── Stock adjustment ───────────────────────────────────────────
-
   @PostMapping("/stock/adjust")
+  @Operation(summary = "Adjust stock", description = "Adjusts stock quantity in a warehouse")
   public ResponseEntity<Void> adjustStock(
     @Valid @RequestBody AdjustStockRequest request
   ) {
@@ -97,9 +97,8 @@ public class WarehouseController {
     return ResponseEntity.ok().build();
   }
 
-  // ─── Goods receiving ────────────────────────────────────────────
-
   @PostMapping("/orders/{id}/receive")
+  @Operation(summary = "Receive goods", description = "Receives goods against a purchase order")
   public ResponseEntity<GoodReceiptResponse> receiveGoods(
     @PathVariable Long id,
     @Valid @RequestBody ReceiveGoodsRequest request
@@ -110,6 +109,7 @@ public class WarehouseController {
   }
 
   @GetMapping("/receipts")
+  @Operation(summary = "List all receipts", description = "Returns a paginated list of all goods receipts")
   public ResponseEntity<Page<GoodReceiptResponse>> getAllReceipts(
     Pageable pageable
   ) {
@@ -117,6 +117,7 @@ public class WarehouseController {
   }
 
   @GetMapping("/orders/{orderId}/receipts")
+  @Operation(summary = "Get receipts by order", description = "Returns all receipts for a specific purchase order")
   public ResponseEntity<List<GoodReceiptResponse>> getReceiptsByOrderId(
     @PathVariable Long orderId
   ) {
@@ -124,13 +125,13 @@ public class WarehouseController {
   }
 
   @GetMapping("/receipts/{id}")
+  @Operation(summary = "Get receipt by ID", description = "Returns a specific goods receipt")
   public ResponseEntity<GoodReceiptResponse> getReceipt(@PathVariable Long id) {
     return ResponseEntity.ok(warehouseService.getReceiptById(id));
   }
 
-  // ─── Kardex / Inventory Movements ───────────────────────────────
-
   @GetMapping("/movements")
+  @Operation(summary = "List inventory movements", description = "Returns paginated inventory movements (kardex) with optional filters")
   public ResponseEntity<Page<InventoryMovementResponse>> getMovements(
     @RequestParam(required = false) Long productId,
     @RequestParam(required = false) Long warehouseId,

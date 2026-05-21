@@ -170,6 +170,32 @@ public class ProductService {
     );
   }
 
+  public ProductDTO getProductBySapCode(Long sapCode) {
+    Product product = productRepository
+      .findById(sapCode)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Producto no encontrado: " + sapCode)
+      );
+    return ProductDTO.fromEntity(
+      product,
+      getTotalStock(product.getId()),
+      getTotalPendingStock(product.getId())
+    );
+  }
+
+  public ProductDTO getProductBySku(String sku) {
+    Product product = productRepository
+      .findBySku(sku)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Producto no encontrado: " + sku)
+      );
+    return ProductDTO.fromEntity(
+      product,
+      getTotalStock(product.getId()),
+      getTotalPendingStock(product.getId())
+    );
+  }
+
   // Actualiza los campos editables de un producto.
   // Valida SKU único si el valor cambió. No modifica internalCode.
   @Transactional

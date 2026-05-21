@@ -3,6 +3,8 @@ package com.visco.backend.controllers;
 import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
 import com.visco.backend.models.dtos.PurchaseOrderResponse;
 import com.visco.backend.services.ProcurementService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -24,11 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/procurement")
 @RequiredArgsConstructor
+@Tag(name = "Procurement", description = "Purchase order management endpoints")
 public class ProcurementController {
 
   private final ProcurementService procurementService;
 
   @PostMapping("/orders")
+  @Operation(summary = "Create purchase order", description = "Creates a new purchase order")
   public ResponseEntity<PurchaseOrderResponse> createOrder(
     @Valid @RequestBody CreatePurchaseOrderRequest request
   ) {
@@ -38,6 +42,7 @@ public class ProcurementController {
   }
 
   @GetMapping("/orders")
+  @Operation(summary = "List all purchase orders", description = "Returns a paginated list of all purchase orders")
   public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(
     Pageable pageable
   ) {
@@ -45,11 +50,13 @@ public class ProcurementController {
   }
 
   @GetMapping("/orders/{id}")
+  @Operation(summary = "Get purchase order by ID", description = "Returns a specific purchase order")
   public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
     return ResponseEntity.ok(procurementService.getOrderById(id));
   }
 
   @PatchMapping("/orders/{id}/submit-for-approval")
+  @Operation(summary = "Submit order for approval", description = "Submits a purchase order for approval")
   public ResponseEntity<PurchaseOrderResponse> submitForApproval(
     @PathVariable Long id
   ) {
@@ -59,13 +66,12 @@ public class ProcurementController {
   public record ApproveOrderRequest(String notes) {}
 
   @PatchMapping("/orders/{id}/approve")
+  @Operation(summary = "Approve purchase order", description = "Approves a purchase order")
   public ResponseEntity<PurchaseOrderResponse> markApproved(
     @PathVariable Long id,
     @AuthenticationPrincipal UserDetails currentUser,
     @RequestBody(required = false) ApproveOrderRequest request
   ) {
-    // UserDetails.getUsername() returns the email (see User.getUsername()).
-    // We delegate UUID resolution to the service so the controller stays thin.
     String approverEmail = currentUser.getUsername();
     String notes = request != null ? request.notes() : null;
 
@@ -75,6 +81,7 @@ public class ProcurementController {
   }
 
   @PatchMapping("/orders/{id}/reject")
+  @Operation(summary = "Reject purchase order", description = "Rejects a purchase order with a reason")
   public ResponseEntity<PurchaseOrderResponse> rejectOrder(
     @PathVariable Long id,
     @RequestBody Map<String, Object> body
@@ -91,6 +98,7 @@ public class ProcurementController {
   }
 
   @PatchMapping("/orders/{id}/send-to-supplier")
+  @Operation(summary = "Send order to supplier", description = "Marks a purchase order as sent to supplier")
   public ResponseEntity<PurchaseOrderResponse> sendToSupplier(
     @PathVariable Long id
   ) {
@@ -98,6 +106,7 @@ public class ProcurementController {
   }
 
   @PatchMapping("/orders/{id}/cancel")
+  @Operation(summary = "Cancel purchase order", description = "Cancels a purchase order")
   public ResponseEntity<PurchaseOrderResponse> cancelOrder(
     @PathVariable Long id,
     @RequestBody(required = false) Map<String, Object> body

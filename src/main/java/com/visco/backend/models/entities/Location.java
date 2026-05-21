@@ -6,12 +6,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.util.ArrayList;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,38 +17,32 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "warehouses")
+@Table(
+  name = "locations",
+  indexes = {
+    @Index(name = "idx_location_warehouse", columnList = "warehouse_id"),
+    @Index(name = "idx_location_code", columnList = "code"),
+  }
+)
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Warehouse {
+public class Location {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(unique = true, nullable = false)
-  private String name;
-
   @Column(nullable = false)
-  private String physicalAddress;
-
-  @Column(nullable = false)
-  private String description;
-
-  @Column(name = "sap_center_code")
-  private String sapCenterCode;
+  private String code;
 
   @Column(name = "is_active", nullable = false)
-  private boolean active;
+  @Builder.Default
+  private Boolean active = true;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "responsible_user_id")
-  private User responsibleUser;
-
-  @OneToMany(mappedBy = "warehouse", fetch = FetchType.LAZY)
-  @Builder.Default
-  private List<Location> locations = new ArrayList<>();
+  @JoinColumn(name = "warehouse_id", nullable = false)
+  private Warehouse warehouse;
 }

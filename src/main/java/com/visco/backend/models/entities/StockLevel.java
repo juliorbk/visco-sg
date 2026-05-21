@@ -29,9 +29,14 @@ import lombok.Setter;
   indexes = {
     @Index(name = "idx_sl_product", columnList = "product_id"),
     @Index(name = "idx_sl_warehouse", columnList = "warehouse_id"),
+    @Index(name = "idx_sl_location", columnList = "location_id"),
     @Index(
       name = "idx_sl_product_warehouse",
       columnList = "product_id,warehouse_id"
+    ),
+    @Index(
+      name = "idx_sl_product_warehouse_location",
+      columnList = "product_id,warehouse_id,location_id"
     ),
   }
 )
@@ -48,6 +53,10 @@ public class StockLevel {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "warehouse_id")
   private Warehouse warehouse;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "location_id")
+  private Location location;
 
   @Version
   private Long version;

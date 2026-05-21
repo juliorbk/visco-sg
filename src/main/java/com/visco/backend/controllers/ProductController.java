@@ -5,6 +5,8 @@ import com.visco.backend.models.dtos.CreateProductRequest;
 import com.visco.backend.models.dtos.ProductDTO;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.services.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,13 +27,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
+@Tag(name = "Products", description = "Product management endpoints")
 public class ProductController {
 
   private final ProductService productService;
 
-  // GET /api/inventory/products?page=0&size=10
-  // Lista paginada de productos. Retorna ProductDTO (no expone la entidad).
   @GetMapping("/products")
+  @Operation(
+    summary = "List products",
+    description = "Returns a paginated list of products with optional search and category filters"
+  )
   public ResponseEntity<Page<ProductDTO>> getProducts(
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "20") int size,
@@ -47,9 +52,11 @@ public class ProductController {
     return ResponseEntity.ok(products);
   }
 
-  // POST /api/inventory/products
-  // Crea un producto. Retorna 201 Created con el DTO.
   @PostMapping("/products")
+  @Operation(
+    summary = "Create product",
+    description = "Creates a new product and returns the created product DTO"
+  )
   public ResponseEntity<ProductDTO> createProduct(
     @Valid @RequestBody CreateProductRequest request
   ) {
@@ -58,15 +65,33 @@ public class ProductController {
     );
   }
 
-  // GET /api/inventory/products/{id}
-  @GetMapping("/products/{id}")
-  public ResponseEntity<ProductDTO> getProductById(@PathVariable Long id) {
-    return ResponseEntity.ok(productService.getProductById(id));
+  @GetMapping("/products/{sku}")
+  @Operation(
+    summary = "Get product by SKU",
+    description = "Returns a product by its SKU"
+  )
+  public ResponseEntity<ProductDTO> getProductBySku(@PathVariable String sku) {
+    return ResponseEntity.ok(productService.getProductBySku(sku));
   }
 
-  // PUT /api/inventory/products/{id}
-  // Actualiza los campos del producto. Retorna el DTO actualizado.
+  @GetMapping("/products/{internalCode}")
+  @Operation(
+    summary = "Get product by internal code",
+    description = "Returns a product by its internal code"
+  )
+  public ResponseEntity<ProductDTO> getProductByInternalCode(
+    @PathVariable String internalCode
+  ) {
+    return ResponseEntity.ok(
+      productService.getProductByInternalCode(internalCode)
+    );
+  }
+
   @PutMapping("/products/{id}")
+  @Operation(
+    summary = "Update product",
+    description = "Updates product fields and returns the updated DTO"
+  )
   public ResponseEntity<ProductDTO> updateProduct(
     @PathVariable Long id,
     @RequestBody ProductDTO request
@@ -74,9 +99,11 @@ public class ProductController {
     return ResponseEntity.ok(productService.updateProduct(id, request));
   }
 
-  // DELETE /api/inventory/products/{id}
-  // Soft delete: desactiva el producto. Retorna 204 No Content.
   @DeleteMapping("/products/{id}")
+  @Operation(
+    summary = "Delete product",
+    description = "Soft deletes a product by deactivating it"
+  )
   public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
     productService.deleteProduct(id);
     return ResponseEntity.noContent().build();

@@ -2,6 +2,7 @@ package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.CostCenterDTO;
 import com.visco.backend.services.CostCenterService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,26 +16,26 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/cost-centers")
-@Tag(name = "Cost Centers", description = "Cost center lookup endpoints")
+@Tag(name = "Cost Centers", description = "Cost center management endpoints")
 @RequiredArgsConstructor
 public class CostCenterController {
 
     private final CostCenterService costCenterService;
 
-    // GET /api/cost-centers?page=0&size=20
     @GetMapping
+    @Operation(summary = "List all cost centers", description = "Returns a paginated list of all cost centers")
     public ResponseEntity<Page<CostCenterDTO>> getAllCostCenters(Pageable pageable) {
         return ResponseEntity.ok(costCenterService.getCostCenters(pageable));
     }
 
-    // GET /api/cost-centers/all  — sin paginar, para dropdowns del frontend
     @GetMapping("/all")
+    @Operation(summary = "List all cost centers (unpaged)", description = "Returns all cost centers without pagination, useful for dropdowns")
     public ResponseEntity<List<CostCenterDTO>> getAllUnpaged() {
         return ResponseEntity.ok(costCenterService.getAllCostCenters());
     }
 
-    // GET /api/cost-centers/{id}
     @GetMapping("/{id}")
+    @Operation(summary = "Get cost center by ID", description = "Returns a specific cost center")
     public ResponseEntity<CostCenterDTO> getById(@PathVariable Long id) {
         return ResponseEntity.ok(costCenterService.getCostCenterById(id));
     }

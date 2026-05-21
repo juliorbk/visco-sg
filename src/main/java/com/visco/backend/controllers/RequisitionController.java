@@ -4,6 +4,8 @@ import com.visco.backend.models.dtos.CreateRequisitionRequest;
 import com.visco.backend.models.dtos.RequisitionResponse;
 import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.services.RequisitionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -24,11 +26,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/requisitions")
 @RequiredArgsConstructor
+@Tag(name = "Requisitions", description = "Purchase requisition management endpoints")
 public class RequisitionController {
 
     private final RequisitionService requisitionService;
 
     @PostMapping
+    @Operation(summary = "Create requisition", description = "Creates a new purchase requisition")
     public ResponseEntity<RequisitionResponse> createRequisition(
         @Valid @RequestBody CreateRequisitionRequest request
     ) {
@@ -38,6 +42,7 @@ public class RequisitionController {
     }
 
     @GetMapping
+    @Operation(summary = "List all requisitions", description = "Returns a paginated list of requisitions with optional status filter")
     public ResponseEntity<Page<RequisitionResponse>> getAllRequisitions(
         @RequestParam(required = false) RequisitionStatus status,
         Pageable pageable
@@ -49,16 +54,19 @@ public class RequisitionController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get requisition by ID", description = "Returns a specific requisition")
     public ResponseEntity<RequisitionResponse> getRequisition(@PathVariable Long id) {
         return ResponseEntity.ok(requisitionService.getRequisitionById(id));
     }
 
     @PatchMapping("/{id}/submit")
+    @Operation(summary = "Submit requisition for approval", description = "Submits a requisition for approval workflow")
     public ResponseEntity<RequisitionResponse> submitForApproval(@PathVariable Long id) {
         return ResponseEntity.ok(requisitionService.submitForApproval(id));
     }
 
     @PatchMapping("/{id}/approve")
+    @Operation(summary = "Approve requisition", description = "Approves a requisition")
     public ResponseEntity<RequisitionResponse> approveRequisition(
         @PathVariable Long id,
         @RequestBody Map<String, Object> body
@@ -70,6 +78,7 @@ public class RequisitionController {
     }
 
     @PatchMapping("/{id}/reject")
+    @Operation(summary = "Reject requisition", description = "Rejects a requisition with a reason")
     public ResponseEntity<RequisitionResponse> rejectRequisition(
         @PathVariable Long id,
         @RequestBody Map<String, Object> body
@@ -81,11 +90,13 @@ public class RequisitionController {
     }
 
     @PatchMapping("/{id}/cancel")
+    @Operation(summary = "Cancel requisition", description = "Cancels a requisition")
     public ResponseEntity<RequisitionResponse> cancelRequisition(@PathVariable Long id) {
         return ResponseEntity.ok(requisitionService.cancelRequisition(id));
     }
 
     @PatchMapping("/{id}/convert")
+    @Operation(summary = "Convert requisition to purchase order", description = "Marks a requisition as converted to a purchase order")
     public ResponseEntity<RequisitionResponse> markAsConverted(@PathVariable Long id) {
         return ResponseEntity.ok(requisitionService.markAsConverted(id));
     }

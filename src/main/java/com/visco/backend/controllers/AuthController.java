@@ -63,6 +63,10 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
+  @Operation(
+    summary = "Logout user",
+    description = "Clears the JWT cookie and logs out the user"
+  )
   public ResponseEntity<?> logoutUser(HttpServletResponse response) {
     var logoutCookie = cookieService.createLogoutCookie();
     response.addCookie(logoutCookie);
