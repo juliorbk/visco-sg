@@ -80,7 +80,8 @@ public class SecurityConfig {
             "/api/auth/logout",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/api/migration/**"
+            "/api/migration/**",
+            "/actuator/**" // <--- AGREGA ESTA LÍNEA AQUÍ
           )
           .permitAll()
           // Solo ADMIN (y cost-centers requiere al menos autenticación)

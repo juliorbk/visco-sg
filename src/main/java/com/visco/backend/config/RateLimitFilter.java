@@ -30,7 +30,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     LOGIN("/api/auth/login", 8, 1),
     REGISTER("/api/auth/register", 3, 5),
     ADMIN_OPERATIONS("/api/admin", 30, 1),
-    //INVENTORY("/api/inventory", 200, 1),
+    INVENTORY("/api/inventory", 60, 1),
     PROCUREMENT("/api/procurement", 60, 1),
     USERS("/api/users", 30, 1),
     SUPPLIERS("/api/suppliers", 60, 1),
