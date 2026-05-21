@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
   Optional<Product> findByInternalCode(String internalCode);
@@ -55,6 +56,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     nativeQuery = true
   )
   Long getNextInternalCodeSequence();
+
+  @Query(
+    "SELECT p FROM Product p WHERE " +
+      "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(p.internalCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+      "AND (:category IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS string)))"
+  )
+  Page<Product> findBySearchAndCategory(
+    Pageable pageable,
+    @Param("search") String search,
+    @Param("category") String category
+  );
 
   interface CriticalProductProjection {
     Long getProductId();

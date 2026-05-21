@@ -1,33 +1,40 @@
 package com.visco.backend.models.entities;
 
-import java.math.BigDecimal;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.Index;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-
+import jakarta.persistence.Version;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "stock_levels", indexes = {
+@Table(
+  name = "stock_levels",
+  indexes = {
     @Index(name = "idx_sl_product", columnList = "product_id"),
-    @Index(name = "idx_sl_location", columnList = "location_id"),
-    @Index(name = "idx_sl_product_location", columnList = "product_id,location_id")
-})
+    @Index(name = "idx_sl_warehouse", columnList = "warehouse_id"),
+    @Index(
+      name = "idx_sl_product_warehouse",
+      columnList = "product_id,warehouse_id"
+    ),
+  }
+)
 public class StockLevel {
 
   @Id
@@ -39,12 +46,18 @@ public class StockLevel {
   private Product product;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "location_id")
-  private Location location;
+  @JoinColumn(name = "warehouse_id")
+  private Warehouse warehouse;
+
+  @Version
+  private Long version;
 
   @Column(nullable = false)
   private BigDecimal currentStock;
 
   @Column(nullable = false)
   private BigDecimal pendingStock;
+
+  @Column(nullable = false)
+  private BigDecimal freeStock;
 }

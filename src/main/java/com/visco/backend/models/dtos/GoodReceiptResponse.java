@@ -12,8 +12,9 @@ public record GoodReceiptResponse(
     String receiptNumber,
     Long purchaseOrderId,
     String orderNumber,
-    PurchaseOrderStatus updatedStatus, // DELIVERED o PARTIALLY_DELIVERED según corresponda
+    PurchaseOrderStatus updatedStatus,
     LocalDateTime receivedAt,
     String notes,
+    String receivedBy,
     List<GoodReceiptItemResponse> items) {
 }

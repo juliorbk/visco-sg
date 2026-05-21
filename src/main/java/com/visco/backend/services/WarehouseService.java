@@ -9,13 +9,12 @@ import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
-import com.visco.backend.models.dtos.WarehouseResponse;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.InventoryMovement;
-import com.visco.backend.models.entities.Location;
 import com.visco.backend.models.entities.MovementType;
+import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
@@ -24,7 +23,7 @@ import com.visco.backend.models.entities.User;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.InventoryMovementRepository;
-import com.visco.backend.repositories.LocationRepository;
+import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.UserRepository;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,7 +51,7 @@ public class WarehouseService {
   private final StockLevelRepository stockLevelRepository;
   private final WarehouseRepository warehouseRepository;
   private final UserRepository userRepository;
-  private final LocationRepository locationRepository;
+  private final ProductRepository productRepository;
   private final InventoryMovementRepository inventoryMovementRepository;
 
   // ─────────────────────────────────────────────────────────────
@@ -81,19 +81,16 @@ public class WarehouseService {
   }
 
   @Transactional(readOnly = true)
-  public List<WarehouseResponse> getAllWarehouses() {
+  public Page<WarehouseDTO> getAllWarehouses(Pageable pageable) {
+    return warehouseRepository.findAll(pageable).map(WarehouseDTO::fromEntity);
+  }
+
+  @Transactional(readOnly = true)
+  public WarehouseDTO getWarehouse(Long id) {
     return warehouseRepository
-      .findAll()
-      .stream()
-      .filter(Warehouse::isActive)
-      .map(w ->
-        WarehouseResponse.builder()
-          .id(w.getId())
-          .name(w.getName())
-          .sapCenterCode(w.getSapCenterCode())
-          .build()
-      )
-      .toList();
+      .findById(id)
+      .map(WarehouseDTO::fromEntity)
+      .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -101,6 +98,7 @@ public class WarehouseService {
   // ─────────────────────────────────────────────────────────────
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public GoodReceiptResponse receiveGoods(
     Long orderId,
     ReceiveGoodsRequest request
@@ -121,11 +119,11 @@ public class WarehouseService {
       );
     }
 
-    Location destLocation = locationRepository
-      .findById(request.destinationLocationId())
+    Warehouse destWarehouse = warehouseRepository
+      .findById(request.destinationWarehouseId())
       .orElseThrow(() ->
         new EntityNotFoundException(
-          "Location not found: " + request.destinationLocationId()
+          "Warehouse not found: " + request.destinationWarehouseId()
         )
       );
 
@@ -157,6 +155,22 @@ public class WarehouseService {
       }
     }
 
+    User receivedByUser;
+    if (request.receivedById() != null) {
+      receivedByUser = userRepository
+        .findById(request.receivedById())
+        .orElseThrow(() ->
+          new EntityNotFoundException(
+            "User not found: " + request.receivedById()
+          )
+        );
+    } else {
+      receivedByUser = userRepository
+        .findById(order.getCreatedBy().getId())
+        .orElse(order.getCreatedBy());
+    }
+    receipt.setReceivedBy(receivedByUser);
+
     User createdBy = userRepository
       .findById(order.getCreatedBy().getId())
       .orElse(order.getCreatedBy());
@@ -185,16 +199,16 @@ public class WarehouseService {
 
       receipt.getItems().add(item);
 
-      // Put-away: find or create StockLevel at the destination location
+      // Find or create StockLevel at the destination warehouse
       StockLevel stockLevel = stockLevelRepository
-        .findByProductIdAndLocationId(
+        .findByProductIdAndWarehouseId(
           poItem.getProduct().getId(),
-          request.destinationLocationId()
+          request.destinationWarehouseId()
         )
         .orElseGet(() ->
           StockLevel.builder()
             .product(poItem.getProduct())
-            .location(destLocation)
+            .warehouse(destWarehouse)
             .currentStock(BigDecimal.ZERO)
             .pendingStock(BigDecimal.ZERO)
             .build()
@@ -203,13 +217,17 @@ public class WarehouseService {
       stockLevel.setCurrentStock(stockLevel.getCurrentStock().add(received));
       stockLevelRepository.save(stockLevel);
 
-      // Remove from pending stock (from whichever level it was added)
-      substractPendingStock(poItem.getProduct().getId(), received);
+      // Remove from pending stock for this product/warehouse
+      substractPendingStock(
+        poItem.getProduct().getId(),
+        request.destinationWarehouseId(),
+        received
+      );
 
       // Record inventory movement (INPUT)
       InventoryMovement movement = InventoryMovement.builder()
         .product(poItem.getProduct())
-        .toLocation(destLocation)
+        .toWarehouse(destWarehouse)
         .quantity(received)
         .type(MovementType.INPUT)
         .reason("Goods receipt - PO: " + order.getOrderNumber())
@@ -292,6 +310,9 @@ public class WarehouseService {
       order.getStatus(),
       receipt.getReceivedAt(),
       receipt.getNotes(),
+      receipt.getReceivedBy() != null
+        ? receipt.getReceivedBy().getName()
+        : null,
       itemResponses
     );
   }
@@ -300,53 +321,73 @@ public class WarehouseService {
   // Stock helpers
   // ─────────────────────────────────────────────────────────────
 
-  // public void addPendingStock(Long productId, BigDecimal quantity) {
-  // StockLevel level = getFirstStockLevel(productId);
-  // level.setPendingStock(level.getPendingStock().add(quantity));
-  // stockLevelRepository.save(level);
-  // }
-
   public void addPendingStockByWarehouse(
     Long productId,
     Long warehouseId,
     BigDecimal quantity
   ) {
-    List<StockLevel> levels =
-      stockLevelRepository.findByProductIdAndLocationWarehouseId(
-        productId,
-        warehouseId
+    Warehouse warehouse = warehouseRepository
+      .findById(warehouseId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Warehouse not found: " + warehouseId)
       );
-    if (levels.isEmpty()) {
-      return;
-    }
-    StockLevel level = levels.get(0);
+
+    StockLevel level = stockLevelRepository
+      .findByProductIdAndWarehouseId(productId, warehouseId)
+      .orElseGet(() -> {
+        Product product = productRepository
+          .findById(productId)
+          .orElseThrow(() ->
+            new EntityNotFoundException("Product not found: " + productId)
+          );
+        return StockLevel.builder()
+          .product(product)
+          .warehouse(warehouse)
+          .currentStock(BigDecimal.ZERO)
+          .pendingStock(BigDecimal.ZERO)
+          .build();
+      });
     level.setPendingStock(level.getPendingStock().add(quantity));
     stockLevelRepository.save(level);
   }
 
-  public void addCurrentStock(Long productId, BigDecimal quantity) {
-    StockLevel level = getFirstStockLevel(productId);
-    level.setCurrentStock(level.getCurrentStock().add(quantity));
+  public void addCurrentStock(
+    Long productId,
+    Long warehouseId,
+    BigDecimal quantity
+  ) {
+    stockLevelRepository
+      .findByProductIdAndWarehouseId(productId, warehouseId)
+      .ifPresent(level -> {
+        level.setCurrentStock(level.getCurrentStock().add(quantity));
+        stockLevelRepository.save(level);
+      });
   }
 
-  public void substractPendingStock(Long productId, BigDecimal quantity) {
-    StockLevel level = getFirstStockLevel(productId);
-    level.setPendingStock(level.getPendingStock().subtract(quantity));
+  public void substractPendingStock(
+    Long productId,
+    Long warehouseId,
+    BigDecimal quantity
+  ) {
+    stockLevelRepository
+      .findByProductIdAndWarehouseId(productId, warehouseId)
+      .ifPresent(level -> {
+        level.setPendingStock(level.getPendingStock().subtract(quantity));
+        stockLevelRepository.save(level);
+      });
   }
 
-  public void substractCurrentStock(Long productId, BigDecimal quantity) {
-    StockLevel level = getFirstStockLevel(productId);
-    level.setCurrentStock(level.getCurrentStock().subtract(quantity));
-  }
-
-  private StockLevel getFirstStockLevel(Long productId) {
-    List<StockLevel> levels = stockLevelRepository.findByProductId(productId);
-    if (levels.isEmpty()) {
-      throw new EntityNotFoundException(
-        "No stock level found for product ID: " + productId
-      );
-    }
-    return levels.get(0);
+  public void substractCurrentStock(
+    Long productId,
+    Long warehouseId,
+    BigDecimal quantity
+  ) {
+    stockLevelRepository
+      .findByProductIdAndWarehouseId(productId, warehouseId)
+      .ifPresent(level -> {
+        level.setCurrentStock(level.getCurrentStock().subtract(quantity));
+        stockLevelRepository.save(level);
+      });
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -468,48 +509,58 @@ public class WarehouseService {
       receipt.getPurchaseOrder().getStatus(),
       receipt.getReceivedAt(),
       receipt.getNotes(),
+      receipt.getReceivedBy() != null
+        ? receipt.getReceivedBy().getName()
+        : null,
       itemResponses
     );
   }
 
   @Transactional
   public void transferStock(TransferStockRequest request) {
-    // 1. Fetch the source stock level
-    StockLevel sourceStock = stockLevelRepository
-      .findByProductIdAndLocationId(
-        request.productId(),
-        request.fromLocationId()
-      )
+    Warehouse fromWarehouse = warehouseRepository
+      .findById(request.fromWarehouseId())
       .orElseThrow(() ->
-        new EntityNotFoundException("Stock level not found for source location")
+        new EntityNotFoundException("Source warehouse not found")
       );
 
-    // 2. Validate sufficient stock
+    Warehouse toWarehouse = warehouseRepository
+      .findById(request.toWarehouseId())
+      .orElseThrow(() ->
+        new EntityNotFoundException("Destination warehouse not found")
+      );
+
+    StockLevel sourceStock = stockLevelRepository
+      .findByProductIdAndWarehouseId(
+        request.productId(),
+        request.fromWarehouseId()
+      )
+      .orElseThrow(() ->
+        new EntityNotFoundException(
+          "Stock level not found for source warehouse"
+        )
+      );
+
     if (sourceStock.getCurrentStock().compareTo(request.quantity()) < 0) {
       throw new IllegalArgumentException(
-        "Insufficient stock in the source location for this transfer."
+        "Insufficient stock in the source warehouse for this transfer."
       );
     }
 
-    // 3. Fetch or create the destination stock level
     StockLevel destinationStock = stockLevelRepository
-      .findByProductIdAndLocationId(request.productId(), request.toLocationId())
-      .orElseGet(() -> {
-        Location toLocation = locationRepository
-          .findById(request.toLocationId())
-          .orElseThrow(() ->
-            new EntityNotFoundException("Destination location not found")
-          );
-
-        return StockLevel.builder()
+      .findByProductIdAndWarehouseId(
+        request.productId(),
+        request.toWarehouseId()
+      )
+      .orElseGet(() ->
+        StockLevel.builder()
           .product(sourceStock.getProduct())
-          .location(toLocation)
+          .warehouse(toWarehouse)
           .currentStock(BigDecimal.ZERO)
           .pendingStock(BigDecimal.ZERO)
-          .build();
-      });
+          .build()
+      );
 
-    // 4. Update the balances
     sourceStock.setCurrentStock(
       sourceStock.getCurrentStock().subtract(request.quantity())
     );
@@ -520,26 +571,25 @@ public class WarehouseService {
     stockLevelRepository.save(sourceStock);
     stockLevelRepository.save(destinationStock);
 
-    // 5. Record the movement in the audit trail
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
     InventoryMovement movement = InventoryMovement.builder()
       .product(sourceStock.getProduct())
-      .fromLocation(sourceStock.getLocation()) //Original location
-      .toLocation(destinationStock.getLocation()) //New location
+      .fromWarehouse(fromWarehouse)
+      .toWarehouse(toWarehouse)
       .quantity(request.quantity())
-      .type(MovementType.TRANSFER) // Type
+      .type(MovementType.TRANSFER)
       .reason(
         request.reason() != null
           ? request.reason()
-          : "Transfer to other location"
-      ) //Reason
+          : "Transfer to other warehouse"
+      )
       .entryUnitPrice(request.unitCost())
       .exitUnitPrice(request.unitCost())
-      .createdAt(LocalDateTime.now()) //Date
-      .createdBy(createdBy) //Responsible
+      .createdAt(LocalDateTime.now())
+      .createdBy(createdBy)
       .build();
 
     inventoryMovementRepository.save(movement);
@@ -547,9 +597,12 @@ public class WarehouseService {
 
   @Transactional
   public void adjustStock(AdjustStockRequest request) {
-    // 1. Fetch the stock level
+    Warehouse warehouse = warehouseRepository
+      .findById(request.warehouseId())
+      .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
+
     StockLevel stock = stockLevelRepository
-      .findByProductIdAndLocationId(request.productId(), request.locationId())
+      .findByProductIdAndWarehouseId(request.productId(), request.warehouseId())
       .orElseThrow(() -> new EntityNotFoundException("Stock level not found"));
 
     User createdBy = userRepository
@@ -559,23 +612,19 @@ public class WarehouseService {
     BigDecimal currentStock = stock.getCurrentStock();
     BigDecimal difference = request.newStock().subtract(currentStock);
 
-    // 2. Record the movement in the audit trail
     InventoryMovement movement = InventoryMovement.builder()
       .product(stock.getProduct())
-      .fromLocation(stock.getLocation()) //Original location
-      .toLocation(stock.getLocation()) //New location
+      .fromWarehouse(warehouse)
+      .toWarehouse(warehouse)
       .quantity(difference)
-      .type(MovementType.ADJUSTMENT) // Type
-      .reason(request.reason() != null ? request.reason() : "Adjust stock") //Reason
+      .type(MovementType.ADJUSTMENT)
+      .reason(request.reason() != null ? request.reason() : "Adjust stock")
       .entryUnitPrice(request.unitCost())
-      .createdAt(LocalDateTime.now()) //Date
-      .createdBy(createdBy) //Responsible
+      .createdAt(LocalDateTime.now())
+      .createdBy(createdBy)
       .build();
 
-    // 2. Update the stock level
-    // Asignamos directamente el valor, porque ya es un BigDecimal
     stock.setCurrentStock(request.newStock());
-
     stockLevelRepository.save(stock);
     inventoryMovementRepository.save(movement);
   }
@@ -585,53 +634,62 @@ public class WarehouseService {
   // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
-  public List<InventoryMovementResponse> getMovements(
+  public Page<InventoryMovementResponse> getMovements(
     Long productId,
-    Long locationId,
+    Long warehouseId,
     MovementType type,
     LocalDateTime startDate,
-    LocalDateTime endDate
+    LocalDateTime endDate,
+    Pageable pageable
   ) {
-    List<InventoryMovement> movements =
+    BigDecimal balanceBefore = BigDecimal.ZERO;
+    if (productId != null && startDate != null) {
+      balanceBefore = inventoryMovementRepository.calculateRunningBalanceUntil(
+        productId,
+        startDate
+      );
+    }
+
+    final BigDecimal openingBalance = balanceBefore;
+
+    Page<InventoryMovement> movementsPage =
       inventoryMovementRepository.findMovementsWithFilters(
         productId,
-        locationId,
+        warehouseId,
         type,
         startDate,
-        endDate
+        endDate,
+        pageable
       );
 
-    BigDecimal[] runningBalance = { BigDecimal.ZERO };
+    return movementsPage.map(m -> {
+      BigDecimal qty =
+        m.getType() == MovementType.OUTPUT ||
+        m.getType() == MovementType.ADJUSTMENT
+          ? m.getQuantity().negate()
+          : m.getQuantity();
 
-    return movements
-      .stream()
-      .map(m -> {
-        runningBalance[0] = runningBalance[0].add(m.getQuantity());
+      BigDecimal entryPrice = m.getEntryUnitPrice();
+      BigDecimal exitPrice = m.getExitUnitPrice();
 
-        BigDecimal entryPrice = m.getEntryUnitPrice();
-        BigDecimal exitPrice = m.getExitUnitPrice();
+      BigDecimal runningBalance = openingBalance.add(qty);
 
-        return new InventoryMovementResponse(
-          m.getId(),
-          m.getProduct().getId(),
-          m.getProduct().getName(),
-          m.getProduct().getSku(),
-          m.getType().name(),
-          m.getQuantity(),
-          entryPrice,
-          exitPrice,
-          m.getFromLocation() != null
-            ? m.getFromLocation().getLocationCode()
-            : null,
-          m.getToLocation() != null
-            ? m.getToLocation().getLocationCode()
-            : null,
-          m.getReason(),
-          m.getCreatedAt(),
-          m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
-          runningBalance[0]
-        );
-      })
-      .toList();
+      return new InventoryMovementResponse(
+        m.getId(),
+        m.getProduct().getId(),
+        m.getProduct().getName(),
+        m.getProduct().getSku(),
+        m.getType().name(),
+        m.getQuantity(),
+        entryPrice,
+        exitPrice,
+        m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
+        m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
+        m.getReason(),
+        m.getCreatedAt(),
+        m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
+        runningBalance
+      );
+    });
   }
 }

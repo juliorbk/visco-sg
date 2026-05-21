@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class InvoiceService {
     private final GoodReceiptRepository goodReceiptRepository;
 
     @Transactional
+    @CacheEvict(value = "dashboard", allEntries = true)
     public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
         PurchaseOrder order = purchaseOrderRepository
             .findById(request.purchaseOrderId())
@@ -107,9 +109,10 @@ public class InvoiceService {
             BigDecimal invQty = itemReq.quantity();
 
             boolean qtyMatch = invQty.compareTo(poQty) == 0;
+            boolean receivedMatch = invQty.compareTo(receivedQty) == 0;
             boolean priceMatch = itemReq.unitPrice().compareTo(poItem.getUnitPrice()) == 0;
 
-            if (!qtyMatch || !priceMatch) {
+            if (!qtyMatch || !priceMatch || !receivedMatch) {
                 anyMismatch = true;
                 allMatch = false;
             }

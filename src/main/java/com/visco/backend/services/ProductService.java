@@ -11,13 +11,15 @@ import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,9 +33,9 @@ public class ProductService {
   // Crea un producto nuevo.
   // Valida SKU único (internalCode se genera automáticamente después del save).
   @Transactional
-  public ProductDTO createProduct(ProductDTO dto) {
+  public ProductDTO createProduct(CreateProductRequest dto) {
     // 1. Corregida la sintaxis del IF
-    if (productRepository.findBySku(dto.getSku()).isPresent()) {
+    if (productRepository.findBySku(dto.sku()).isPresent()) {
       throw new IllegalArgumentException("The product is already registered");
     }
 
@@ -42,34 +44,33 @@ public class ProductService {
 
     // 3. Buscar relaciones (Asegúrate de tener inyectados estos repositorios en tu servicio)
     Supplier supplier = null;
-    if (dto.getSupplierId() != null) {
+    if (dto.supplierId() != null) {
       supplier = supplierRepository
-        .findById(dto.getSupplierId())
+        .findById(dto.supplierId())
         .orElseThrow(() -> new IllegalArgumentException("Supplier not found"));
     }
 
     Category category = null;
-    if (dto.getCategoryId() != null) {
+    if (dto.categoryId() != null) {
       category = categoryRepository
-        .findById(dto.getCategoryId())
+        .findById(dto.categoryId())
         .orElseThrow(() -> new IllegalArgumentException("Category not found"));
     }
 
     // 4. Construcción de la entidad
     Product product = Product.builder()
-      .id(null) // Forzamos a PostgreSQL a usar tu secuencia 'product_code_seq'
+      // .id(null) ← ELIMINA esta línea, Hibernate lo maneja solo
       .internalCode(nextCode)
-      .sku(dto.getSku())
-      .name(dto.getName())
-      .description(dto.getDescription())
-      .sapCode(dto.getSapCode())
-      .uom(Uom.valueOf(dto.getUom()))
-      .reorderPoint(dto.getReorderPoint())
-      .active(dto.getActive() != null ? dto.getActive() : true)
-      .supplier(supplier) // <-- Asignamos el proveedor encontrado
-      .category(category) // <-- Asignamos la categoría encontrada
+      .sku(dto.sku())
+      .name(dto.name())
+      .description(dto.description())
+      .sapCode(dto.sapCode() != null ? dto.sapCode() : "") // sapCode es nullable=false
+      .uom(dto.uom())
+      .reorderPoint(dto.reorderPoint())
+      // .active(true) ← Tampoco necesitas esto, ya tienes @Builder.Default active = true
+      .supplier(supplier)
+      .category(category)
       .build();
-
     Product savedProduct = productRepository.save(product);
 
     // Como es un producto nuevo, pasamos BigDecimal.ZERO para los stocks
@@ -122,16 +123,37 @@ public class ProductService {
 
   // Lista paginada de todos los productos.
   // GET /api/inventory/products?page=0&size=10
-  public Page<ProductDTO> getAllProducts(Pageable pageable) {
-    return productRepository
-      .findAll(pageable)
-      .map(p ->
-        ProductDTO.fromEntity(
-          p,
-          getTotalStock(p.getId()),
-          getTotalPendingStock(p.getId())
+  public Page<ProductDTO> getProducts(
+    Pageable pageable,
+    String search,
+    String category
+  ) {
+    Page<Product> products = productRepository.findBySearchAndCategory(
+      pageable,
+      search,
+      category
+    );
+
+    // Obtiene todos los stocks en una sola query
+    List<Long> productIds = products.stream().map(Product::getId).toList();
+
+    Map<Long, BigDecimal[]> stockMap = stockLevelRepository
+      .sumStockByProductIds(productIds)
+      .stream()
+      .collect(
+        Collectors.toMap(
+          row -> (Long) row[0],
+          row -> new BigDecimal[] { (BigDecimal) row[1], (BigDecimal) row[2] }
         )
       );
+
+    return products.map(product -> {
+      BigDecimal[] stocks = stockMap.getOrDefault(
+        product.getId(),
+        new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
+      );
+      return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
+    });
   }
 
   // Busca un producto por su ID numérico.
@@ -168,13 +190,15 @@ public class ProductService {
 
     Supplier supplier = null;
     if (dto.getSupplierId() != null) {
-      supplier = supplierRepository.findById(dto.getSupplierId())
+      supplier = supplierRepository
+        .findById(dto.getSupplierId())
         .orElseThrow(() -> new IllegalArgumentException("Supplier not found"));
     }
 
     Category category = null;
     if (dto.getCategoryId() != null) {
-      category = categoryRepository.findById(dto.getCategoryId())
+      category = categoryRepository
+        .findById(dto.getCategoryId())
         .orElseThrow(() -> new IllegalArgumentException("Category not found"));
     }
 

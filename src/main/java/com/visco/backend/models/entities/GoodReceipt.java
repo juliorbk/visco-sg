@@ -1,23 +1,21 @@
 package com.visco.backend.models.entities;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Index;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,9 +26,12 @@ import lombok.ToString;
 // Nota de recepción — se crea cuando llega mercancía al warehouse
 // Registra qué productos llegaron y en qué cantidad contra una orden de compra
 @Entity
-@Table(name = "good_receipts", indexes = {
-    @Index(name = "idx_gr_purchase_order", columnList = "purchase_order_id")
-})
+@Table(
+  name = "good_receipts",
+  indexes = {
+    @Index(name = "idx_gr_purchase_order", columnList = "purchase_order_id"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -53,16 +54,23 @@ public class GoodReceipt {
   private LocalDateTime receivedAt; // Fecha/hora de la recepción
 
   @Column(length = 1000)
-  private String notes; // Observaciones (opcional)
+  private String notes;
 
   @Column(nullable = false)
   private boolean closed;
 
   @Column(nullable = false)
-  private Long destinationWarehouseId; // Almacén destino
+  private Long destinationWarehouseId;
 
-  // Items recibidos (cascade = ALL para que se guarden automáticamente)
-  @OneToMany(mappedBy = "goodReceipt", cascade = CascadeType.ALL, orphanRemoval = true)
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "received_by_id")
+  private User receivedBy;
+
+  @OneToMany(
+    mappedBy = "goodReceipt",
+    cascade = CascadeType.ALL,
+    orphanRemoval = true
+  )
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude

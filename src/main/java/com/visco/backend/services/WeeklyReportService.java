@@ -1,332 +1,527 @@
 package com.visco.backend.services;
 
+import com.visco.backend.models.dtos.CriticalInventoryItemDTO;
+import com.visco.backend.models.dtos.KpiStatsDTO;
+import com.visco.backend.models.dtos.RecentOrderDTO;
+import com.visco.backend.repositories.UserRepository;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import java.awt.Color;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.visco.backend.models.dtos.CriticalInventoryItemDTO;
-import com.visco.backend.models.dtos.KpiStatsDTO;
-import com.visco.backend.models.dtos.RecentOrderDTO;
-import com.visco.backend.repositories.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class WeeklyReportService {
 
-    private final StatsService statsService;
-    private final UserRepository userRepository;
-    private final JavaMailSender mailSender;
+  private final StatsService statsService;
+  private final UserRepository userRepository;
+  private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String senderEmail;
+  @Value("${spring.mail.username}")
+  private String senderEmail;
 
-    @Value("${report.recipients:}")
-    private String reportRecipients;
+  @Value("${report.recipients:}")
+  private String reportRecipients;
 
-    private static final DateTimeFormatter DATE_FMT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+  @Value("${report.max-critical-items:50}")
+  private int maxCriticalItems;
 
-    // Corre todos los lunes a las 8:00 AM
-    @Scheduled(cron = "0 0 8 * * MON")
-    @Transactional(readOnly = true)
-    public void sendWeeklyReport() {
-        log.info("Generando reporte semanal...");
+  @Value("${report.max-recent-orders:50}")
+  private int maxRecentOrders;
 
-        List<String> recipients = resolveRecipients();
-        if (recipients.isEmpty()) {
-            log.warn("No hay destinatarios configurados para el reporte semanal. "
-                    + "Agrega report.recipients en el .env");
-            return;
-        }
+  private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern(
+    "dd/MM/yyyy"
+  );
 
-        try {
-            KpiStatsDTO kpis = statsService.getKpis();
-            List<RecentOrderDTO> recentOrders = statsService.getRecentOrders(10);
-            List<CriticalInventoryItemDTO> critical = statsService.getCriticalInventory();
+  @Scheduled(cron = "0 0 8 * * MON")
+  @Transactional(readOnly = true)
+  public void sendWeeklyReport() {
+    log.info("Generating weekly report...");
 
-            String html = buildHtml(kpis, recentOrders, critical);
-            String subject = String.format("📊 Reporte Semanal Visco Orinoco — %s",
-                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-
-            for (String recipient : recipients) {
-                sendEmail(recipient.trim(), subject, html);
-            }
-
-            log.info("Reporte semanal enviado a {} destinatario(s)", recipients.size());
-
-        } catch (Exception e) {
-            log.error("Error al generar/enviar reporte semanal: {}", e.getMessage(), e);
-        }
+    List<String> recipients = resolveRecipients();
+    if (recipients.isEmpty()) {
+      log.warn(
+        "No recipients configured for weekly report. Add report.recipients to .env"
+      );
+      return;
     }
 
-    // También disparo manual desde un endpoint si hace falta (útil para pruebas)
-    @Transactional(readOnly = true)
-    public void sendReportNow() {
-        sendWeeklyReport();
+    try {
+      KpiStatsDTO kpis = statsService.getKpis();
+      List<RecentOrderDTO> recentOrders = statsService.getRecentOrders(
+        maxRecentOrders
+      );
+      List<CriticalInventoryItemDTO> critical =
+        statsService.getCriticalInventory();
+
+      // Truncate critical items if needed
+      if (critical.size() > maxCriticalItems) {
+        log.warn(
+          "Critical inventory items {} exceed max {}. Truncating.",
+          critical.size(),
+          maxCriticalItems
+        );
+        critical = critical.subList(0, maxCriticalItems);
+      }
+
+      byte[] excelBytes = buildExcelFile(kpis, recentOrders, critical);
+      LocalDateTime now = LocalDateTime.now();
+      String weekStart = now
+        .minusDays(now.getDayOfWeek().getValue() - 1)
+        .format(DATE_FMT);
+      String weekEnd = now
+        .minusDays(now.getDayOfWeek().getValue() - 7)
+        .format(DATE_FMT);
+
+      String subject = String.format(
+        "📊 Reporte Semanal Visco Orinoco — %s (Semana %s a %s)",
+        now.format(DATE_FMT),
+        weekStart,
+        weekEnd
+      );
+
+      for (String recipient : recipients) {
+        sendEmailWithAttachment(recipient.trim(), subject, excelBytes);
+      }
+
+      log.info("Weekly report sent to {} recipient(s)", recipients.size());
+    } catch (Exception e) {
+      log.error(
+        "Error generating/sending weekly report: {}",
+        e.getMessage(),
+        e
+      );
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public void sendReportNow() {
+    sendWeeklyReport();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private List<String> resolveRecipients() {
+    if (reportRecipients != null && !reportRecipients.isBlank()) {
+      return List.of(reportRecipients.split(","));
+    }
+    return userRepository.findActiveAdminAndManagerEmails();
+  }
+
+  private byte[] buildExcelFile(
+    KpiStatsDTO kpis,
+    List<RecentOrderDTO> orders,
+    List<CriticalInventoryItemDTO> critical
+  ) throws IOException {
+    try (
+      XSSFWorkbook wb = new XSSFWorkbook();
+      ByteArrayOutputStream baos = new ByteArrayOutputStream()
+    ) {
+      // FIXED: XSFSheet changed to XSSFSheet
+      Sheet sheet = wb.createSheet("Reporte Semanal");
+      int rowNum = 0;
+
+      rowNum = buildHeader(sheet, rowNum, kpis);
+      rowNum = buildKpiTable(sheet, rowNum, kpis);
+
+      if (!critical.isEmpty()) {
+        rowNum = buildCriticalInventorySection(sheet, rowNum, critical);
+      } else {
+        rowNum = buildNoIssuesRow(
+          sheet,
+          rowNum,
+          "✅ All products above reorder point"
+        );
+      }
+
+      if (!orders.isEmpty()) {
+        rowNum = buildOrdersSection(sheet, rowNum, orders);
+      }
+
+      rowNum = buildFooter(sheet, rowNum);
+
+      // Auto-size columns
+      sheet.setColumnWidth(0, 7000); // Widened slightly to fit names better
+      sheet.setColumnWidth(1, 4000);
+      sheet.setColumnWidth(2, 4000);
+      sheet.setColumnWidth(3, 4000);
+      sheet.setColumnWidth(4, 4000);
+
+      wb.write(baos);
+      return baos.toByteArray();
+    }
+  }
+
+  private int buildHeader(Sheet sheet, int rowNum, KpiStatsDTO kpis) {
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime weekStart = now.minusDays(now.getDayOfWeek().getValue() - 1);
+    LocalDateTime weekEnd = weekStart.plusDays(6);
+
+    CellStyle titleStyle = sheet.getWorkbook().createCellStyle();
+    titleStyle.setFont(createFont(sheet.getWorkbook(), 16, true, "5C1212"));
+    titleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+    CellStyle subtitleStyle = sheet.getWorkbook().createCellStyle();
+    subtitleStyle.setFont(createFont(sheet.getWorkbook(), 11, false, "666666"));
+    subtitleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+    Row r1 = sheet.createRow(rowNum++);
+    Cell c1 = r1.createCell(0);
+    c1.setCellValue("📊 REPORTE SEMANAL VISCO ORINOCO");
+    c1.setCellStyle(titleStyle);
+    sheet.addMergedRegion(
+      new CellRangeAddress(r1.getRowNum(), r1.getRowNum(), 0, 4)
+    );
+
+    Row r2 = sheet.createRow(rowNum++);
+    Cell c2 = r2.createCell(0);
+    c2.setCellValue(
+      String.format(
+        "Semana del %s al %s",
+        weekStart.format(DATE_FMT),
+        weekEnd.format(DATE_FMT)
+      )
+    );
+    c2.setCellStyle(subtitleStyle);
+    sheet.addMergedRegion(
+      new CellRangeAddress(r2.getRowNum(), r2.getRowNum(), 0, 4)
+    );
+
+    Row r3 = sheet.createRow(rowNum++);
+    Cell c3 = r3.createCell(0);
+    c3.setCellValue(
+      "Generado: " + now.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+    );
+    c3.setCellStyle(subtitleStyle);
+    sheet.addMergedRegion(
+      new CellRangeAddress(r3.getRowNum(), r3.getRowNum(), 0, 4)
+    );
+
+    rowNum++; // Blank row
+    return rowNum;
+  }
+
+  private int buildKpiTable(Sheet sheet, int rowNum, KpiStatsDTO kpis) {
+    // FIXED: Proper background color application
+    XSSFCellStyle headerStyle = (XSSFCellStyle) sheet
+      .getWorkbook()
+      .createCellStyle();
+    headerStyle.setFont(createFont(sheet.getWorkbook(), 11, true, "FFFFFF"));
+    headerStyle.setFillForegroundColor(
+      new XSSFColor(new Color(92, 18, 18), null)
+    ); // #5C1212
+    headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    headerStyle.setAlignment(HorizontalAlignment.CENTER);
+    setBorder(headerStyle);
+
+    CellStyle dataStyle = sheet.getWorkbook().createCellStyle();
+    dataStyle.setAlignment(HorizontalAlignment.CENTER);
+    setBorder(dataStyle);
+
+    Row headerRow = sheet.createRow(rowNum++);
+    String[] headers = {
+      "Órdenes Totales",
+      "Unidades en Stock",
+      "Gasto Mensual",
+      "Cumplimiento",
+      "Estado",
+    };
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    Row dataRow = sheet.createRow(rowNum++);
+    dataRow.createCell(0).setCellValue(kpis.getTotalOrders());
+    dataRow
+      .createCell(1)
+      .setCellValue(
+        kpis.getTotalInventoryUnits() != null
+          ? kpis.getTotalInventoryUnits().intValue()
+          : 0
+      );
+    dataRow.createCell(2).setCellValue(formatMoney(kpis.getMonthlySpend()));
+    dataRow
+      .createCell(3)
+      .setCellValue(String.format("%.1f%%", kpis.getFulfillmentRate()));
+    dataRow
+      .createCell(4)
+      .setCellValue(
+        kpis.getFulfillmentRate() >= 90 ? "✅ Bueno" : "⚠️ Revisar"
+      );
 
-    private List<String> resolveRecipients() {
-        if (reportRecipients != null && !reportRecipients.isBlank()) {
-            return List.of(reportRecipients.split(","));
-        }
-        return userRepository.findActiveAdminAndManagerEmails();
+    for (int i = 0; i < headers.length; i++) {
+      dataRow.getCell(i).setCellStyle(dataStyle);
     }
 
-    private void sendEmail(String to, String subject, String html) {
-        try {
-            MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-            helper.setFrom(senderEmail);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(html, true);
-            mailSender.send(msg);
-        } catch (MessagingException e) {
-            log.error("❌ No se pudo enviar reporte a {}: {}", to, e.getMessage());
-        }
+    rowNum++; // Blank row
+    return rowNum;
+  }
+
+  private int buildCriticalInventorySection(
+    Sheet sheet,
+    int rowNum,
+    List<CriticalInventoryItemDTO> items
+  ) {
+    CellStyle sectionTitleStyle = sheet.getWorkbook().createCellStyle();
+    sectionTitleStyle.setFont(
+      createFont(sheet.getWorkbook(), 12, true, "DC2626")
+    );
+
+    Row titleRow = sheet.createRow(rowNum++);
+    Cell titleCell = titleRow.createCell(0);
+    titleCell.setCellValue(
+      "⚠️ INVENTARIO CRÍTICO (" + items.size() + " productos)"
+    );
+    titleCell.setCellStyle(sectionTitleStyle);
+
+    CellStyle headerStyle = createHeaderStyle(
+      sheet.getWorkbook(),
+      new Color(229, 229, 229)
+    ); // #E5E5E5
+    CellStyle criticalStyle = createAlertStyle(
+      sheet.getWorkbook(),
+      new Color(254, 242, 242)
+    ); // #FEF2F2
+    CellStyle warningStyle = createAlertStyle(
+      sheet.getWorkbook(),
+      new Color(255, 248, 235)
+    ); // #FFF8EB
+
+    Row headerRow = sheet.createRow(rowNum++);
+    String[] headers = {
+      "Producto",
+      "SKU",
+      "Stock Actual",
+      "Punto Reorden",
+      "Severidad",
+    };
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
     }
 
-    // ── HTML del reporte ──────────────────────────────────────────────────────
+    for (CriticalInventoryItemDTO item : items) {
+      Row row = sheet.createRow(rowNum++);
+      boolean isCritical = "CRITICAL".equals(item.getSeverity());
+      CellStyle rowStyle = isCritical ? criticalStyle : warningStyle;
 
-    private String buildHtml(KpiStatsDTO kpis, List<RecentOrderDTO> orders,
-            List<CriticalInventoryItemDTO> critical) {
+      row.createCell(0).setCellValue(item.getProductName());
+      row.createCell(1).setCellValue(item.getSku());
+      row.createCell(2).setCellValue(item.getCurrentStock().intValue());
+      row.createCell(3).setCellValue(item.getReorderPoint().intValue());
+      row.createCell(4).setCellValue(isCritical ? "🔴 CRÍTICO" : "🟡 ALERTA");
 
-        String generatedAt = LocalDateTime.now().format(DATE_FMT);
-        String fulfillment = String.format("%.1f%%", kpis.getFulfillmentRate());
-        String spend = formatMoney(kpis.getMonthlySpend());
-        String units = kpis.getTotalInventoryUnits() != null
-                ? kpis.getTotalInventoryUnits().toPlainString()
-                : "0";
-
-        return """
-                <!DOCTYPE html>
-                <html lang="es">
-                <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                </head>
-                <body style="margin:0;padding:0;background:#F5F5F7;font-family:'Segoe UI',Arial,sans-serif;">
-                <table width="100%%" cellpadding="0" cellspacing="0" style="background:#F5F5F7;padding:32px 0;">
-                  <tr><td align="center">
-                  <table width="620" cellpadding="0" cellspacing="0"
-                         style="background:#ffffff;border-radius:16px;overflow:hidden;
-                                box-shadow:0 8px 24px rgba(0,0,0,0.07);">
-
-                    <!-- HEADER -->
-                    <tr>
-                      <td style="background:linear-gradient(135deg,#5C1212,#A0302A);
-                                  padding:32px 40px 28px;">
-                        <p style="margin:0 0 4px;font-size:11px;font-weight:600;
-                                   color:rgba(255,255,255,0.55);letter-spacing:2px;
-                                   text-transform:uppercase;">Informe automático</p>
-                        <h1 style="margin:0;font-size:26px;font-weight:700;color:#fff;">
-                          Reporte Semanal
-                        </h1>
-                        <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">
-                          Generado el %s
-                        </p>
-                      </td>
-                    </tr>
-
-                    <!-- KPIs -->
-                    <tr>
-                      <td style="padding:32px 40px 0;">
-                        <p style="margin:0 0 14px;font-size:11px;font-weight:600;
-                                   color:#9CA3AF;letter-spacing:1.5px;text-transform:uppercase;">
-                          Resumen de la semana
-                        </p>
-                        <table width="100%%" cellpadding="0" cellspacing="0"
-                               style="border:1px solid #F3F4F6;border-radius:12px;overflow:hidden;">
-                          <tr>
-                            <td style="padding:18px 20px;border-right:1px solid #F3F4F6;text-align:center;">
-                              <div style="font-size:22px;font-weight:700;color:#111827;">%d</div>
-                              <div style="font-size:11px;color:#9CA3AF;margin-top:4px;
-                                          text-transform:uppercase;letter-spacing:0.8px;">
-                                Órdenes totales</div>
-                            </td>
-                            <td style="padding:18px 20px;border-right:1px solid #F3F4F6;text-align:center;">
-                              <div style="font-size:22px;font-weight:700;color:#111827;">%s</div>
-                              <div style="font-size:11px;color:#9CA3AF;margin-top:4px;
-                                          text-transform:uppercase;letter-spacing:0.8px;">
-                                Unidades en stock</div>
-                            </td>
-                            <td style="padding:18px 20px;border-right:1px solid #F3F4F6;text-align:center;">
-                              <div style="font-size:22px;font-weight:700;color:#111827;">%s</div>
-                              <div style="font-size:11px;color:#9CA3AF;margin-top:4px;
-                                          text-transform:uppercase;letter-spacing:0.8px;">
-                                Gasto mensual</div>
-                            </td>
-                            <td style="padding:18px 20px;text-align:center;">
-                              <div style="font-size:22px;font-weight:700;color:#7B1A1A;">%s</div>
-                              <div style="font-size:11px;color:#9CA3AF;margin-top:4px;
-                                          text-transform:uppercase;letter-spacing:0.8px;">
-                                Cumplimiento</div>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-
-                    <!-- INVENTARIO CRÍTICO -->
-                    %s
-
-                    <!-- ÓRDENES RECIENTES -->
-                    %s
-
-                    <!-- FOOTER -->
-                    <tr>
-                      <td style="padding:24px 40px;border-top:1px solid #F3F4F6;
-                                  margin-top:32px;text-align:center;">
-                        <p style="margin:0;font-size:12px;color:#9CA3AF;">
-                          Este reporte se genera automáticamente cada lunes a las 8:00 AM.<br>
-                          © %d Visco Orinoco — Sistema de Gestión Empresarial
-                        </p>
-                      </td>
-                    </tr>
-
-                  </table>
-                  </td></tr>
-                </table>
-                </body>
-                </html>
-                """
-                .formatted(generatedAt, kpis.getTotalOrders(), units, spend, fulfillment,
-                        buildCriticalSection(critical), buildOrdersSection(orders),
-                        LocalDateTime.now().getYear());
+      for (int i = 0; i < 5; i++) {
+        row.getCell(i).setCellStyle(rowStyle);
+      }
     }
 
-    private String buildCriticalSection(List<CriticalInventoryItemDTO> items) {
-        if (items.isEmpty()) {
-            return """
-                    <tr><td style="padding:28px 40px 0;">
-                      <p style="margin:0 0 14px;font-size:11px;font-weight:600;color:#9CA3AF;
-                                 letter-spacing:1.5px;text-transform:uppercase;">
-                        Inventario crítico</p>
-                      <p style="margin:0;padding:16px;background:#F0FDF4;border-radius:8px;
-                                 font-size:13px;color:#15803D;">
-                        ✅ Todos los productos están sobre su punto de reorden.
-                      </p>
-                    </td></tr>
-                    """;
-        }
+    rowNum++; // Blank row
+    return rowNum;
+  }
 
-        StringBuilder rows = new StringBuilder();
-        for (CriticalInventoryItemDTO item : items) {
-            String color = "CRITICAL".equals(item.getSeverity()) ? "#FEF2F2" : "#FFFBEB";
-            String badge = "CRITICAL".equals(item.getSeverity()) ? "#DC2626" : "#D97706";
-            String label = "CRITICAL".equals(item.getSeverity()) ? "CRÍTICO" : "ALERTA";
-            rows.append(
-                    """
-                            <tr style="border-bottom:1px solid #F3F4F6;">
-                              <td style="padding:10px 16px;font-size:13px;color:#111827;background:%s;">
-                                <strong>%s</strong>
-                                <span style="margin-left:8px;font-size:10px;font-weight:700;color:#fff;
-                                              background:%s;padding:2px 6px;border-radius:4px;">%s</span>
-                              </td>
-                              <td style="padding:10px 16px;font-size:12px;color:#6B7280;background:%s;">%s</td>
-                              <td style="padding:10px 16px;font-size:13px;color:#111827;
-                                          font-weight:600;text-align:right;background:%s;">
-                                %s / %s
-                              </td>
-                            </tr>
-                            """
-                            .formatted(color, item.getProductName(), badge, label, color,
-                                    item.getSku(), color, item.getCurrentStock().toPlainString(),
-                                    item.getReorderPoint().toPlainString()));
-        }
+  private int buildOrdersSection(
+    Sheet sheet,
+    int rowNum,
+    List<RecentOrderDTO> orders
+  ) {
+    CellStyle sectionTitleStyle = sheet.getWorkbook().createCellStyle();
+    sectionTitleStyle.setFont(
+      createFont(sheet.getWorkbook(), 12, true, "185FA5")
+    );
 
-        return """
-                <tr><td style="padding:28px 40px 0;">
-                  <p style="margin:0 0 14px;font-size:11px;font-weight:600;color:#9CA3AF;
-                             letter-spacing:1.5px;text-transform:uppercase;">
-                    Inventario crítico (%d productos)</p>
-                  <table width="100%%" cellpadding="0" cellspacing="0"
-                         style="border:1px solid #F3F4F6;border-radius:12px;overflow:hidden;
-                                font-size:13px;">
-                    <tr style="background:#F9FAFB;">
-                      <th style="padding:10px 16px;text-align:left;font-size:11px;
-                                  color:#6B7280;font-weight:600;">Producto</th>
-                      <th style="padding:10px 16px;text-align:left;font-size:11px;
-                                  color:#6B7280;font-weight:600;">SKU</th>
-                      <th style="padding:10px 16px;text-align:right;font-size:11px;
-                                  color:#6B7280;font-weight:600;">Stock / Reorden</th>
-                    </tr>
-                    %s
-                  </table>
-                </td></tr>
-                """.formatted(items.size(), rows.toString());
+    Row titleRow = sheet.createRow(rowNum++);
+    Cell titleCell = titleRow.createCell(0);
+    titleCell.setCellValue(
+      "📦 ÓRDENES RECIENTES (" + orders.size() + " últimas)"
+    );
+    titleCell.setCellStyle(sectionTitleStyle);
+
+    CellStyle headerStyle = createHeaderStyle(
+      sheet.getWorkbook(),
+      new Color(229, 229, 229)
+    );
+    CellStyle dataStyle = sheet.getWorkbook().createCellStyle();
+    setBorder(dataStyle);
+
+    Row headerRow = sheet.createRow(rowNum++);
+    String[] headers = { "N° Orden", "Proveedor", "Fecha", "Monto", "Estado" };
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
     }
 
-    private String buildOrdersSection(List<RecentOrderDTO> orders) {
-        if (orders.isEmpty()) {
-            return "";
-        }
+    for (RecentOrderDTO order : orders) {
+      Row row = sheet.createRow(rowNum++);
+      row.createCell(0).setCellValue(order.getOrderNumber());
+      row.createCell(1).setCellValue(order.getSupplierName());
+      row
+        .createCell(2)
+        .setCellValue(
+          order.getCreatedAt() != null
+            ? order.getCreatedAt().format(DATE_FMT)
+            : "—"
+        );
+      row.createCell(3).setCellValue(formatMoney(order.getAmount()));
+      row.createCell(4).setCellValue(order.getStatus().name());
 
-        StringBuilder rows = new StringBuilder();
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        for (RecentOrderDTO o : orders) {
-            String statusColor = switch (o.getStatus().name()) {
-                case "DELIVERED", "COMPLETED" -> "#15803D";
-                case "CANCELLED", "REJECTED" -> "#DC2626";
-                case "PENDING" -> "#D97706";
-                default -> "#2563EB";
-            };
-            rows.append("""
-                    <tr style="border-bottom:1px solid #F3F4F6;">
-                      <td style="padding:10px 16px;font-size:13px;color:#111827;font-weight:500;">
-                        %s</td>
-                      <td style="padding:10px 16px;font-size:12px;color:#6B7280;">%s</td>
-                      <td style="padding:10px 16px;font-size:12px;color:#6B7280;">%s</td>
-                      <td style="padding:10px 16px;text-align:right;">
-                        <span style="font-size:11px;font-weight:600;color:%s;">%s</span>
-                      </td>
-                    </tr>
-                    """.formatted(o.getOrderNumber(), o.getSupplierName(),
-                    o.getCreatedAt() != null ? o.getCreatedAt().format(fmt) : "—", statusColor,
-                    o.getStatus().name()));
-        }
-
-        return """
-                <tr><td style="padding:28px 40px 0;">
-                  <p style="margin:0 0 14px;font-size:11px;font-weight:600;color:#9CA3AF;
-                             letter-spacing:1.5px;text-transform:uppercase;">
-                    Órdenes recientes</p>
-                  <table width="100%%" cellpadding="0" cellspacing="0"
-                         style="border:1px solid #F3F4F6;border-radius:12px;overflow:hidden;">
-                    <tr style="background:#F9FAFB;">
-                      <th style="padding:10px 16px;text-align:left;font-size:11px;
-                                  color:#6B7280;font-weight:600;">N° Orden</th>
-                      <th style="padding:10px 16px;text-align:left;font-size:11px;
-                                  color:#6B7280;font-weight:600;">Proveedor</th>
-                      <th style="padding:10px 16px;text-align:left;font-size:11px;
-                                  color:#6B7280;font-weight:600;">Fecha</th>
-                      <th style="padding:10px 16px;text-align:right;font-size:11px;
-                                  color:#6B7280;font-weight:600;">Estado</th>
-                    </tr>
-                    %s
-                  </table>
-                </td></tr>
-                """.formatted(rows.toString());
+      for (int i = 0; i < 5; i++) {
+        row.getCell(i).setCellStyle(dataStyle);
+      }
     }
 
-    private String formatMoney(BigDecimal amount) {
-        if (amount == null)
-            return "$0.00";
-        return "$" + amount.setScale(2, RoundingMode.HALF_UP).toPlainString()
-                .replaceAll("(\\d)(?=(\\d{3})+\\.)", "$1,");
+    rowNum++; // Blank row
+    return rowNum;
+  }
+
+  private int buildNoIssuesRow(Sheet sheet, int rowNum, String message) {
+    XSSFCellStyle style = (XSSFCellStyle) sheet.getWorkbook().createCellStyle();
+    style.setFont(createFont(sheet.getWorkbook(), 11, false, "15803D"));
+    style.setFillForegroundColor(new XSSFColor(new Color(240, 253, 244), null)); // #F0FDF4
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    style.setAlignment(HorizontalAlignment.CENTER);
+
+    Row row = sheet.createRow(rowNum++);
+    Cell cell = row.createCell(0);
+    cell.setCellValue(message);
+    cell.setCellStyle(style);
+    sheet.addMergedRegion(
+      new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, 4)
+    );
+
+    rowNum++;
+    return rowNum;
+  }
+
+  private int buildFooter(Sheet sheet, int rowNum) {
+    rowNum += 2; // Extra space
+    CellStyle footerStyle = sheet.getWorkbook().createCellStyle();
+    footerStyle.setFont(createFont(sheet.getWorkbook(), 9, false, "9CA3AF"));
+    footerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+    Row footerRow = sheet.createRow(rowNum);
+    Cell footerCell = footerRow.createCell(0);
+    footerCell.setCellValue(
+      "© " +
+        LocalDateTime.now().getYear() +
+        " Visco Orinoco — Sistema de Gestión Empresarial"
+    );
+    footerCell.setCellStyle(footerStyle);
+    sheet.addMergedRegion(
+      new CellRangeAddress(footerRow.getRowNum(), footerRow.getRowNum(), 0, 4)
+    );
+
+    return rowNum + 1;
+  }
+
+  private void sendEmailWithAttachment(
+    String to,
+    String subject,
+    byte[] excelBytes
+  ) {
+    try {
+      MimeMessage msg = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+      helper.setFrom(senderEmail);
+      helper.setTo(to);
+      helper.setSubject(subject);
+      helper.setText(
+        "Adjunto: Reporte Semanal en Excel\n\nVer archivo para detalle completo.",
+        false
+      );
+      helper.addAttachment(
+        "Reporte_Semanal_" +
+          LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) +
+          ".xlsx",
+        () -> new java.io.ByteArrayInputStream(excelBytes),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      mailSender.send(msg);
+    } catch (MessagingException e) {
+      log.error("❌ Failed to send report to {}: {}", to, e.getMessage());
     }
+  }
+
+  // ── Style Helpers ──────────────────────────────────────────────────────────
+
+  // FIXED: Standardize hex strings to standard hex codes (e.g. "5C1212" without "FF") and use XSSFFont
+  private Font createFont(
+    Workbook wb,
+    int size,
+    boolean bold,
+    String hexColor
+  ) {
+    XSSFFont font = (XSSFFont) wb.createFont();
+    font.setFontHeightInPoints((short) size);
+    font.setBold(bold);
+    font.setColor(new XSSFColor(Color.decode("#" + hexColor), null));
+    return font;
+  }
+
+  // FIXED: Apply passed background colors properly
+  private CellStyle createHeaderStyle(Workbook wb, Color bgColor) {
+    XSSFCellStyle style = (XSSFCellStyle) wb.createCellStyle();
+    style.setFont(createFont(wb, 10, true, "000000"));
+    style.setFillForegroundColor(new XSSFColor(bgColor, null));
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    style.setAlignment(HorizontalAlignment.CENTER);
+    style.setVerticalAlignment(VerticalAlignment.CENTER);
+    setBorder(style);
+    return style;
+  }
+
+  // FIXED: Apply passed background colors properly
+  private CellStyle createAlertStyle(Workbook wb, Color bgColor) {
+    XSSFCellStyle style = (XSSFCellStyle) wb.createCellStyle();
+    style.setFillForegroundColor(new XSSFColor(bgColor, null));
+    style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+    style.setAlignment(HorizontalAlignment.LEFT);
+    setBorder(style);
+    return style;
+  }
+
+  // Extracted repetitive border assignments to a cleaner helper
+  private void setBorder(CellStyle style) {
+    style.setBorderBottom(BorderStyle.THIN);
+    style.setBorderTop(BorderStyle.THIN);
+    style.setBorderLeft(BorderStyle.THIN);
+    style.setBorderRight(BorderStyle.THIN);
+  }
+
+  private String formatMoney(BigDecimal amount) {
+    if (amount == null) return "$0.00";
+    return (
+      "$" +
+      amount
+        .setScale(2, RoundingMode.HALF_UP)
+        .toPlainString()
+        .replaceAll("(\\d)(?=(\\d{3})+\\.)", "$1,")
+    );
+  }
 }

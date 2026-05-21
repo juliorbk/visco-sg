@@ -117,13 +117,10 @@ public class SupplierService {
             .findById(Id)
             .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + Id));
 
-        if (Boolean.TRUE.equals(supplier.getActive())) {
-            throw new IllegalStateException(
-                "Supplier with id: " + Id + " is active, cannot be deleted"
-            );
-        }
-        log.info("Deleting supplier with id: {}", Id);
-        supplierRepository.delete(supplier);
+        supplier.setActive(false);
+        supplier.setDeletedAt(LocalDateTime.now());
+        supplierRepository.save(supplier);
+        log.info("Soft-deleted (deactivated) supplier with id: {}", Id);
     }
 
     public void deactivateSupplier(Long id) {

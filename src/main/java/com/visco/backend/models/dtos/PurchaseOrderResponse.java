@@ -21,6 +21,8 @@ public record PurchaseOrderResponse(
   String approvedBy,
   LocalDateTime approvedAt,
   Long requisitionId,
+  Long destinationWarehouseId,
+  String destinationWarehouseName,
   Integer leadTime,
   List<PurchaseOrderItemResponse> items
 ) {}

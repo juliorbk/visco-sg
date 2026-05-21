@@ -8,9 +8,9 @@ import java.util.UUID;
 public record TransferStockRequest(
     @NotNull(message = "El producto es obligatorio") Long productId,
 
-    @NotNull(message = "La ubicación origen es obligatoria") Long fromLocationId,
+    @NotNull(message = "El almacén origen es obligatorio") Long fromWarehouseId,
 
-    @NotNull(message = "La ubicación destino es obligatoria") Long toLocationId,
+    @NotNull(message = "El almacén destino es obligatorio") Long toWarehouseId,
 
     @NotNull @Positive(message = "La cantidad debe ser positiva") BigDecimal quantity,
 

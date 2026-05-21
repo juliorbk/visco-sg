@@ -10,7 +10,7 @@ public record AdjustStockRequest(
 
 		@NotNull(message = "El producto es obligatorio") Long productId,
 
-		@NotNull(message = "La ubicación es obligatoria") Long locationId,
+		@NotNull(message = "El almacén es obligatorio") Long warehouseId,
 
 		@NotNull @PositiveOrZero(message = "El stock no puede ser negativo") BigDecimal newStock,
 

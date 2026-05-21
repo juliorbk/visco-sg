@@ -39,8 +39,15 @@ public class WarehouseController {
   // ─── Warehouses ─────────────────────────────────────────────────
 
   @GetMapping
-  public ResponseEntity<List<WarehouseResponse>> getAllWarehouses() {
-    return ResponseEntity.ok(warehouseService.getAllWarehouses());
+  public ResponseEntity<Page<WarehouseDTO>> getAllWarehouses(
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(warehouseService.getAllWarehouses(pageable));
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<WarehouseDTO> getWarehouse(@PathVariable Long id) {
+    return ResponseEntity.ok(warehouseService.getWarehouse(id));
   }
 
   @PostMapping
@@ -124,24 +131,26 @@ public class WarehouseController {
   // ─── Kardex / Inventory Movements ───────────────────────────────
 
   @GetMapping("/movements")
-  public ResponseEntity<List<InventoryMovementResponse>> getMovements(
+  public ResponseEntity<Page<InventoryMovementResponse>> getMovements(
     @RequestParam(required = false) Long productId,
-    @RequestParam(required = false) Long locationId,
+    @RequestParam(required = false) Long warehouseId,
     @RequestParam(required = false) MovementType type,
     @RequestParam(required = false) @DateTimeFormat(
       iso = DateTimeFormat.ISO.DATE_TIME
     ) LocalDateTime startDate,
     @RequestParam(required = false) @DateTimeFormat(
       iso = DateTimeFormat.ISO.DATE_TIME
-    ) LocalDateTime endDate
+    ) LocalDateTime endDate,
+    Pageable pageable
   ) {
     return ResponseEntity.ok(
       warehouseService.getMovements(
         productId,
-        locationId,
+        warehouseId,
         type,
         startDate,
-        endDate
+        endDate,
+        pageable
       )
     );
   }

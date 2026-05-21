@@ -1,21 +1,19 @@
 package com.visco.backend.config;
 
-import java.io.IOException;
-import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.http.HttpStatus;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -32,7 +30,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     LOGIN("/api/auth/login", 8, 1),
     REGISTER("/api/auth/register", 3, 5),
     ADMIN_OPERATIONS("/api/admin", 30, 1),
-    INVENTORY("/api/inventory", 60, 1),
+    //INVENTORY("/api/inventory", 200, 1),
     PROCUREMENT("/api/procurement", 60, 1),
     USERS("/api/users", 30, 1),
     SUPPLIERS("/api/suppliers", 60, 1),
@@ -52,21 +50,27 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private Bucket createBucket(RateLimitedRoute route) {
     return Bucket.builder()
-        .addLimit(Bandwidth.builder()
-            .capacity(route.capacity)
-            .refillIntervally(route.capacity, Duration.ofMinutes(route.minutes))
-            .build())
-        .build();
+      .addLimit(
+        Bandwidth.builder()
+          .capacity(route.capacity)
+          .refillIntervally(route.capacity, Duration.ofMinutes(route.minutes))
+          .build()
+      )
+      .build();
   }
 
   private void cleanupOldBuckets() {
     long now = System.currentTimeMillis();
     if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
       synchronized (cleanupLock) {
-        buckets.keySet().removeIf(key -> {
-          Long lastAccess = lastAccessTime.get(key);
-          return lastAccess != null && (now - lastAccess > STALE_THRESHOLD_MS);
-        });
+        buckets
+          .keySet()
+          .removeIf(key -> {
+            Long lastAccess = lastAccessTime.get(key);
+            return (
+              lastAccess != null && (now - lastAccess > STALE_THRESHOLD_MS)
+            );
+          });
         lastAccessTime.keySet().removeIf(key -> !buckets.containsKey(key));
         lastCleanup = now;
       }
@@ -83,9 +87,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   @Override
   public void doFilterInternal(
-      @NonNull HttpServletRequest request,
-      @NonNull HttpServletResponse response,
-      @NonNull FilterChain filterChain) throws ServletException, IOException {
+    @NonNull HttpServletRequest request,
+    @NonNull HttpServletResponse response,
+    @NonNull FilterChain filterChain
+  ) throws ServletException, IOException {
     String uri = request.getRequestURI();
 
     RateLimitedRoute matchedRoute = null;
@@ -107,7 +112,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     String bucketKey = ip + ":" + matchedRoute.name();
     lastAccessTime.put(bucketKey, System.currentTimeMillis());
     RateLimitedRoute finalRoute = matchedRoute;
-    Bucket bucket = buckets.computeIfAbsent(bucketKey, k -> createBucket(finalRoute));
+    Bucket bucket = buckets.computeIfAbsent(bucketKey, k ->
+      createBucket(finalRoute)
+    );
 
     if (bucket.tryConsume(1)) {
       filterChain.doFilter(request, response);
@@ -115,9 +122,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
       response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
       response.setContentType("application/json");
       response
-          .getWriter()
-          .write(
-              "{\"error\": \"Demasiadas solicitudes. Espera un momento e intenta de nuevo.\"}");
+        .getWriter()
+        .write(
+          "{\"error\": \"Demasiadas solicitudes. Espera un momento e intenta de nuevo.\"}"
+        );
     }
   }
 }

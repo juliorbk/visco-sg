@@ -24,8 +24,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "inventory_movements", indexes = {
     @Index(name = "idx_im_product", columnList = "product_id"),
-    @Index(name = "idx_im_from_location", columnList = "from_location_id"),
-    @Index(name = "idx_im_to_location", columnList = "to_location_id"),
+    @Index(name = "idx_im_from_warehouse", columnList = "from_warehouse_id"),
+    @Index(name = "idx_im_to_warehouse", columnList = "to_warehouse_id"),
     @Index(name = "idx_im_created_by", columnList = "created_by_id")
 })
 @Data
@@ -43,12 +43,12 @@ public class InventoryMovement {
 	private Product product;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "from_location_id")
-	private Location fromLocation;
+	@JoinColumn(name = "from_warehouse_id")
+	private Warehouse fromWarehouse;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "to_location_id")
-	private Location toLocation;
+	@JoinColumn(name = "to_warehouse_id")
+	private Warehouse toWarehouse;
 
 	@Column(nullable = false)
 	private BigDecimal quantity;

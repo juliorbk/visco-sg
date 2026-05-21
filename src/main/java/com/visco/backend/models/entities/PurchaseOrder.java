@@ -87,6 +87,7 @@ public class PurchaseOrder {
   @Column(name = "lead_time")
   private Integer leadTime = 0;
 
+  @Column(name = "deleted_at")
   private LocalDateTime deletedAt;
 
   @Column(name = "approval_notes", length = 1000)

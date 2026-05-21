@@ -4,6 +4,8 @@ import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
 import com.visco.backend.models.dtos.PurchaseOrderItemRequest;
 import com.visco.backend.models.dtos.PurchaseOrderItemResponse;
 import com.visco.backend.models.dtos.PurchaseOrderResponse;
+import com.visco.backend.models.entities.GoodReceipt;
+import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
@@ -13,6 +15,7 @@ import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.models.entities.User;
 import com.visco.backend.models.entities.Warehouse;
+import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.RequisitionRepository;
@@ -22,14 +25,17 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,17 +51,17 @@ public class ProcurementService {
   private final UserRepository userRepository;
   private final WarehouseService warehouseService;
   private final RequisitionRepository requisitionRepository;
+  private final GoodReceiptRepository goodReceiptRepository;
 
   // ─────────────────────────────────────────────────────────────
-  // Creación de orden de compra
+  // Create purchase order
   // ─────────────────────────────────────────────────────────────
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse createPurchaseOrder(
     CreatePurchaseOrderRequest request
   ) {
-    // Mapeamos que existan las entidades de la orden de compra
-    // Proveedor
     Supplier supplier = supplierRepository
       .findById(request.supplierId())
       .orElseThrow(() ->
@@ -63,13 +69,13 @@ public class ProcurementService {
           "Supplier not found: " + request.supplierId()
         )
       );
-    // Creador
+
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() ->
         new EntityNotFoundException("User not found: " + request.createdById())
       );
-    // Warehouse destino
+
     Warehouse destinationWarehouse = warehouseRepository
       .findById(request.destinationWarehouseId())
       .orElseThrow(() ->
@@ -91,7 +97,6 @@ public class ProcurementService {
       .createdAt(LocalDateTime.now())
       .build();
 
-    // Link requisition if provided
     if (request.requisitionId() != null) {
       Requisition requisition = requisitionRepository
         .findById(request.requisitionId())
@@ -138,9 +143,6 @@ public class ProcurementService {
 
       order.getItems().add(item);
 
-      // Usa addPendingStockByWarehouse (el supplier de la orden define el almacén destino)
-      // Por ahora incrementa el stock pendiente sin filtrar por warehouse específico,
-      // igual que antes — cuando agregues warehouses múltiples puedes pasar el ID aquí.
       warehouseService.addPendingStockByWarehouse(
         product.getId(),
         request.destinationWarehouseId(),
@@ -153,11 +155,11 @@ public class ProcurementService {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Transiciones de estado
+  // Internal state transitions (package-private for clarity)
   // ─────────────────────────────────────────────────────────────
 
   @Transactional
-  public void submitForApproval(Long orderId) {
+  void submitForApproval(Long orderId) {
     PurchaseOrder order = findOrderById(orderId);
     if (order.getStatus() != PurchaseOrderStatus.PENDING) {
       throw new IllegalStateException(
@@ -171,7 +173,7 @@ public class ProcurementService {
   }
 
   @Transactional
-  public void approveOrder(Long orderId, UUID approverUserId, String notes) {
+  void approveOrder(Long orderId, UUID approverUserId, String notes) {
     PurchaseOrder order = findOrderById(orderId);
     if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
       throw new IllegalStateException(
@@ -193,7 +195,7 @@ public class ProcurementService {
   }
 
   @Transactional
-  public void rejectOrder(Long orderId, UUID rejecterUserId, String reason) {
+  void rejectOrder(Long orderId, UUID rejecterUserId, String reason) {
     PurchaseOrder order = findOrderById(orderId);
     if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
       throw new IllegalStateException(
@@ -211,7 +213,7 @@ public class ProcurementService {
   }
 
   @Transactional
-  public void sendToSupplier(Long orderId) {
+  void sendToSupplier(Long orderId) {
     PurchaseOrder order = findOrderById(orderId);
     if (order.getStatus() != PurchaseOrderStatus.APPROVED) {
       throw new IllegalStateException(
@@ -225,9 +227,8 @@ public class ProcurementService {
   }
 
   @Transactional
-  public void cancelOrderById(Long orderId, String reason) {
+  void cancelOrderById(Long orderId, String reason) {
     PurchaseOrder order = findOrderById(orderId);
-
     if (
       order.getStatus() == PurchaseOrderStatus.DELIVERED ||
       order.getStatus() == PurchaseOrderStatus.CANCELLED ||
@@ -237,7 +238,6 @@ public class ProcurementService {
         "Cannot cancel an order with status: " + order.getStatus()
       );
     }
-
     log.info(
       "Cancelling order ID: {}, current status: {}",
       orderId,
@@ -246,18 +246,40 @@ public class ProcurementService {
     order.setStatus(PurchaseOrderStatus.CANCELLED);
     order.setRejectionReason(reason);
     order.setUpdatedAt(LocalDateTime.now());
-    purchaseOrderRepository.save(order);
 
-    for (PurchaseOrderItem item : order.getItems()) {
-      warehouseService.substractPendingStock(
-        item.getProduct().getId(),
-        BigDecimal.valueOf(item.getQuantity())
-      );
+    Warehouse orderWarehouse = order.getDestinationWarehouse();
+    if (orderWarehouse != null) {
+      Map<Long, BigDecimal> receivedQtys = getTotalReceivedByOrder(orderId);
+      for (PurchaseOrderItem item : order.getItems()) {
+        BigDecimal orderedQty = BigDecimal.valueOf(item.getQuantity());
+        BigDecimal receivedQty = receivedQtys.getOrDefault(item.getProduct().getId(), BigDecimal.ZERO);
+        BigDecimal pendingQty = orderedQty.subtract(receivedQty);
+        if (pendingQty.compareTo(BigDecimal.ZERO) > 0) {
+          warehouseService.substractPendingStock(
+            item.getProduct().getId(),
+            orderWarehouse.getId(),
+            pendingQty
+          );
+        }
+      }
     }
+
+    purchaseOrderRepository.save(order);
+  }
+
+  private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
+    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(orderId);
+    Map<Long, BigDecimal> received = new HashMap<>();
+    for (GoodReceipt receipt : receipts) {
+      for (GoodReceiptItem item : receipt.getItems()) {
+        received.merge(item.getProduct().getId(), item.getReceivedQuantity(), BigDecimal::add);
+      }
+    }
+    return received;
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Consultas
+  // Public API (used by controller)
   // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
@@ -271,12 +293,18 @@ public class ProcurementService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse submitOrderForApproval(Long id) {
     submitForApproval(id);
     return getOrderById(id);
   }
 
+  /**
+   * Approve by UUID — used when the caller already has the approver's UUID
+   * (e.g. from a request body field like the reject endpoint).
+   */
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse markAsApproved(
     Long id,
     UUID approverUserId,
@@ -284,6 +312,26 @@ public class ProcurementService {
   ) {
     approveOrder(id, approverUserId, notes);
     return getOrderById(id);
+  }
+
+  /**
+   * FIX (BUG 3): New entry point used by the controller's /approve endpoint.
+   * The controller only has access to UserDetails (email), not a UUID, because
+   * the old extractUuidFrom(UserDetails) helper was never implemented.
+   * We resolve the User by email here in the service layer instead.
+   */
+  @Transactional
+  public PurchaseOrderResponse markAsApprovedByEmail(
+    Long id,
+    String approverEmail,
+    String notes
+  ) {
+    User approver = userRepository
+      .findByEmail(approverEmail)
+      .orElseThrow(() ->
+        new UsernameNotFoundException("Approver not found: " + approverEmail)
+      );
+    return markAsApproved(id, approver.getId(), notes);
   }
 
   @Transactional
@@ -303,10 +351,15 @@ public class ProcurementService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse cancelOrder(Long id, String reason) {
     cancelOrderById(id, reason);
     return getOrderById(id);
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // Private helpers
+  // ─────────────────────────────────────────────────────────────
 
   private PurchaseOrder findOrderById(Long id) {
     return purchaseOrderRepository
@@ -315,10 +368,6 @@ public class ProcurementService {
         new EntityNotFoundException("Purchase order not found: " + id)
       );
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // Mapper
-  // ─────────────────────────────────────────────────────────────
 
   private PurchaseOrderResponse toResponse(PurchaseOrder order) {
     List<PurchaseOrderItemResponse> itemResponses = order
@@ -336,6 +385,7 @@ public class ProcurementService {
       )
       .toList();
 
+    Warehouse wh = order.getDestinationWarehouse();
     return new PurchaseOrderResponse(
       order.getId(),
       order.getOrderNumber(),
@@ -351,6 +401,8 @@ public class ProcurementService {
       order.getApprovedBy() != null ? order.getApprovedBy().getName() : null,
       order.getApprovedAt(),
       order.getRequisition() != null ? order.getRequisition().getId() : null,
+      wh != null ? wh.getId() : null,
+      wh != null ? wh.getName() : null,
       order.getLeadTime() != null ? order.getLeadTime() : null,
       itemResponses
     );

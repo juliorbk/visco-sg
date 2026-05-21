@@ -11,68 +11,69 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
-    // ─────────────────────────────────────────────────────────────
-    // Búsquedas para actualizaciones (Capa de Servicio)
-    // ─────────────────────────────────────────────────────────────
+  List<StockLevel> findByProductId(Long productId);
 
-    // Todas las filas de StockLevel para un producto dado (en todas las
-    // ubicaciones)
-    List<StockLevel> findByProductId(Long productId);
+  Optional<StockLevel> findByProductIdAndWarehouseId(
+    Long productId,
+    Long warehouseId
+  );
 
-    // Búsqueda exacta para sumar/restar stock en un estante/ubicación específica
-    Optional<StockLevel> findByProductIdAndLocationId(Long productId, Long locationId);
+  List<StockLevel> findByProductIdAndWarehouseIdIn(
+    Long productId,
+    List<Long> warehouseIds
+  );
 
-    // Obtener todos los registros de un producto dentro de un almacén específico
-    List<StockLevel> findByProductIdAndLocationWarehouseId(Long productId, Long warehouseId);
+  @Query(
+    "SELECT SUM(s.currentStock) FROM StockLevel s WHERE s.product.id = :productId"
+  )
+  BigDecimal getTotalStockByProductId(@Param("productId") Long productId);
 
-    // ─────────────────────────────────────────────────────────────
-    // Consultas para Reportes y Kardex
-    // ─────────────────────────────────────────────────────────────
+  @Query(
+    "SELECT SUM(s.currentStock) FROM StockLevel s " +
+      "WHERE s.product.id = :productId AND s.warehouse.id = :warehouseId"
+  )
+  BigDecimal getStockByProductAndWarehouse(
+    @Param("productId") Long productId,
+    @Param("warehouseId") Long warehouseId
+  );
 
-    // 1. Stock físico total en todas las ubicaciones
-    @Query("SELECT SUM(s.currentStock) FROM StockLevel s WHERE s.product.id = :productId")
-    BigDecimal getTotalStockByProductId(@Param("productId") Long productId);
+  @Query(
+    "SELECT s.warehouse.id as warehouseId, " +
+      "s.warehouse.name as warehouseName, " +
+      "SUM(s.currentStock) as currentStock, " +
+      "SUM(s.pendingStock) as pendingStock " +
+      "FROM StockLevel s WHERE s.product.id = :productId " +
+      "GROUP BY s.warehouse.id, s.warehouse.name"
+  )
+  List<WarehouseStockProjection> getStockByProductGroupedByWarehouse(
+    @Param("productId") Long productId
+  );
 
-    // 2. Stock de un producto en un almacén específico
-    @Query(
-        "SELECT SUM(s.currentStock) FROM StockLevel s " +
-            "WHERE s.product.id = :productId AND s.location.warehouse.id = :warehouseId"
-    )
-    BigDecimal getStockByProductAndWarehouse(
-        @Param("productId") Long productId,
-        @Param("warehouseId") Long warehouseId
-    );
+  @Query(
+    "SELECT s.warehouse.id as warehouseId, " +
+      "s.warehouse.name as warehouseName, " +
+      "SUM(s.currentStock) as currentStock, " +
+      "SUM(s.pendingStock) as pendingStock " +
+      "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
+  )
+  List<WarehouseStockProjection> getGlobalStockByWarehouse();
 
-    // 3. Stock de un producto agrupado por almacén
-    @Query(
-        "SELECT s.location.warehouse.id as warehouseId, " +
-            "s.location.warehouse.name as warehouseName, " +
-            "SUM(s.currentStock) as currentStock, " +
-            "SUM(s.pendingStock) as pendingStock " +
-            "FROM StockLevel s WHERE s.product.id = :productId " +
-            "GROUP BY s.location.warehouse.id, s.location.warehouse.name"
-    )
-    List<WarehouseStockProjection> getStockByProductGroupedByWarehouse(
-        @Param("productId") Long productId
-    );
+  interface WarehouseStockProjection {
+    Long getWarehouseId();
 
-    // 4. Resumen global de stock por almacén
-    @Query(
-        "SELECT s.location.warehouse.id as warehouseId, " +
-            "s.location.warehouse.name as warehouseName, " +
-            "SUM(s.currentStock) as currentStock, " +
-            "SUM(s.pendingStock) as pendingStock " +
-            "FROM StockLevel s GROUP BY s.location.warehouse.id, s.location.warehouse.name"
-    )
-    List<WarehouseStockProjection> getGlobalStockByWarehouse();
+    String getWarehouseName();
 
-    interface WarehouseStockProjection {
-        Long getWarehouseId();
+    java.math.BigDecimal getCurrentStock();
 
-        String getWarehouseName();
+    java.math.BigDecimal getPendingStock();
+  }
 
-        java.math.BigDecimal getCurrentStock();
-
-        java.math.BigDecimal getPendingStock();
-    }
+  @Query(
+    "SELECT sl.product.id, SUM(sl.currentStock), SUM(sl.pendingStock) " +
+      "FROM StockLevel sl WHERE sl.product.id IN :productIds " +
+      "GROUP BY sl.product.id"
+  )
+  List<Object[]> sumStockByProductIds(
+    @Param("productIds") List<Long> productIds
+  );
 }

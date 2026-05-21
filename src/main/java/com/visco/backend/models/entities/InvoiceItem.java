@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -16,46 +17,52 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "invoice_items")
+@Table(
+  name = "invoice_items",
+  indexes = {
+    @Index(name = "idx_ii_invoice", columnList = "invoice_id"),
+    @Index(name = "idx_ii_product", columnList = "product_id"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class InvoiceItem {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id", nullable = false)
-    private Invoice invoice;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "invoice_id", nullable = false)
+  private Invoice invoice;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "product_id", nullable = false)
+  private Product product;
 
-    @Column(nullable = false)
-    private BigDecimal quantity;
+  @Column(nullable = false)
+  private BigDecimal quantity;
 
-    @Column(name = "unit_price", nullable = false)
-    private BigDecimal unitPrice;
+  @Column(name = "unit_price", nullable = false)
+  private BigDecimal unitPrice;
 
-    @Column(name = "line_total", nullable = false)
-    private BigDecimal lineTotal;
+  @Column(name = "line_total", nullable = false)
+  private BigDecimal lineTotal;
 
-    @Column(name = "po_quantity")
-    private BigDecimal poQuantity;
+  @Column(name = "po_quantity")
+  private BigDecimal poQuantity;
 
-    @Column(name = "received_quantity")
-    private BigDecimal receivedQuantity;
+  @Column(name = "received_quantity")
+  private BigDecimal receivedQuantity;
 
-    @Column(name = "quantity_match")
-    private Boolean quantityMatch;
+  @Column(name = "quantity_match")
+  private Boolean quantityMatch;
 
-    @Column(name = "price_match")
-    private Boolean priceMatch;
+  @Column(name = "price_match")
+  private Boolean priceMatch;
 
-    @Column(length = 500)
-    private String notes;
+  @Column(length = 500)
+  private String notes;
 }

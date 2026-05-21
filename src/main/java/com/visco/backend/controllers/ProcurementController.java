@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -60,14 +61,16 @@ public class ProcurementController {
   @PatchMapping("/orders/{id}/approve")
   public ResponseEntity<PurchaseOrderResponse> markApproved(
     @PathVariable Long id,
-    @AuthenticationPrincipal UserDetails currentUser, // Get user from token!
+    @AuthenticationPrincipal UserDetails currentUser,
     @RequestBody(required = false) ApproveOrderRequest request
   ) {
-    UUID approverId = extractUuidFrom(currentUser);
-    String notes = request != null ? request.getNotes() : null;
+    // UserDetails.getUsername() returns the email (see User.getUsername()).
+    // We delegate UUID resolution to the service so the controller stays thin.
+    String approverEmail = currentUser.getUsername();
+    String notes = request != null ? request.notes() : null;
 
     return ResponseEntity.ok(
-      procurementService.markAsApproved(id, approverId, notes)
+      procurementService.markAsApprovedByEmail(id, approverEmail, notes)
     );
   }
 
