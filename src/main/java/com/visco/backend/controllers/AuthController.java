@@ -28,6 +28,7 @@ public class AuthController {
     private final AuthService authService;
     private final CookieService cookieService;
 
+    @PostMapping("/register")
     public ResponseEntity<?> registerUser(
         @Valid @RequestBody UserRegisterRequest request,
         HttpServletResponse response // agregar esto
