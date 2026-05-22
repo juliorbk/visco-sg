@@ -33,19 +33,23 @@ public class ProductController {
   @GetMapping("/products")
   @Operation(
     summary = "List products",
-    description = "Returns a paginated list of products with optional search and category filters"
+    description = "Returns a paginated list of products with optional search, category, and stock sorting"
   )
   public ResponseEntity<Page<ProductDTO>> getProducts(
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "20") int size,
     @RequestParam(required = false) String search,
-    @RequestParam(required = false) String category
+    @RequestParam(required = false) String category,
+    @RequestParam(required = false) String sortBy,
+    @RequestParam(defaultValue = "asc") String sortDir
   ) {
     Pageable pageable = PageRequest.of(page, size);
     Page<ProductDTO> products = productService.getProducts(
       pageable,
       search,
-      category
+      category,
+      sortBy,
+      sortDir
     );
     return ResponseEntity.ok(products);
   }

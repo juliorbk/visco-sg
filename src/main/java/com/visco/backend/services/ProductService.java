@@ -12,11 +12,13 @@ import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -114,11 +116,12 @@ public class ProductService {
     );
   }
 
-  // FIX: sumStockByProductIds ahora devuelve 3 campos [id, current, pending]
   public Page<ProductDTO> getProducts(
     Pageable pageable,
     String search,
-    String category
+    String category,
+    String sortBy,
+    String sortDir
   ) {
     Page<Product> products = productRepository.findBySearchAndCategory(
       pageable,
@@ -128,7 +131,6 @@ public class ProductService {
 
     List<Long> productIds = products.stream().map(Product::getId).toList();
 
-    // row[0]=productId, row[1]=currentStock, row[2]=pendingStock
     Map<Long, BigDecimal[]> stockMap = stockLevelRepository
       .sumStockByProductIds(productIds)
       .stream()
@@ -143,13 +145,25 @@ public class ProductService {
         )
       );
 
-    return products.map(product -> {
+    List<ProductDTO> dtos = products.stream().map(product -> {
       BigDecimal[] stocks = stockMap.getOrDefault(
         product.getId(),
         new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
       );
       return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
-    });
+    }).toList();
+
+    if ("stock".equals(sortBy)) {
+      Comparator<ProductDTO> comparator = Comparator.comparing(
+        ProductDTO::getTotalStock
+      );
+      if ("desc".equalsIgnoreCase(sortDir)) {
+        comparator = comparator.reversed();
+      }
+      dtos = dtos.stream().sorted(comparator).toList();
+    }
+
+    return new PageImpl<>(dtos, pageable, products.getTotalElements());
   }
 
   public ProductDTO getProductById(Long id) {
