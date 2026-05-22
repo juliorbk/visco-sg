@@ -245,6 +245,9 @@ public class RequisitionService {
     if (req.getStatus() != RequisitionStatus.DRAFT) {
       throw new IllegalStateException("Only DRAFT requisitions can be updated");
     }
+
+    req.setDescription(request.description());
+
     if (!req.getCostCenter().getId().equals(request.costCenterId())) {
       CostCenter costCenter = costCenterRepository
         .findById(request.costCenterId())
@@ -255,9 +258,9 @@ public class RequisitionService {
         );
       req.setCostCenter(costCenter);
     }
+
     req.getItems().clear();
 
-    req.setUpdatedAt(LocalDateTime.now());
     Map<Long, Product> productMap = productRepository
       .findAllById(
         request.items().stream().map(RequisitionItemRequest::productId).toList()
@@ -281,9 +284,10 @@ public class RequisitionService {
       req.getItems().add(item);
     }
 
+    req.setUpdatedAt(LocalDateTime.now());
     Requisition saved = requisitionRepository.save(req);
     log.info(
-      "Created requisition: {} by user: {}",
+      "Updated requisition: {} by user: {}",
       saved.getRequisitionNumber(),
       requestedBy.getName()
     );

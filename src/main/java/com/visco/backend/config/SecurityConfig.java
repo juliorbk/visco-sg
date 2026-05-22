@@ -87,28 +87,28 @@ public class SecurityConfig {
           .permitAll()
           // Solo ADMIN (y cost-centers requiere al menos autenticación)
           .requestMatchers("/api/users/**", "/api/cost-centers/**")
-          .hasAuthority("ADMIN")
+          .hasRole("ADMIN")
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
             "/api/suppliers/**",
             "/api/procurement/**",
             "/api/requisitions/**"
           )
-          .hasAnyAuthority("ADMIN", "MANAGER", "PROCUREMENT")
+          .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           // ADMIN, MANAGER, PROCUREMENT y WAREHOUSEMAN
           .requestMatchers("/api/warehouse/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "PROCUREMENT", "WAREHOUSEMAN")
+          .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT", "WAREHOUSEMAN")
           // ADMIN, MANAGER, PROCUREMENT
           .requestMatchers("/api/invoices/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "PROCUREMENT")
+          .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           //Admin
           .requestMatchers("/api/migration/**")
-          .hasAuthority("ADMIN")
+          .hasRole("ADMIN")
           // Roles específicos
           .requestMatchers("/api/inventory/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "WAREHOUSEMAN")
+          .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN")
           .requestMatchers("/api/dashboard/**")
-          .hasAnyAuthority("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
+          .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
           // Cualquier otra petición debe estar autenticada
           .anyRequest()
           .authenticated()

@@ -85,16 +85,13 @@ public class RequisitionController {
   @PatchMapping("/{id}")
   @Operation(
     summary = "Edit requisition",
-    description = "Updates a requisition"
+    description = "Updates a DRAFT requisition"
   )
   public ResponseEntity<RequisitionResponse> updateRequisition(
     @PathVariable Long id,
-    @Valid @RequestBody UpdateRequisition request,
-    @AuthenticationPrincipal UserPrincipal currentUser // <-- Inyectado automáticamente por Spring
+    @Valid @RequestBody UpdateRequisition request
   ) {
-    return ResponseEntity.ok(
-      requisitionService.updateRequisition(id, currentUser.getId(), request)
-    );
+    return ResponseEntity.ok(requisitionService.updateRequisition(id, request.requestedById(), request));
   }
 
   @PatchMapping("/{id}/approve")
