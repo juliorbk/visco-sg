@@ -34,7 +34,7 @@ public class SecurityConfig {
     private final UserRepository userRepository;
 
     @Value(
-        "${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173, https://viscoorinocosia.vercel.app/**}"
+        "${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://viscoorinocosia.vercel.app/**}"
     )
     private String[] allowedOrigins;
 
