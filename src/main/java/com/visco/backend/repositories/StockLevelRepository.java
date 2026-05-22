@@ -69,13 +69,13 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // ─────────────────────────────────────────────────────────────
 
   @Query(
-    "SELECT s.warehouse.id               as warehouseId, " +
+    "SELECT s.warehouse.id                 as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
-      "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
-      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
+      "       COUNT(CASE WHEN s.currentStock > 0 THEN 1 END) as currentStock, " +
+      "       COUNT(CASE WHEN s.pendingStock > 0 THEN 1 END) as pendingStock " +
       "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
   )
-  List<WarehouseStockProjection> getGlobalStockByWarehouse();
+  List<GlobalStockProjection> getGlobalStockByWarehouse();
 
   // ─────────────────────────────────────────────────────────────
   // Batch query para lista de productos (ProductService.getProducts)
@@ -102,5 +102,12 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     String getWarehouseName();
     BigDecimal getCurrentStock();
     BigDecimal getPendingStock();
+  }
+
+  interface GlobalStockProjection {
+    Long getWarehouseId();
+    String getWarehouseName();
+    Long getCurrentStock();
+    Long getPendingStock();
   }
 }

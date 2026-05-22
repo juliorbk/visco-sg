@@ -491,10 +491,14 @@ public class WarehouseService {
           .warehouseId(p.getWarehouseId())
           .warehouseName(p.getWarehouseName())
           .totalStock(
-            p.getCurrentStock() != null ? p.getCurrentStock() : BigDecimal.ZERO
+            p.getCurrentStock() != null
+              ? BigDecimal.valueOf(p.getCurrentStock())
+              : BigDecimal.ZERO
           )
           .totalPendingStock(
-            p.getPendingStock() != null ? p.getPendingStock() : BigDecimal.ZERO
+            p.getPendingStock() != null
+              ? BigDecimal.valueOf(p.getPendingStock())
+              : BigDecimal.ZERO
           )
           .build()
       )
