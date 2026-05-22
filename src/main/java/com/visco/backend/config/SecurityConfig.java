@@ -76,7 +76,6 @@ public class SecurityConfig {
                         "/api/auth/logout",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
-                        "/api/migration/**",
                         "/actuator/**",
                         "/health"
                     )
@@ -97,6 +96,9 @@ public class SecurityConfig {
                     // ADMIN, MANAGER, PROCUREMENT
                     .requestMatchers("/api/invoices/**")
                     .hasAnyAuthority("ADMIN", "MANAGER", "PROCUREMENT")
+                    //Admin
+                    .requestMatchers("/api/migration/**")
+                    .hasAuthority("ADMIN")
                     // Roles específicos
                     .requestMatchers("/api/inventory/**")
                     .hasAnyAuthority("ADMIN", "MANAGER", "WAREHOUSEMAN")

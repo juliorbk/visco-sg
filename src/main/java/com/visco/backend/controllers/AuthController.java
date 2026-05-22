@@ -25,62 +25,56 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthController {
 
-  private final AuthService authService;
-  private final CookieService cookieService;
+    private final AuthService authService;
+    private final CookieService cookieService;
 
-  @PostMapping("/register")
-  @Operation(
-    summary = "Register a new user",
-    description = "Registers a new user and returns an authentication token"
-  )
-  public ResponseEntity<?> registerUser(
-    @Valid @RequestBody UserRegisterRequest request
-  ) {
-    AuthResponse registeredUser = authService.register(request);
-    return ResponseEntity.ok(registeredUser);
-  }
+    public ResponseEntity<?> registerUser(
+        @Valid @RequestBody UserRegisterRequest request,
+        HttpServletResponse response // agregar esto
+    ) {
+        AuthResponse registeredUser = authService.register(request);
+        var jwtCookie = cookieService.createJwtCookie(registeredUser.getToken());
+        response.addCookie(jwtCookie);
+        registeredUser.setToken(null); // nunca exponer el token en body
+        return ResponseEntity.ok(registeredUser);
+    }
 
-  @PostMapping("/login")
-  @Operation(
-    summary = "Login user",
-    description = "Authenticates a user and returns an authentication token"
-  )
-  public ResponseEntity<AuthResponse> loginUser(
-    @Valid @RequestBody LoginRequest request,
-    HttpServletResponse response
-  ) {
-    // We create de login request
-    AuthResponse authData = authService.login(request);
-    // if validates ok we extract the JWT and create the cookie
-    var jwtCookie = cookieService.createJwtCookie(authData.getToken());
+    @PostMapping("/login")
+    @Operation(
+        summary = "Login user",
+        description = "Authenticates a user and returns an authentication token"
+    )
+    public ResponseEntity<AuthResponse> loginUser(
+        @Valid @RequestBody LoginRequest request,
+        HttpServletResponse response
+    ) {
+        // We create de login request
+        AuthResponse authData = authService.login(request);
+        // if validates ok we extract the JWT and create the cookie
+        var jwtCookie = cookieService.createJwtCookie(authData.getToken());
 
-    // add the cookie to the http response
-    response.addCookie(jwtCookie);
+        // add the cookie to the http response
+        response.addCookie(jwtCookie);
 
-    // We delete the token, for security
-    authData.setToken(null);
-    return ResponseEntity.ok(authData);
-  }
+        // We delete the token, for security
+        authData.setToken(null);
+        return ResponseEntity.ok(authData);
+    }
 
-  @PostMapping("/logout")
-  @Operation(
-    summary = "Logout user",
-    description = "Clears the JWT cookie and logs out the user"
-  )
-  public ResponseEntity<?> logoutUser(HttpServletResponse response) {
-    var logoutCookie = cookieService.createLogoutCookie();
-    response.addCookie(logoutCookie);
-    return ResponseEntity.ok().body("Logout successful");
-  }
+    @PostMapping("/logout")
+    @Operation(summary = "Logout user", description = "Clears the JWT cookie and logs out the user")
+    public ResponseEntity<?> logoutUser(HttpServletResponse response) {
+        var logoutCookie = cookieService.createLogoutCookie();
+        response.addCookie(logoutCookie);
+        return ResponseEntity.ok().body("Logout successful");
+    }
 
-  @GetMapping("/me")
-  @Operation(
-    summary = "Get current user",
-    description = "Returns the authenticated user information from the JWT cookie or bearer token"
-  )
-  public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
-    return ResponseEntity.ok(
-      authService.getCurrentUser(authentication.getName())
-    );
-  }
+    @GetMapping("/me")
+    @Operation(
+        summary = "Get current user",
+        description = "Returns the authenticated user information from the JWT cookie or bearer token"
+    )
+    public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
+        return ResponseEntity.ok(authService.getCurrentUser(authentication.getName()));
+    }
 }
