@@ -32,319 +32,366 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class SupplierService {
 
-    private final SupplierRepository supplierRepository;
-    private final PurchaseOrderRepository orderRepository;
+  private final SupplierRepository supplierRepository;
+  private final PurchaseOrderRepository orderRepository;
 
-    // ------ CRUD ------
+  // ------ CRUD ------
 
-    // Create Supplier
+  // Create Supplier
 
-    @Transactional
-    public SupplierDTO createSupplier(CreateSupplierRequest request) {
-        if (supplierRepository.existsByName(request.name())) {
-            throw new IllegalStateException(
-                "Supplier with name: " + request.name() + " already exists"
-            );
-        }
-
-        // 1. Construyes el proveedor base
-        Supplier newSupplier = Supplier.builder()
-            .name(request.name())
-            .address(request.address())
-            .email(request.email())
-            .phoneNumbers(request.phoneNumbers())
-            .description(request.description())
-            .currency(request.currency())
-            .sapCode(request.sapCode())
-            .active(true)
-            .representatives(new HashSet<>())
-            .build();
-
-        // 2. Representantes — se crean como entidades independientes
-        if (request.representativeIds() != null && !request.representativeIds().isEmpty()) {
-            Set<LegalRepresentative> reps = request
-                .representativeIds()
-                .stream()
-                .map((String nombre) ->
-                    LegalRepresentative.builder() // ← tipo explícito
-                        .fullName(nombre)
-                        .build()
-                )
-                .collect(Collectors.toSet());
-
-            newSupplier.setRepresentatives(reps);
-        }
-
-        // 3. Guarda y retorna — siempre, con o sin representantes
-        return SupplierDTO.fromSupplier(supplierRepository.save(newSupplier));
+  @Transactional
+  public SupplierDTO createSupplier(CreateSupplierRequest request) {
+    if (supplierRepository.existsByName(request.name())) {
+      throw new IllegalStateException(
+        "Supplier with name: " + request.name() + " already exists"
+      );
     }
 
-    // Read all Suppliers
-    public Page<SupplierDTO> getAllSuppliers(Pageable pageable) {
-        return supplierRepository.findAll(pageable).map(SupplierDTO::fromSupplier);
+    // 1. Construyes el proveedor base
+    Supplier newSupplier = Supplier.builder()
+      .name(request.name())
+      .address(request.address())
+      .email(request.email())
+      .phoneNumbers(request.phoneNumbers())
+      .description(request.description())
+      .currency(request.currency())
+      .active(true)
+      .representatives(new HashSet<>())
+      .build();
+
+    // 2. Representantes — se crean como entidades independientes
+    if (
+      request.representativeIds() != null &&
+      !request.representativeIds().isEmpty()
+    ) {
+      Set<LegalRepresentative> reps = request
+        .representativeIds()
+        .stream()
+        .map((String nombre) ->
+          LegalRepresentative.builder() // ← tipo explícito
+            .fullName(nombre)
+            .build()
+        )
+        .collect(Collectors.toSet());
+
+      newSupplier.setRepresentatives(reps);
     }
 
-    // Update Supplier
-    @Transactional
-    public SupplierDTO updateSupplier(Long id, UpdateSupplierRequest request) {
-        Supplier existing = supplierRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + id));
+    // 3. Guarda y retorna — siempre, con o sin representantes
+    return SupplierDTO.fromSupplier(supplierRepository.save(newSupplier));
+  }
 
-        existing.setName(request.name());
-        existing.setEmail(request.email());
-        existing.setPhoneNumbers(request.phoneNumbers());
-        existing.setDescription(request.description());
-        existing.setAddress(request.address());
-        existing.setCurrency(request.currency());
-        existing.setSapCode(request.sapCode());
-        existing.setUpdatedAt(LocalDateTime.now());
+  // Read all Suppliers
+  public Page<SupplierDTO> getAllSuppliers(Pageable pageable) {
+    return supplierRepository.findAll(pageable).map(SupplierDTO::fromSupplier);
+  }
 
-        if (request.representativeIds() != null) {
-            Set<LegalRepresentative> filtered = existing.getRepresentatives().stream()
-                .filter(r -> request.representativeIds().contains(r.getId()))
-                .collect(Collectors.toSet());
-            existing.setRepresentatives(filtered);
-        }
+  // Update Supplier
+  @Transactional
+  public SupplierDTO updateSupplier(Long id, UpdateSupplierRequest request) {
+    Supplier existing = supplierRepository
+      .findById(id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Supplier not found: " + id)
+      );
 
-        return SupplierDTO.fromSupplier(supplierRepository.save(existing));
+    existing.setName(request.name());
+    existing.setEmail(request.email());
+    existing.setPhoneNumbers(request.phoneNumbers());
+    existing.setDescription(request.description());
+    existing.setAddress(request.address());
+    existing.setCurrency(request.currency());
+    existing.setUpdatedAt(LocalDateTime.now());
+
+    if (request.representativeIds() != null) {
+      Set<LegalRepresentative> filtered = existing
+        .getRepresentatives()
+        .stream()
+        .filter(r -> request.representativeIds().contains(r.getId()))
+        .collect(Collectors.toSet());
+      existing.setRepresentatives(filtered);
     }
 
-    // Deacativate - Delete Suppplier
+    return SupplierDTO.fromSupplier(supplierRepository.save(existing));
+  }
 
-    public void deleteSupplier(Long Id) {
-        Supplier supplier = supplierRepository
-            .findById(Id)
-            .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + Id));
+  // Deacativate - Delete Suppplier
 
-        supplier.setActive(false);
-        supplier.setDeletedAt(LocalDateTime.now());
-        supplierRepository.save(supplier);
-        log.info("Soft-deleted (deactivated) supplier with id: {}", Id);
+  public void deleteSupplier(Long Id) {
+    Supplier supplier = supplierRepository
+      .findById(Id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Supplier not found: " + Id)
+      );
+
+    supplier.setActive(false);
+    supplier.setDeletedAt(LocalDateTime.now());
+    supplierRepository.save(supplier);
+    log.info("Soft-deleted (deactivated) supplier with id: {}", Id);
+  }
+
+  public void deactivateSupplier(Long id) {
+    // 1. Properly handle the Optional using orElseThrow
+    Supplier supplier = supplierRepository
+      .findById(id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Supplier not found with id: " + id)
+      );
+
+    // 2. Safe boolean check (handles null if active is a Boolean object)
+    if (Boolean.FALSE.equals(supplier.getActive())) {
+      throw new IllegalStateException(
+        "Supplier with id: " + id + " is already inactive"
+      );
     }
 
-    public void deactivateSupplier(Long id) {
-        // 1. Properly handle the Optional using orElseThrow
-        Supplier supplier = supplierRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Supplier not found with id: " + id));
+    log.info("Deactivating supplier with id: {}", id);
 
-        // 2. Safe boolean check (handles null if active is a Boolean object)
-        if (Boolean.FALSE.equals(supplier.getActive())) {
-            throw new IllegalStateException("Supplier with id: " + id + " is already inactive");
-        }
+    // 3. Update state and timestamps
+    supplier.setActive(false);
+    supplier.setUpdatedAt(LocalDateTime.now());
 
-        log.info("Deactivating supplier with id: {}", id);
+    supplierRepository.save(supplier);
+  }
 
-        // 3. Update state and timestamps
-        supplier.setActive(false);
-        supplier.setUpdatedAt(LocalDateTime.now());
+  public void activateSupplier(Long id) {
+    Supplier supplier = supplierRepository
+      .findById(id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Supplier not found with id: " + id)
+      );
 
-        supplierRepository.save(supplier);
+    if (Boolean.TRUE.equals(supplier.getActive())) {
+      throw new IllegalStateException(
+        "Supplier with id: " + id + " is already active"
+      );
     }
 
-    public void activateSupplier(Long id) {
-        Supplier supplier = supplierRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException("Supplier not found with id: " + id));
+    log.info("Activating supplier with id: {}", id);
 
-        if (Boolean.TRUE.equals(supplier.getActive())) {
-            throw new IllegalStateException("Supplier with id: " + id + " is already active");
-        }
+    supplier.setActive(true);
+    supplier.setUpdatedAt(LocalDateTime.now());
 
-        log.info("Activating supplier with id: {}", id);
+    supplierRepository.save(supplier);
+  }
 
-        supplier.setActive(true);
-        supplier.setUpdatedAt(LocalDateTime.now());
+  public SupplierDTO getSupplierById(Long id) {
+    return SupplierDTO.fromSupplier(
+      supplierRepository
+        .findById(id)
+        .orElseThrow(() ->
+          new EntityNotFoundException("Supplier not found: " + id)
+        )
+    );
+  }
 
-        supplierRepository.save(supplier);
-    }
+  public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
+    return supplierRepository
+      .findByActiveTrue(pageable)
+      .map(SupplierDTO::fromSupplier);
+  }
 
-    public SupplierDTO getSupplierById(Long id) {
-        return SupplierDTO.fromSupplier(
-            supplierRepository
-                .findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Supplier not found: " + id))
-        );
-    }
+  public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
+    return supplierRepository
+      .findByActiveFalse(pageable)
+      .map(SupplierDTO::fromSupplier);
+  }
 
-    public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
-        return supplierRepository.findByActiveTrue(pageable).map(SupplierDTO::fromSupplier);
-    }
+  public Page<SupplierDTO> getSuppliersByCurrency(
+    Currency currency,
+    Pageable pageable
+  ) {
+    return supplierRepository
+      .findByCurrency(currency, pageable)
+      .map(SupplierDTO::fromSupplier);
+  }
 
-    public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
-        return supplierRepository.findByActiveFalse(pageable).map(SupplierDTO::fromSupplier);
-    }
+  @Transactional(readOnly = true)
+  public List<SupplierPerformanceDTO> getSupplierPerformance(int months) {
+    LocalDateTime from = LocalDateTime.now()
+      .minusMonths(months)
+      .withDayOfMonth(1)
+      .withHour(0)
+      .withMinute(0)
+      .withSecond(0);
 
-    public Page<SupplierDTO> getSuppliersByCurrency(Currency currency, Pageable pageable) {
-        return supplierRepository.findByCurrency(currency, pageable).map(SupplierDTO::fromSupplier);
-    }
+    List<PurchaseOrderRepository.SupplierPerformanceProjection> rows =
+      orderRepository.getSupplierPerformance(from);
 
-    @Transactional(readOnly = true)
-    public List<SupplierPerformanceDTO> getSupplierPerformance(int months) {
-        LocalDateTime from = LocalDateTime.now()
-            .minusMonths(months)
-            .withDayOfMonth(1)
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0);
+    // Agrupar por proveedor
+    Map<
+      Long,
+      List<PurchaseOrderRepository.SupplierPerformanceProjection>
+    > bySupplier = rows
+      .stream()
+      .collect(
+        Collectors.groupingBy(
+          PurchaseOrderRepository.SupplierPerformanceProjection::getSupplierId
+        )
+      );
 
-        List<PurchaseOrderRepository.SupplierPerformanceProjection> rows =
-            orderRepository.getSupplierPerformance(from);
+    return bySupplier
+      .entrySet()
+      .stream()
+      .map(entry -> {
+        List<
+          PurchaseOrderRepository.SupplierPerformanceProjection
+        > supplierRows = entry.getValue();
 
-        // Agrupar por proveedor
-        Map<Long, List<PurchaseOrderRepository.SupplierPerformanceProjection>> bySupplier = rows
-            .stream()
-            .collect(
-                Collectors.groupingBy(
-                    PurchaseOrderRepository.SupplierPerformanceProjection::getSupplierId
-                )
-            );
+        String supplierName = supplierRows.get(0).getSupplierName();
+        long totalOrders = supplierRows
+          .stream()
+          .mapToLong(r -> r.getTotalOrders())
+          .sum();
+        long totalDelivered = supplierRows
+          .stream()
+          .mapToLong(r -> r.getDeliveredOrders())
+          .sum();
+        BigDecimal totalSpend = supplierRows
+          .stream()
+          .map(r ->
+            r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO
+          )
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+        double fulfillmentRate =
+          totalOrders == 0
+            ? 0.0
+            : BigDecimal.valueOf((totalDelivered * 100.0) / totalOrders)
+                .setScale(1, RoundingMode.HALF_UP)
+                .doubleValue();
 
-        return bySupplier
-            .entrySet()
-            .stream()
-            .map((entry) -> {
-                List<PurchaseOrderRepository.SupplierPerformanceProjection> supplierRows =
-                    entry.getValue();
+        List<SupplierPerformanceDTO.MonthlyEntry> monthlyEntries = supplierRows
+          .stream()
+          .map(r -> {
+            long mo = r.getTotalOrders();
+            long md = r.getDeliveredOrders();
+            BigDecimal ms =
+              r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO;
+            double mRate =
+              mo == 0
+                ? 0.0
+                : BigDecimal.valueOf((md * 100.0) / mo)
+                    .setScale(1, RoundingMode.HALF_UP)
+                    .doubleValue();
+            return SupplierPerformanceDTO.MonthlyEntry.builder()
+              .month(r.getMonth().toString().substring(0, 7))
+              .totalOrders(mo)
+              .deliveredOrders(md)
+              .totalSpend(ms)
+              .fulfillmentRate(mRate)
+              .build();
+          })
+          .toList();
 
-                String supplierName = supplierRows.get(0).getSupplierName();
-                long totalOrders = supplierRows
-                    .stream()
-                    .mapToLong((r) -> r.getTotalOrders())
-                    .sum();
-                long totalDelivered = supplierRows
-                    .stream()
-                    .mapToLong((r) -> r.getDeliveredOrders())
-                    .sum();
-                BigDecimal totalSpend = supplierRows
-                    .stream()
-                    .map((r) -> r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-                double fulfillmentRate =
-                    totalOrders == 0
-                        ? 0.0
-                        : BigDecimal.valueOf((totalDelivered * 100.0) / totalOrders)
-                              .setScale(1, RoundingMode.HALF_UP)
-                              .doubleValue();
+        return SupplierPerformanceDTO.builder()
+          .supplierId(entry.getKey())
+          .supplierName(supplierName)
+          .months(monthlyEntries)
+          .totalOrders(totalOrders)
+          .totalDelivered(totalDelivered)
+          .fulfillmentRate(fulfillmentRate)
+          .totalSpend(totalSpend)
+          .build();
+      })
+      .toList();
+  }
 
-                List<SupplierPerformanceDTO.MonthlyEntry> monthlyEntries = supplierRows
-                    .stream()
-                    .map((r) -> {
-                        long mo = r.getTotalOrders();
-                        long md = r.getDeliveredOrders();
-                        BigDecimal ms =
-                            r.getTotalSpend() != null ? r.getTotalSpend() : BigDecimal.ZERO;
-                        double mRate =
-                            mo == 0
-                                ? 0.0
-                                : BigDecimal.valueOf((md * 100.0) / mo)
-                                      .setScale(1, RoundingMode.HALF_UP)
-                                      .doubleValue();
-                        return SupplierPerformanceDTO.MonthlyEntry.builder()
-                            .month(r.getMonth().toString().substring(0, 7))
-                            .totalOrders(mo)
-                            .deliveredOrders(md)
-                            .totalSpend(ms)
-                            .fulfillmentRate(mRate)
-                            .build();
-                    })
-                    .toList();
+  @Transactional(readOnly = true)
+  public List<SupplierPerformanceMonthlyDTO> getSupplierPerformanceChart(
+    int months
+  ) {
+    LocalDateTime from = LocalDateTime.now()
+      .minusMonths(months)
+      .withDayOfMonth(1)
+      .withHour(0)
+      .withMinute(0)
+      .withSecond(0);
 
-                return SupplierPerformanceDTO.builder()
-                    .supplierId(entry.getKey())
-                    .supplierName(supplierName)
-                    .months(monthlyEntries)
-                    .totalOrders(totalOrders)
-                    .totalDelivered(totalDelivered)
-                    .fulfillmentRate(fulfillmentRate)
-                    .totalSpend(totalSpend)
-                    .build();
-            })
-            .toList();
-    }
+    List<PurchaseOrderRepository.MonthlySupplierStatsProjection> rows =
+      orderRepository.getMonthlySupplierStats(from);
 
-    @Transactional(readOnly = true)
-    public List<SupplierPerformanceMonthlyDTO> getSupplierPerformanceChart(int months) {
-        LocalDateTime from = LocalDateTime.now()
-            .minusMonths(months)
-            .withDayOfMonth(1)
-            .withHour(0)
-            .withMinute(0)
-            .withSecond(0);
+    // Agrupar por mes
+    Map<
+      String,
+      List<PurchaseOrderRepository.MonthlySupplierStatsProjection>
+    > byMonth = rows
+      .stream()
+      .collect(
+        Collectors.groupingBy(r -> r.getMonth().toString().substring(0, 7))
+      );
 
-        List<PurchaseOrderRepository.MonthlySupplierStatsProjection> rows =
-            orderRepository.getMonthlySupplierStats(from);
+    // Por mes: calcular volumen total por proveedor para separar Tier 1 vs Tier 2-3
+    // Tier 1 = proveedores en el top 33% por volumen de órdenes globales
+    Map<Long, Long> globalVolume = rows
+      .stream()
+      .collect(
+        Collectors.groupingBy(
+          PurchaseOrderRepository.MonthlySupplierStatsProjection::getSupplierId,
+          Collectors.summingLong(r -> r.getTotalOrders())
+        )
+      );
 
-        // Agrupar por mes
-        Map<String, List<PurchaseOrderRepository.MonthlySupplierStatsProjection>> byMonth = rows
-            .stream()
-            .collect(Collectors.groupingBy((r) -> r.getMonth().toString().substring(0, 7)));
+    long threshold = globalVolume
+      .values()
+      .stream()
+      .sorted(Comparator.reverseOrder())
+      .limit(Math.max(1, globalVolume.size() / 3))
+      .min(Comparator.naturalOrder())
+      .orElse(1L);
 
-        // Por mes: calcular volumen total por proveedor para separar Tier 1 vs Tier 2-3
-        // Tier 1 = proveedores en el top 33% por volumen de órdenes globales
-        Map<Long, Long> globalVolume = rows
-            .stream()
-            .collect(
-                Collectors.groupingBy(
-                    PurchaseOrderRepository.MonthlySupplierStatsProjection::getSupplierId,
-                    Collectors.summingLong((r) -> r.getTotalOrders())
-                )
-            );
+    Set<Long> tier1Suppliers = globalVolume
+      .entrySet()
+      .stream()
+      .filter(e -> e.getValue() >= threshold)
+      .map(Map.Entry::getKey)
+      .collect(Collectors.toSet());
 
-        long threshold = globalVolume
-            .values()
-            .stream()
-            .sorted(Comparator.reverseOrder())
-            .limit(Math.max(1, globalVolume.size() / 3))
-            .min(Comparator.naturalOrder())
-            .orElse(1L);
+    return byMonth
+      .entrySet()
+      .stream()
+      .sorted(Map.Entry.comparingByKey())
+      .map(entry -> {
+        List<PurchaseOrderRepository.MonthlySupplierStatsProjection> monthRows =
+          entry.getValue();
 
-        Set<Long> tier1Suppliers = globalVolume
-            .entrySet()
-            .stream()
-            .filter((e) -> e.getValue() >= threshold)
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toSet());
+        // Tier 1
+        double aRate = monthRows
+          .stream()
+          .filter(r -> tier1Suppliers.contains(r.getSupplierId()))
+          .mapToDouble(r ->
+            r.getTotalOrders() == 0
+              ? 0.0
+              : (r.getDeliveredOrders() * 100.0) / r.getTotalOrders()
+          )
+          .average()
+          .orElse(0.0);
 
-        return byMonth
-            .entrySet()
-            .stream()
-            .sorted(Map.Entry.comparingByKey())
-            .map((entry) -> {
-                List<PurchaseOrderRepository.MonthlySupplierStatsProjection> monthRows =
-                    entry.getValue();
+        // Tier 2-3
+        double bRate = monthRows
+          .stream()
+          .filter(r -> !tier1Suppliers.contains(r.getSupplierId()))
+          .mapToDouble(r ->
+            r.getTotalOrders() == 0
+              ? 0.0
+              : (r.getDeliveredOrders() * 100.0) / r.getTotalOrders()
+          )
+          .average()
+          .orElse(0.0);
 
-                // Tier 1
-                double aRate = monthRows
-                    .stream()
-                    .filter((r) -> tier1Suppliers.contains(r.getSupplierId()))
-                    .mapToDouble((r) ->
-                        r.getTotalOrders() == 0
-                            ? 0.0
-                            : (r.getDeliveredOrders() * 100.0) / r.getTotalOrders()
-                    )
-                    .average()
-                    .orElse(0.0);
-
-                // Tier 2-3
-                double bRate = monthRows
-                    .stream()
-                    .filter((r) -> !tier1Suppliers.contains(r.getSupplierId()))
-                    .mapToDouble((r) ->
-                        r.getTotalOrders() == 0
-                            ? 0.0
-                            : (r.getDeliveredOrders() * 100.0) / r.getTotalOrders()
-                    )
-                    .average()
-                    .orElse(0.0);
-
-                return SupplierPerformanceMonthlyDTO.builder()
-                    .month(entry.getKey())
-                    .a(BigDecimal.valueOf(aRate).setScale(1, RoundingMode.HALF_UP).doubleValue())
-                    .b(BigDecimal.valueOf(bRate).setScale(1, RoundingMode.HALF_UP).doubleValue())
-                    .build();
-            })
-            .toList();
-    }
+        return SupplierPerformanceMonthlyDTO.builder()
+          .month(entry.getKey())
+          .a(
+            BigDecimal.valueOf(aRate)
+              .setScale(1, RoundingMode.HALF_UP)
+              .doubleValue()
+          )
+          .b(
+            BigDecimal.valueOf(bRate)
+              .setScale(1, RoundingMode.HALF_UP)
+              .doubleValue()
+          )
+          .build();
+      })
+      .toList();
+  }
 }

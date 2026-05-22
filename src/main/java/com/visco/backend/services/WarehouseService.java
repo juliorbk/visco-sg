@@ -31,10 +31,10 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -132,17 +132,16 @@ public class WarehouseService {
         )
       );
 
+    // Asumiendo que orderId es numérico (ej. 1, 25, 300)
+    int currentYear = Year.now().getValue();
+
+    // %04d rellena con ceros a la izquierda hasta tener 4 dígitos
+    String receiptNumber = String.format("RC-%04d/%d", orderId, currentYear);
+
+    // Resultado para el ID 15: RC-0015/2026
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber(
-        "VIS-" +
-          orderId +
-          "-" +
-          System.currentTimeMillis() +
-          "-" +
-          UUID.randomUUID().toString().substring(0, 8)
-      )
+      .receiptNumber(receiptNumber)
       .purchaseOrder(order)
-      // FIX #1: Guardar el warehouse real de recepción, no el de la PO
       .destinationWarehouseId(destWarehouse.getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
