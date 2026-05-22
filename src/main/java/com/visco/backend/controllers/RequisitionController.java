@@ -1,6 +1,9 @@
 package com.visco.backend.controllers;
 
+import com.visco.backend.config.UserPrincipal; // <-- Importante: Tu clase recién creada
+import com.visco.backend.models.dtos.ApprovalRequest;
 import com.visco.backend.models.dtos.CreateRequisitionRequest;
+import com.visco.backend.models.dtos.RejectRequest;
 import com.visco.backend.models.dtos.RequisitionResponse;
 import com.visco.backend.models.dtos.UpdateRequisition;
 import com.visco.backend.models.entities.RequisitionStatus;
@@ -8,21 +11,13 @@ import com.visco.backend.services.RequisitionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.util.Map;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/requisitions")
@@ -94,15 +89,11 @@ public class RequisitionController {
   )
   public ResponseEntity<RequisitionResponse> updateRequisition(
     @PathVariable Long id,
-    @Valid @RequestBody UpdateRequisition request
+    @Valid @RequestBody UpdateRequisition request,
+    @AuthenticationPrincipal UserPrincipal currentUser // <-- Inyectado automáticamente por Spring
   ) {
-    UUID approverId =
-      body.get("userId") != null
-        ? UUID.fromString(body.get("userId").toString())
-        : null;
-
     return ResponseEntity.ok(
-      requisitionService.updateRequisition(id, request.requestedById(), request)
+      requisitionService.updateRequisition(id, currentUser.getId(), request)
     );
   }
 
@@ -113,16 +104,15 @@ public class RequisitionController {
   )
   public ResponseEntity<RequisitionResponse> approveRequisition(
     @PathVariable Long id,
-    @RequestBody Map<String, Object> body
+    @Valid @RequestBody ApprovalRequest request,
+    @AuthenticationPrincipal UserPrincipal currentUser // <-- Inyectado automáticamente por Spring
   ) {
-    UUID approverId =
-      body.get("userId") != null
-        ? UUID.fromString(body.get("userId").toString())
-        : null;
-    String notes =
-      body.get("notes") != null ? body.get("notes").toString() : null;
     return ResponseEntity.ok(
-      requisitionService.approveRequisition(id, approverId, notes)
+      requisitionService.approveRequisition(
+        id,
+        currentUser.getId(),
+        request.notes()
+      )
     );
   }
 
@@ -133,16 +123,15 @@ public class RequisitionController {
   )
   public ResponseEntity<RequisitionResponse> rejectRequisition(
     @PathVariable Long id,
-    @RequestBody Map<String, Object> body
+    @Valid @RequestBody RejectRequest request,
+    @AuthenticationPrincipal UserPrincipal currentUser // <-- Inyectado automáticamente por Spring
   ) {
-    UUID rejecterId =
-      body.get("userId") != null
-        ? UUID.fromString(body.get("userId").toString())
-        : null;
-    String reason =
-      body.get("reason") != null ? body.get("reason").toString() : null;
     return ResponseEntity.ok(
-      requisitionService.rejectRequisition(id, rejecterId, reason)
+      requisitionService.rejectRequisition(
+        id,
+        currentUser.getId(),
+        request.reason()
+      )
     );
   }
 
