@@ -9,7 +9,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -33,7 +35,13 @@ public class Category {
   @JoinColumn(name = "parent_id")
   private Category parentCategory;
 
-  public Long getParentId() {
-    return parentCategory != null ? parentCategory.getId() : null;
+  @Transient
+  private Long parentId;
+
+  @PostLoad
+  private void onLoad() {
+    if (parentCategory != null) {
+      this.parentId = parentCategory.getId();
+    }
   }
 }

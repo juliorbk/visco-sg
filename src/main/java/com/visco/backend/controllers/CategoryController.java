@@ -50,6 +50,7 @@ public class CategoryController {
 		if (categoryRepository.findByName(category.getName()).isPresent()) {
 			throw new IllegalArgumentException("Category with name '" + category.getName() + "' already exists");
 		}
+		resolveParent(category);
 		return ResponseEntity.status(HttpStatus.CREATED).body(categoryRepository.save(category));
 	}
 
@@ -63,8 +64,17 @@ public class CategoryController {
 			throw new IllegalArgumentException("Category with name '" + updated.getName() + "' already exists");
 		}
 		existing.setName(updated.getName());
+		resolveParent(updated);
 		existing.setParentCategory(updated.getParentCategory());
 		return ResponseEntity.ok(categoryRepository.save(existing));
+	}
+
+	private void resolveParent(Category category) {
+		if (category.getParentId() != null) {
+			Category parent = categoryRepository.findById(category.getParentId())
+					.orElseThrow(() -> new EntityNotFoundException("Parent category not found: " + category.getParentId()));
+			category.setParentCategory(parent);
+		}
 	}
 
 	@DeleteMapping("/{id}")
