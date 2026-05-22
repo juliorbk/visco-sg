@@ -78,6 +78,7 @@ public class SecurityConfig {
             "/api/auth/register",
             "/api/auth/login",
             "/api/auth/logout",
+            "/api/cost-centers/all",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/actuator/**",
