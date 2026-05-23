@@ -135,8 +135,14 @@ public class WarehouseService {
     // Asumiendo que orderId es numérico (ej. 1, 25, 300)
     int currentYear = Year.now().getValue();
 
-    // %04d rellena con ceros a la izquierda hasta tener 4 dígitos
-    String receiptNumber = String.format("RC-%04d/%d", orderId, currentYear);
+    long nextSequence = goodReceiptRepository.count() + 1;
+
+    // %04d rellena con ceros a la izquierda hasta tener 4 dígitos basados en la secuencia
+    String receiptNumber = String.format(
+      "RC-%04d/%d",
+      nextSequence,
+      currentYear
+    );
 
     // Resultado para el ID 15: RC-0015/2026
     GoodReceipt receipt = GoodReceipt.builder()
