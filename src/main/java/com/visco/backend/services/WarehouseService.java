@@ -6,6 +6,7 @@ import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
+import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
@@ -256,6 +257,63 @@ public class WarehouseService {
     purchaseOrderRepository.save(order);
     goodReceiptRepository.save(receipt);
     return buildReceiptResponse(receipt, order);
+  }
+
+  @Transactional(readOnly = true)
+  public PurchaseOrderReceiptSummary getReceiptSummaryByOrder(Long orderId) {
+    PurchaseOrder order = purchaseOrderRepository
+      .findById(orderId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Purchase order not found: " + orderId)
+      );
+
+    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
+      orderId
+    );
+
+    // Acumular todo lo recibido por producto
+    Map<Long, BigDecimal> totalReceived = new HashMap<>();
+    for (GoodReceipt receipt : receipts) {
+      for (GoodReceiptItem item : receipt.getItems()) {
+        totalReceived.merge(
+          item.getProduct().getId(),
+          item.getReceivedQuantity(),
+          BigDecimal::add
+        );
+      }
+    }
+
+    // Construir items con expected vs received vs pending
+    List<PurchaseOrderReceiptSummary.ItemSummary> items = order
+      .getItems()
+      .stream()
+      .map(poItem -> {
+        BigDecimal ordered = BigDecimal.valueOf(poItem.getQuantity());
+        BigDecimal received = totalReceived.getOrDefault(
+          poItem.getProduct().getId(),
+          BigDecimal.ZERO
+        );
+        BigDecimal pending = ordered.subtract(received);
+
+        return PurchaseOrderReceiptSummary.ItemSummary.builder()
+          .productId(poItem.getProduct().getId())
+          .productName(poItem.getProduct().getName())
+          .productSku(poItem.getProduct().getSku())
+          .orderedQuantity(ordered)
+          .receivedQuantity(received)
+          .pendingQuantity(pending.max(BigDecimal.ZERO))
+          .fullyReceived(received.compareTo(ordered) >= 0)
+          .build();
+      })
+      .toList();
+
+    return PurchaseOrderReceiptSummary.builder()
+      .orderId(orderId)
+      .orderNumber(order.getOrderNumber())
+      .orderStatus(order.getStatus())
+      .totalReceipts(receipts.size())
+      .items(items)
+      .build();
   }
 
   public boolean determineIfFullyReceived(
