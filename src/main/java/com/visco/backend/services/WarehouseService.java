@@ -620,9 +620,11 @@ public class WarehouseService {
       .findById(request.warehouseId())
       .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
 
-    StockLevel stock = stockLevelRepository
-      .findByProductIdAndWarehouseId(request.productId(), request.warehouseId())
-      .orElseThrow(() -> new EntityNotFoundException("Stock level not found"));
+    Product product = productRepository
+      .findById(request.productId())
+      .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+
+    StockLevel stock = findOrCreateStockLevel(product, warehouse);
 
     User createdBy = userRepository
       .findById(request.createdById())
@@ -632,7 +634,7 @@ public class WarehouseService {
     BigDecimal difference = request.newStock().subtract(currentStock);
 
     InventoryMovement movement = InventoryMovement.builder()
-      .product(stock.getProduct())
+      .product(product)
       .fromWarehouse(warehouse)
       .toWarehouse(warehouse)
       .quantity(difference) // signed: negativo si reduce stock, positivo si aumenta
