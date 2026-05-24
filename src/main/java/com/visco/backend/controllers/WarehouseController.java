@@ -4,6 +4,7 @@ import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
+import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
@@ -120,6 +121,21 @@ public class WarehouseController {
   ) {
     warehouseService.adjustStock(request);
     return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/stock/on-stock")
+  @Operation(
+    summary = "Get products with stock in a warehouse",
+    description = "Returns paginated products that have stock (currentStock > 0) in the specified warehouse, with optional search"
+  )
+  public ResponseEntity<Page<ProductOnStock>> getProductsOnStock(
+    @RequestParam Long warehouseId,
+    @RequestParam(required = false) String search,
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(
+      warehouseService.getProductsOnStock(warehouseId, search, pageable)
+    );
   }
 
   @PostMapping("/orders/{id}/receive")

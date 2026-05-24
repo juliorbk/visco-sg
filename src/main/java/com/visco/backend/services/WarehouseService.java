@@ -5,6 +5,7 @@ import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
+import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
@@ -568,6 +569,36 @@ public class WarehouseService {
           .build()
       )
       .toList();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Products in stock by warehouse (transfer modal)
+  // ─────────────────────────────────────────────────────────────
+
+  @Transactional(readOnly = true)
+  public Page<ProductOnStock> getProductsOnStock(
+    Long warehouseId,
+    String search,
+    Pageable pageable
+  ) {
+    Page<StockLevel> stockPage =
+      stockLevelRepository.findStockWithProductByWarehouse(
+        pageable,
+        warehouseId,
+        search
+      );
+
+    return stockPage.map(sl -> {
+      Product p = sl.getProduct();
+      return new ProductOnStock(
+        p.getId(),
+        p.getInternalCode(),
+        p.getSku(),
+        p.getName(),
+        p.getSapCode(),
+        p.getUom().name()
+      );
+    });
   }
 
   // ─────────────────────────────────────────────────────────────
