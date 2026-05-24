@@ -55,6 +55,8 @@ public class WarehouseService {
   private final ProductRepository productRepository;
   private final InventoryMovementRepository inventoryMovementRepository;
 
+  private final Object stockLevelLock = new Object();
+
   // ─────────────────────────────────────────────────────────────
   // Warehouse CRUD
   // ─────────────────────────────────────────────────────────────
@@ -322,22 +324,24 @@ public class WarehouseService {
   // Stock helpers
   // ─────────────────────────────────────────────────────────────
 
-  // FIX #2: Helper centralizado para buscar o crear StockLevel
-  // Evita el constraint violation en nullable=false
   private StockLevel findOrCreateStockLevel(
     Product product,
     Warehouse warehouse
   ) {
-    return stockLevelRepository
-      .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-      .orElseGet(() ->
-        StockLevel.builder()
-          .product(product)
-          .warehouse(warehouse)
-          .currentStock(BigDecimal.ZERO)
-          .pendingStock(BigDecimal.ZERO)
-          .build()
-      );
+    synchronized (stockLevelLock) {
+      return stockLevelRepository
+        .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+        .orElseGet(() ->
+          stockLevelRepository.save(
+            StockLevel.builder()
+              .product(product)
+              .warehouse(warehouse)
+              .currentStock(BigDecimal.ZERO)
+              .pendingStock(BigDecimal.ZERO)
+              .build()
+          )
+        );
+    }
   }
 
   public void addPendingStockByWarehouse(
