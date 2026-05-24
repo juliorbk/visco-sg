@@ -91,7 +91,9 @@ public class RequisitionController {
     @PathVariable Long id,
     @Valid @RequestBody UpdateRequisition request
   ) {
-    return ResponseEntity.ok(requisitionService.updateRequisition(id, request.requestedById(), request));
+    return ResponseEntity.ok(
+      requisitionService.updateRequisition(id, request.requestedById(), request)
+    );
   }
 
   @PatchMapping("/{id}/approve")

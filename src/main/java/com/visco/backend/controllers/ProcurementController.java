@@ -32,7 +32,10 @@ public class ProcurementController {
   private final ProcurementService procurementService;
 
   @PostMapping("/orders")
-  @Operation(summary = "Create purchase order", description = "Creates a new purchase order")
+  @Operation(
+    summary = "Create purchase order",
+    description = "Creates a new purchase order"
+  )
   public ResponseEntity<PurchaseOrderResponse> createOrder(
     @Valid @RequestBody CreatePurchaseOrderRequest request
   ) {
@@ -42,7 +45,10 @@ public class ProcurementController {
   }
 
   @GetMapping("/orders")
-  @Operation(summary = "List all purchase orders", description = "Returns a paginated list of all purchase orders")
+  @Operation(
+    summary = "List all purchase orders",
+    description = "Returns a paginated list of all purchase orders"
+  )
   public ResponseEntity<Page<PurchaseOrderResponse>> getAllOrders(
     Pageable pageable
   ) {
@@ -50,13 +56,19 @@ public class ProcurementController {
   }
 
   @GetMapping("/orders/{id}")
-  @Operation(summary = "Get purchase order by ID", description = "Returns a specific purchase order")
+  @Operation(
+    summary = "Get purchase order by ID",
+    description = "Returns a specific purchase order"
+  )
   public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
     return ResponseEntity.ok(procurementService.getOrderById(id));
   }
 
   @PatchMapping("/orders/{id}/submit-for-approval")
-  @Operation(summary = "Submit order for approval", description = "Submits a purchase order for approval")
+  @Operation(
+    summary = "Submit order for approval",
+    description = "Submits a purchase order for approval"
+  )
   public ResponseEntity<PurchaseOrderResponse> submitForApproval(
     @PathVariable Long id
   ) {
@@ -66,7 +78,10 @@ public class ProcurementController {
   public record ApproveOrderRequest(String notes) {}
 
   @PatchMapping("/orders/{id}/approve")
-  @Operation(summary = "Approve purchase order", description = "Approves a purchase order")
+  @Operation(
+    summary = "Approve purchase order",
+    description = "Approves a purchase order"
+  )
   public ResponseEntity<PurchaseOrderResponse> markApproved(
     @PathVariable Long id,
     @AuthenticationPrincipal UserDetails currentUser,
@@ -80,25 +95,31 @@ public class ProcurementController {
     );
   }
 
+  public record RejectOrderRequest(String reason) {}
+
   @PatchMapping("/orders/{id}/reject")
-  @Operation(summary = "Reject purchase order", description = "Rejects a purchase order with a reason")
+  @Operation(
+    summary = "Reject purchase order",
+    description = "Rejects a purchase order with a reason"
+  )
   public ResponseEntity<PurchaseOrderResponse> rejectOrder(
     @PathVariable Long id,
-    @RequestBody Map<String, Object> body
+    @AuthenticationPrincipal UserDetails currentUser,
+    @RequestBody(required = false) RejectOrderRequest body
   ) {
-    UUID rejecterId =
-      body.get("userId") != null
-        ? UUID.fromString(body.get("userId").toString())
-        : null;
-    String reason =
-      body.get("reason") != null ? body.get("reason").toString() : null;
+    String rejecterEmail = currentUser.getUsername();
+    String reason = body != null ? body.reason() : null;
+
     return ResponseEntity.ok(
-      procurementService.rejectPurchaseOrder(id, rejecterId, reason)
+      procurementService.rejectPurchaseOrder(id, rejecterEmail, reason)
     );
   }
 
   @PatchMapping("/orders/{id}/send-to-supplier")
-  @Operation(summary = "Send order to supplier", description = "Marks a purchase order as sent to supplier")
+  @Operation(
+    summary = "Send order to supplier",
+    description = "Marks a purchase order as sent to supplier"
+  )
   public ResponseEntity<PurchaseOrderResponse> sendToSupplier(
     @PathVariable Long id
   ) {
@@ -106,7 +127,10 @@ public class ProcurementController {
   }
 
   @PatchMapping("/orders/{id}/cancel")
-  @Operation(summary = "Cancel purchase order", description = "Cancels a purchase order")
+  @Operation(
+    summary = "Cancel purchase order",
+    description = "Cancels a purchase order"
+  )
   public ResponseEntity<PurchaseOrderResponse> cancelOrder(
     @PathVariable Long id,
     @RequestBody(required = false) Map<String, Object> body

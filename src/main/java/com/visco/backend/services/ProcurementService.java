@@ -206,7 +206,7 @@ public class ProcurementService {
     order.setStatus(PurchaseOrderStatus.REJECTED);
     order.setRejectionReason(reason);
     if (rejecterUserId != null) {
-      userRepository.findById(rejecterUserId).ifPresent(order::setApprovedBy);
+      userRepository.findById(rejecterUserId).ifPresent(order::setRejectedBy);
     }
     order.setUpdatedAt(LocalDateTime.now());
     purchaseOrderRepository.save(order);
@@ -252,7 +252,10 @@ public class ProcurementService {
       Map<Long, BigDecimal> receivedQtys = getTotalReceivedByOrder(orderId);
       for (PurchaseOrderItem item : order.getItems()) {
         BigDecimal orderedQty = BigDecimal.valueOf(item.getQuantity());
-        BigDecimal receivedQty = receivedQtys.getOrDefault(item.getProduct().getId(), BigDecimal.ZERO);
+        BigDecimal receivedQty = receivedQtys.getOrDefault(
+          item.getProduct().getId(),
+          BigDecimal.ZERO
+        );
         BigDecimal pendingQty = orderedQty.subtract(receivedQty);
         if (pendingQty.compareTo(BigDecimal.ZERO) > 0) {
           warehouseService.substractPendingStock(
@@ -268,11 +271,17 @@ public class ProcurementService {
   }
 
   private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
-    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(orderId);
+    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
+      orderId
+    );
     Map<Long, BigDecimal> received = new HashMap<>();
     for (GoodReceipt receipt : receipts) {
       for (GoodReceiptItem item : receipt.getItems()) {
-        received.merge(item.getProduct().getId(), item.getReceivedQuantity(), BigDecimal::add);
+        received.merge(
+          item.getProduct().getId(),
+          item.getReceivedQuantity(),
+          BigDecimal::add
+        );
       }
     }
     return received;
@@ -335,12 +344,18 @@ public class ProcurementService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse rejectPurchaseOrder(
     Long id,
-    UUID rejecterUserId,
+    String rejecterEmail,
     String reason
   ) {
-    rejectOrder(id, rejecterUserId, reason);
+    User rejecter = userRepository
+      .findByEmail(rejecterEmail)
+      .orElseThrow(() ->
+        new UsernameNotFoundException("Rejecter not found: " + rejecterEmail)
+      );
+    rejectOrder(id, rejecter.getId(), reason);
     return getOrderById(id);
   }
 

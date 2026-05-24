@@ -135,24 +135,23 @@ public class WarehouseService {
     // Asumiendo que orderId es numérico (ej. 1, 25, 300)
     int currentYear = Year.now().getValue();
 
-    long nextSequence = goodReceiptRepository.count() + 1;
-
-    // %04d rellena con ceros a la izquierda hasta tener 4 dígitos basados en la secuencia
-    String receiptNumber = String.format(
-      "RC-%04d/%d",
-      nextSequence,
-      currentYear
-    );
-
     // Resultado para el ID 15: RC-0015/2026
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber(receiptNumber)
+      .receiptNumber("PENDING") // temporal — se sobreescribe tras el save
       .purchaseOrder(order)
       .destinationWarehouseId(destWarehouse.getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
 
+    receipt = goodReceiptRepository.saveAndFlush(receipt); // obtiene el ID real de la BD
+
+    String receiptNumber = String.format(
+      "RC-%04d/%d",
+      receipt.getId(),
+      currentYear
+    );
+    receipt.setReceiptNumber(receiptNumber);
     Map<Long, BigDecimal> previousReceived = new HashMap<>();
     for (GoodReceipt prev : goodReceiptRepository.findByPurchaseOrderId(
       orderId
@@ -241,8 +240,6 @@ public class WarehouseService {
       inventoryMovementRepository.save(movement);
     }
 
-    goodReceiptRepository.save(receipt);
-
     boolean allFullyReceived = determineIfFullyReceived(
       order,
       previousReceived,
@@ -253,8 +250,9 @@ public class WarehouseService {
         ? PurchaseOrderStatus.DELIVERED
         : PurchaseOrderStatus.PARTIALLY_DELIVERED
     );
+    receipt.setClosed(allFullyReceived);
     purchaseOrderRepository.save(order);
-
+    goodReceiptRepository.save(receipt);
     return buildReceiptResponse(receipt, order);
   }
 
@@ -637,7 +635,7 @@ public class WarehouseService {
       .product(stock.getProduct())
       .fromWarehouse(warehouse)
       .toWarehouse(warehouse)
-      .quantity(difference.abs()) // FIX #4: guardar siempre valor absoluto; el tipo indica dirección
+      .quantity(difference) // signed: negativo si reduce stock, positivo si aumenta
       .type(MovementType.ADJUSTMENT)
       .reason(request.reason() != null ? request.reason() : "Adjust stock")
       .entryUnitPrice(request.unitCost())

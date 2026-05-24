@@ -97,7 +97,6 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // ─────────────────────────────────────────────────────────────
 
   interface WarehouseStockProjection {
-    Long getSupplierId();
     Long getWarehouseId();
     String getWarehouseName();
     BigDecimal getCurrentStock();

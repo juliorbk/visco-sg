@@ -145,13 +145,16 @@ public class ProductService {
         )
       );
 
-    List<ProductDTO> dtos = products.stream().map(product -> {
-      BigDecimal[] stocks = stockMap.getOrDefault(
-        product.getId(),
-        new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
-      );
-      return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
-    }).toList();
+    List<ProductDTO> dtos = products
+      .stream()
+      .map(product -> {
+        BigDecimal[] stocks = stockMap.getOrDefault(
+          product.getId(),
+          new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
+        );
+        return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
+      })
+      .toList();
 
     if ("stock".equals(sortBy)) {
       Comparator<ProductDTO> comparator = Comparator.comparing(
