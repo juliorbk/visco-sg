@@ -545,6 +545,12 @@ public class WarehouseService {
 
   @Transactional
   public void transferStock(TransferStockRequest request) {
+    if (request.fromWarehouseId().equals(request.toWarehouseId())) {
+      throw new IllegalArgumentException(
+        "Source and destination warehouses must be different"
+      );
+    }
+
     Warehouse fromWarehouse = warehouseRepository
       .findById(request.fromWarehouseId())
       .orElseThrow(() ->
