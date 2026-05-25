@@ -126,9 +126,9 @@ public class ProductService {
     String sortDir
   ) {
     if ("stock".equals(sortBy)) {
-      List<Product> allProducts = productRepository.findBySearchAndCategory(
-        Pageable.unpaged(), search, category
-      ).getContent();
+      List<Product> allProducts = productRepository
+        .findBySearchAndCategory(Pageable.unpaged(), search, category)
+        .getContent();
 
       List<Long> productIds = allProducts.stream().map(Product::getId).toList();
 
@@ -138,10 +138,11 @@ public class ProductService {
         .collect(
           Collectors.toMap(
             row -> (Long) row[0],
-            row -> new BigDecimal[] {
-              row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
-              row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
-            }
+            row ->
+              new BigDecimal[] {
+                row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
+                row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
+              }
           )
         );
 
@@ -152,7 +153,8 @@ public class ProductService {
         comparator = comparator.reversed();
       }
 
-      List<ProductDTO> allDtos = allProducts.stream()
+      List<ProductDTO> allDtos = allProducts
+        .stream()
         .map(product -> {
           BigDecimal[] stocks = stockMap.getOrDefault(
             product.getId(),
@@ -166,9 +168,8 @@ public class ProductService {
       long total = allDtos.size();
       int start = (int) pageable.getOffset();
       int end = Math.min(start + pageable.getPageSize(), allDtos.size());
-      List<ProductDTO> pageContent = start >= allDtos.size()
-        ? List.of()
-        : allDtos.subList(start, end);
+      List<ProductDTO> pageContent =
+        start >= allDtos.size() ? List.of() : allDtos.subList(start, end);
 
       return new PageImpl<>(pageContent, pageable, total);
     }
