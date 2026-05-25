@@ -350,12 +350,16 @@ public class ProcurementService {
     String rejecterEmail,
     String reason
   ) {
-    User rejecter = userRepository
-      .findByEmail(rejecterEmail)
-      .orElseThrow(() ->
-        new UsernameNotFoundException("Rejecter not found: " + rejecterEmail)
-      );
-    rejectOrder(id, rejecter.getId(), reason);
+    if (rejecterEmail != null) {
+      User rejecter = userRepository
+        .findByEmail(rejecterEmail)
+        .orElseThrow(() ->
+          new UsernameNotFoundException("Rejecter not found: " + rejecterEmail)
+        );
+      rejectOrder(id, rejecter.getId(), reason);
+    } else {
+      rejectOrder(id, null, reason);
+    }
     return getOrderById(id);
   }
 
