@@ -247,4 +247,38 @@ public class ProductService {
   public Category createCategory(Category category) {
     return categoryRepository.save(category);
   }
+
+  @Transactional(readOnly = true)
+  public Page<Product> getProductsByCategory(
+    Long categoryId,
+    Pageable pageable
+  ) {
+    return productRepository
+      .findByCategoryId(categoryId, pageable)
+      .map(product ->
+        ProductDTO.fromEntity(
+          product,
+          getTotalStock(product.getId()),
+          getTotalPendingStock(product.getId())
+        )
+      );
+
+  }
+
+  @Transactional(readOnly = true)
+  public Page<Product> getProductsByWarehouse(
+    Long warehouseId,
+    Pageable pageable
+  ) {
+    return productRepository
+      .findByWarehouse(warehouseId, pageable)
+      .stream()
+      .map(product ->
+        ProductDTO.fromEntity(
+          product,
+          getTotalStock(product.getId()),
+          getTotalPendingStock(product.getId())
+        )
+      )
+  }
 }

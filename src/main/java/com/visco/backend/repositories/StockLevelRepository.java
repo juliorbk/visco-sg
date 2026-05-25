@@ -123,6 +123,34 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   // ─────────────────────────────────────────────────────────────
+  // All products in a warehouse (including zero stock)
+  // ─────────────────────────────────────────────────────────────
+
+  @Query(
+    value = """
+    SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
+    WHERE sl.warehouse.id = :warehouseId
+    AND (CAST(:search AS string) IS NULL
+      OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    """,
+    countQuery = """
+    SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
+    WHERE sl.warehouse.id = :warehouseId
+    AND (CAST(:search AS string) IS NULL
+      OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    """
+  )
+  Page<StockLevel> findAllStockByWarehouse(
+    Pageable pageable,
+    @Param("warehouseId") Long warehouseId,
+    @Param("search") String search
+  );
+
+  // ─────────────────────────────────────────────────────────────
   // Projection interface
   // ─────────────────────────────────────────────────────────────
 

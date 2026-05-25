@@ -2,6 +2,8 @@ package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
+import com.visco.backend.models.dtos.DispatchRequest;
+import com.visco.backend.models.dtos.DispatchResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
 import com.visco.backend.models.dtos.ProductOnStock;
@@ -123,6 +125,21 @@ public class WarehouseController {
     return ResponseEntity.ok().build();
   }
 
+  @GetMapping("/{id}/products")
+  @Operation(
+    summary = "Get all products in a warehouse",
+    description = "Returns all products in the specified warehouse including those with zero stock, with optional search"
+  )
+  public ResponseEntity<Page<ProductOnStock>> getAllProductsInWarehouse(
+    @PathVariable Long id,
+    @RequestParam(required = false) String search,
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(
+      warehouseService.getAllProductsInWarehouse(id, search, pageable)
+    );
+  }
+
   @GetMapping("/stock/on-stock")
   @Operation(
     summary = "Get products with stock in a warehouse",
@@ -194,6 +211,41 @@ public class WarehouseController {
     return ResponseEntity.ok(
       warehouseService.getReceiptSummaryByOrder(orderId)
     );
+  }
+
+  @PostMapping("/dispatch")
+  @Operation(
+    summary = "Create dispatch",
+    description = "Creates a dispatch note (output) removing products from warehouse stock"
+  )
+  public ResponseEntity<DispatchResponse> createDispatch(
+    @Valid @RequestBody DispatchRequest request
+  ) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(
+      warehouseService.outputStock(request)
+    );
+  }
+
+  @GetMapping("/dispatches")
+  @Operation(
+    summary = "List all dispatches",
+    description = "Returns a paginated list of all dispatch notes"
+  )
+  public ResponseEntity<Page<DispatchResponse>> getAllDispatches(
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(warehouseService.getAllDispatches(pageable));
+  }
+
+  @GetMapping("/dispatches/{id}")
+  @Operation(
+    summary = "Get dispatch by ID",
+    description = "Returns a specific dispatch note"
+  )
+  public ResponseEntity<DispatchResponse> getDispatchById(
+    @PathVariable Long id
+  ) {
+    return ResponseEntity.ok(warehouseService.getDispatchById(id));
   }
 
   @GetMapping("/movements")

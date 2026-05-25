@@ -1,6 +1,6 @@
 package com.visco.backend.services;
 
-import com.visco.backend.models.dtos.CostCenterDTO;
+import com.visco.backend.models.dtos.CostCenterResponseDto;
 import com.visco.backend.repositories.CostCenterRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
@@ -14,29 +14,31 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CostCenterService {
 
-    private final CostCenterRepository costCenterRepository;
+  private final CostCenterRepository costCenterRepository;
 
-    @Transactional(readOnly = true)
-    public Page<CostCenterDTO> getCostCenters(Pageable pageable) {
-        return costCenterRepository
-            .findAllByOrderByFullDescriptionAsc(pageable)
-            .map(CostCenterDTO::fromEntity);
-    }
+  @Transactional(readOnly = true)
+  public Page<CostCenterResponseDto> getCostCenters(Pageable pageable) {
+    return costCenterRepository
+      .findAllByOrderByFullDescriptionAsc(pageable)
+      .map(CostCenterResponseDto::fromEntity);
+  }
 
-    @Transactional(readOnly = true)
-    public List<CostCenterDTO> getAllCostCenters() {
-        return costCenterRepository
-            .findAllByOrderByFullDescriptionAsc()
-            .stream()
-            .map(CostCenterDTO::fromEntity)
-            .toList();
-    }
+  @Transactional(readOnly = true)
+  public List<CostCenterResponseDto> getAllCostCenters() {
+    return costCenterRepository
+      .findAllByOrderByFullDescriptionAsc()
+      .stream()
+      .map(CostCenterResponseDto::fromEntity)
+      .toList();
+  }
 
-    @Transactional(readOnly = true)
-    public CostCenterDTO getCostCenterById(Long id) {
-        return costCenterRepository
-            .findById(id)
-            .map(CostCenterDTO::fromEntity)
-            .orElseThrow(() -> new EntityNotFoundException("Cost center not found: " + id));
-    }
+  @Transactional(readOnly = true)
+  public CostCenterResponseDto getCostCenterById(Long id) {
+    return costCenterRepository
+      .findById(id)
+      .map(CostCenterResponseDto::fromEntity)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Cost center not found: " + id)
+      );
+  }
 }
