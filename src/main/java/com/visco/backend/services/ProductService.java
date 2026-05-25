@@ -101,6 +101,7 @@ public class ProductService {
   // Queries públicas
   // ─────────────────────────────────────────────────────────────
 
+  @Transactional(readOnly = true)
   public ProductDTO getProductByInternalCode(String internalCode) {
     Product product = productRepository
       .findByInternalCode(internalCode)
@@ -116,6 +117,7 @@ public class ProductService {
     );
   }
 
+  @Transactional(readOnly = true)
   public Page<ProductDTO> getProducts(
     Pageable pageable,
     String search,
@@ -169,6 +171,7 @@ public class ProductService {
     return new PageImpl<>(dtos, pageable, products.getTotalElements());
   }
 
+  @Transactional(readOnly = true)
   public ProductDTO getProductById(Long id) {
     Product product = productRepository
       .findById(id)
@@ -240,6 +243,7 @@ public class ProductService {
     productRepository.save(product);
   }
 
+  @Transactional
   public Category createCategory(Category category) {
     return categoryRepository.save(category);
   }

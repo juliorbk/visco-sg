@@ -82,6 +82,7 @@ public class SupplierService {
   }
 
   // Read all Suppliers
+  @Transactional(readOnly = true)
   public Page<SupplierDTO> getAllSuppliers(Pageable pageable) {
     return supplierRepository.findAll(pageable).map(SupplierDTO::fromSupplier);
   }
@@ -117,6 +118,7 @@ public class SupplierService {
 
   // Deacativate - Delete Suppplier
 
+  @Transactional
   public void deleteSupplier(Long Id) {
     Supplier supplier = supplierRepository
       .findById(Id)
@@ -130,6 +132,7 @@ public class SupplierService {
     log.info("Soft-deleted (deactivated) supplier with id: {}", Id);
   }
 
+  @Transactional
   public void deactivateSupplier(Long id) {
     // 1. Properly handle the Optional using orElseThrow
     Supplier supplier = supplierRepository
@@ -154,6 +157,7 @@ public class SupplierService {
     supplierRepository.save(supplier);
   }
 
+  @Transactional
   public void activateSupplier(Long id) {
     Supplier supplier = supplierRepository
       .findById(id)
@@ -175,6 +179,7 @@ public class SupplierService {
     supplierRepository.save(supplier);
   }
 
+  @Transactional(readOnly = true)
   public SupplierDTO getSupplierById(Long id) {
     return SupplierDTO.fromSupplier(
       supplierRepository
@@ -185,18 +190,21 @@ public class SupplierService {
     );
   }
 
+  @Transactional(readOnly = true)
   public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
     return supplierRepository
       .findByActiveTrue(pageable)
       .map(SupplierDTO::fromSupplier);
   }
 
+  @Transactional(readOnly = true)
   public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
     return supplierRepository
       .findByActiveFalse(pageable)
       .map(SupplierDTO::fromSupplier);
   }
 
+  @Transactional(readOnly = true)
   public Page<SupplierDTO> getSuppliersByCurrency(
     Currency currency,
     Pageable pageable
