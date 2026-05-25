@@ -27,6 +27,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Version;
+
 @Entity
 @Table(
   name = "invoices",
@@ -51,11 +54,18 @@ public class Invoice {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "purchase_order_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private PurchaseOrder purchaseOrder;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "supplier_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Supplier supplier;
+
+  @Version
+  private Long version;
 
   @Column(name = "invoice_date", nullable = false)
   private LocalDate invoiceDate;
@@ -102,5 +112,10 @@ public class Invoice {
   protected void onCreate() {
     createdAt = LocalDateTime.now();
     if (status == null) status = InvoiceStatus.PENDING;
+  }
+
+  @PreUpdate
+  protected void onUpdate() {
+    updatedAt = LocalDateTime.now();
   }
 }

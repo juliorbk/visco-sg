@@ -73,8 +73,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       }
     } catch (ExpiredJwtException e) {
       log.warn("Token expirado para la ruta: {}", request.getRequestURI());
+      response.setStatus(401);
+      response.setContentType("application/json");
+      response.getWriter().write("{\"error\": \"Token expirado\"}");
+      return;
     } catch (JwtException e) {
       log.warn("Token invalido: {}", e.getMessage());
+      response.setStatus(401);
+      response.setContentType("application/json");
+      response.getWriter().write("{\"error\": \"Token invalido\"}");
+      return;
     }
 
     filterChain.doFilter(request, response);

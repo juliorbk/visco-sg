@@ -80,7 +80,6 @@ public class SecurityConfig {
             "/api/cost-centers/all",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/actuator/**",
             "/health"
           )
           .permitAll()
@@ -102,6 +101,8 @@ public class SecurityConfig {
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           //Admin
           .requestMatchers("/api/migration/**")
+          .hasRole("ADMIN")
+          .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos
           .requestMatchers("/api/inventory/**")

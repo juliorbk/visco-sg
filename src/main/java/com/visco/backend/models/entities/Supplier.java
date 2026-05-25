@@ -22,8 +22,12 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+import jakarta.persistence.Version;
 import lombok.Setter;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
@@ -81,6 +85,9 @@ public class Supplier {
 
   @Column(nullable = false, columnDefinition = "TEXT")
   private String description;
+
+  @Version
+  private Long version;
 
   @Column(name = "created_at", nullable = false, updatable = false)
   @CreatedDate

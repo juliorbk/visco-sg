@@ -13,7 +13,9 @@ import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "requisition_items")
@@ -29,10 +31,14 @@ public class RequisitionItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requisition_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Requisition requisition;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Product product;
 
     @Column(nullable = false)

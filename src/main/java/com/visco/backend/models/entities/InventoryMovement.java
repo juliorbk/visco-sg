@@ -16,10 +16,13 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "inventory_movements", indexes = {
@@ -38,17 +41,23 @@ public class InventoryMovement {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "product_id", nullable = false)
-	private Product product;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "product_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Product product;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "from_warehouse_id")
-	private Warehouse fromWarehouse;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "from_warehouse_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Warehouse fromWarehouse;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "to_warehouse_id")
-	private Warehouse toWarehouse;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "to_warehouse_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Warehouse toWarehouse;
 
 	@Column(nullable = false)
 	private BigDecimal quantity;
@@ -69,12 +78,17 @@ public class InventoryMovement {
 	@Column(nullable = false)
 	private LocalDateTime createdAt;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "created_by_id", nullable = false)
-	private User createdBy;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "created_by_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private User createdBy;
 
-	@PrePersist
-	protected void onCreate() {
+  @Version
+  private Long version;
+
+  @PrePersist
+  protected void onCreate() {
 		if (createdAt == null) {
 			createdAt = LocalDateTime.now();
 		}

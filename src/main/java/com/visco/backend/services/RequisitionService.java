@@ -161,9 +161,6 @@ public class RequisitionService {
     }
     req.setStatus(RequisitionStatus.REJECTED);
     req.setRejectionReason(reason);
-    if (rejecterUserId != null) {
-      userRepository.findById(rejecterUserId).ifPresent(req::setApprovedBy);
-    }
     Requisition saved = requisitionRepository.save(req);
     log.info(
       "Requisition {} rejected. Reason: {}",

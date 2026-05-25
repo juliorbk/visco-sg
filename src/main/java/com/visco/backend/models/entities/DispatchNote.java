@@ -23,6 +23,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import jakarta.persistence.Version;
+
 @Entity
 @Table(
   name = "dispatch_notes",
@@ -47,11 +49,18 @@ public class DispatchNote {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "warehouse_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Warehouse warehouse;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "withdrawn_by_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Employee withdrawnBy;
+
+  @Version
+  private Long version;
 
   @Column(length = 1000)
   private String notes;
@@ -61,6 +70,8 @@ public class DispatchNote {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "created_by_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private User createdBy;
 
   @OneToMany(

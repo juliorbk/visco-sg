@@ -73,8 +73,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Query(
     "SELECT s.warehouse.id                 as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
-      "       COUNT(CASE WHEN s.currentStock > 0 THEN 1 END) as currentStock, " +
-      "       COUNT(CASE WHEN s.pendingStock > 0 THEN 1 END) as pendingStock " +
+      "       SUM(CASE WHEN s.currentStock > 0 THEN 1 ELSE 0 END) as currentStock, " +
+      "       SUM(CASE WHEN s.pendingStock > 0 THEN 1 ELSE 0 END) as pendingStock " +
       "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
   )
   List<GlobalStockProjection> getGlobalStockByWarehouse();

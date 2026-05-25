@@ -125,6 +125,54 @@ public class ProductService {
     String sortBy,
     String sortDir
   ) {
+    if ("stock".equals(sortBy)) {
+      List<Product> allProducts = productRepository.findBySearchAndCategory(
+        Pageable.unpaged(), search, category
+      ).getContent();
+
+      List<Long> productIds = allProducts.stream().map(Product::getId).toList();
+
+      Map<Long, BigDecimal[]> stockMap = stockLevelRepository
+        .sumStockByProductIds(productIds)
+        .stream()
+        .collect(
+          Collectors.toMap(
+            row -> (Long) row[0],
+            row -> new BigDecimal[] {
+              row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
+              row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
+            }
+          )
+        );
+
+      Comparator<ProductDTO> comparator = Comparator.comparing(
+        ProductDTO::getTotalStock
+      );
+      if ("desc".equalsIgnoreCase(sortDir)) {
+        comparator = comparator.reversed();
+      }
+
+      List<ProductDTO> allDtos = allProducts.stream()
+        .map(product -> {
+          BigDecimal[] stocks = stockMap.getOrDefault(
+            product.getId(),
+            new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
+          );
+          return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
+        })
+        .sorted(comparator)
+        .toList();
+
+      long total = allDtos.size();
+      int start = (int) pageable.getOffset();
+      int end = Math.min(start + pageable.getPageSize(), allDtos.size());
+      List<ProductDTO> pageContent = start >= allDtos.size()
+        ? List.of()
+        : allDtos.subList(start, end);
+
+      return new PageImpl<>(pageContent, pageable, total);
+    }
+
     Page<Product> products = productRepository.findBySearchAndCategory(
       pageable,
       search,
@@ -157,16 +205,6 @@ public class ProductService {
         return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
       })
       .toList();
-
-    if ("stock".equals(sortBy)) {
-      Comparator<ProductDTO> comparator = Comparator.comparing(
-        ProductDTO::getTotalStock
-      );
-      if ("desc".equalsIgnoreCase(sortDir)) {
-        comparator = comparator.reversed();
-      }
-      dtos = dtos.stream().sorted(comparator).toList();
-    }
 
     return new PageImpl<>(dtos, pageable, products.getTotalElements());
   }

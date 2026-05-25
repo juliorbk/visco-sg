@@ -14,7 +14,9 @@ import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 // Item individual dentro de una nota de recepción
 // Guarda cuánto se esperaba (según la PO) y cuánto realmente llegó
@@ -39,11 +41,14 @@ public class GoodReceiptItem {
   // Nota de recepción a la que pertenece
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "good_receipt_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private GoodReceipt goodReceipt;
 
-  // Producto recibido
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Product product;
 
   @Column(name = "expected_quantity", nullable = false)

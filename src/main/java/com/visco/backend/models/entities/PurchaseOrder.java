@@ -26,6 +26,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import jakarta.persistence.Version;
+
 @Entity
 @Table(
   name = "purchase_orders",
@@ -52,29 +54,32 @@ public class PurchaseOrder {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "created_by_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private User createdBy;
 
   @Column(nullable = false)
   private String description;
 
-  // Corregido: Usamos tu Enum en lugar de un String
+  @Version
+  private Long version;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private PaymentMethod paymentMethod;
 
-  // Corregido: Usamos tu Enum en lugar de un String
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private PurchaseOrderType type;
 
-  // Corregido: Usamos tu Enum en lugar de un String
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private PurchaseOrderStatus status;
 
-  // Relación con el Proveedor
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "supplier_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Supplier supplier;
 
   // Auditoría básica
@@ -98,14 +103,20 @@ public class PurchaseOrder {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "approved_by_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private User approvedBy;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "rejected_by_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private User rejectedBy;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "requisition_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Requisition requisition;
 
   @Column(name = "approved_at")
@@ -123,6 +134,8 @@ public class PurchaseOrder {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "destination_warehouse_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Warehouse destinationWarehouse;
 
   // Relación bidireccional con los items de la orden

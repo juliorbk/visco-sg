@@ -23,6 +23,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import jakarta.persistence.Version;
+
 // Nota de recepción — se crea cuando llega mercancía al warehouse
 // Registra qué productos llegaron y en qué cantidad contra una orden de compra
 @Entity
@@ -48,10 +50,15 @@ public class GoodReceipt {
   // Orden de compra contra la que se recibe
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "purchase_order_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private PurchaseOrder purchaseOrder;
 
+  @Version
+  private Long version;
+
   @Column(name = "received_at", nullable = false)
-  private LocalDateTime receivedAt; // Fecha/hora de la recepción
+  private LocalDateTime receivedAt;
 
   @Column(length = 1000)
   private String notes;
@@ -64,6 +71,8 @@ public class GoodReceipt {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "received_by_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private User receivedBy;
 
   @OneToMany(

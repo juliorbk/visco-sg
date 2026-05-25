@@ -25,6 +25,9 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Version;
+
 @Entity
 @Table(name = "requisitions")
 @Data
@@ -45,11 +48,18 @@ public class Requisition {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requested_by_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private User requestedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cost_center_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private CostCenter costCenter;
+
+    @Version
+    private Long version;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -63,6 +73,8 @@ public class Requisition {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private User approvedBy;
 
     @Column(name = "approved_at")
@@ -84,5 +96,10 @@ public class Requisition {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (status == null) status = RequisitionStatus.DRAFT;
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

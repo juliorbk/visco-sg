@@ -17,7 +17,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
 
-  Page<Product> findByWarehouse(Long warehouseId, Pageable pageable);
+  @Query(
+    """
+      SELECT p FROM Product p
+      JOIN StockLevel s ON s.product.id = p.id
+      WHERE s.warehouse.id = :warehouseId
+    """
+  )
+  Page<Product> findByWarehouse(
+    @Param("warehouseId") Long warehouseId,
+    Pageable pageable
+  );
+
   // Repository method automatically supports pagination
   Page<Product> findAll(Pageable pageable);
 

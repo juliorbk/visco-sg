@@ -11,7 +11,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "purchase_order_items", indexes = {
@@ -30,10 +35,14 @@ public class PurchaseOrderItem {
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "purchase_order_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private PurchaseOrder purchaseOrder;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
   private Product product;
 
   @Column(nullable = false)
