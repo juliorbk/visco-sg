@@ -5,7 +5,9 @@ import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
+import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
+import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
@@ -31,10 +33,10 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -54,6 +56,8 @@ public class WarehouseService {
   private final UserRepository userRepository;
   private final ProductRepository productRepository;
   private final InventoryMovementRepository inventoryMovementRepository;
+
+  private final Object stockLevelLock = new Object();
 
   // ─────────────────────────────────────────────────────────────
   // Warehouse CRUD
@@ -132,22 +136,26 @@ public class WarehouseService {
         )
       );
 
+    // Asumiendo que orderId es numérico (ej. 1, 25, 300)
+    int currentYear = Year.now().getValue();
+
+    // Resultado para el ID 15: RC-0015/2026
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber(
-        "VIS-" +
-          orderId +
-          "-" +
-          System.currentTimeMillis() +
-          "-" +
-          UUID.randomUUID().toString().substring(0, 8)
-      )
+      .receiptNumber("PENDING") // temporal — se sobreescribe tras el save
       .purchaseOrder(order)
-      // FIX #1: Guardar el warehouse real de recepción, no el de la PO
       .destinationWarehouseId(destWarehouse.getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
 
+    receipt = goodReceiptRepository.saveAndFlush(receipt); // obtiene el ID real de la BD
+
+    String receiptNumber = String.format(
+      "RC-%04d/%d",
+      receipt.getId(),
+      currentYear
+    );
+    receipt.setReceiptNumber(receiptNumber);
     Map<Long, BigDecimal> previousReceived = new HashMap<>();
     for (GoodReceipt prev : goodReceiptRepository.findByPurchaseOrderId(
       orderId
@@ -236,8 +244,6 @@ public class WarehouseService {
       inventoryMovementRepository.save(movement);
     }
 
-    goodReceiptRepository.save(receipt);
-
     boolean allFullyReceived = determineIfFullyReceived(
       order,
       previousReceived,
@@ -248,9 +254,67 @@ public class WarehouseService {
         ? PurchaseOrderStatus.DELIVERED
         : PurchaseOrderStatus.PARTIALLY_DELIVERED
     );
+    receipt.setClosed(allFullyReceived);
     purchaseOrderRepository.save(order);
-
+    goodReceiptRepository.save(receipt);
     return buildReceiptResponse(receipt, order);
+  }
+
+  @Transactional(readOnly = true)
+  public PurchaseOrderReceiptSummary getReceiptSummaryByOrder(Long orderId) {
+    PurchaseOrder order = purchaseOrderRepository
+      .findById(orderId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Purchase order not found: " + orderId)
+      );
+
+    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
+      orderId
+    );
+
+    // Acumular todo lo recibido por producto
+    Map<Long, BigDecimal> totalReceived = new HashMap<>();
+    for (GoodReceipt receipt : receipts) {
+      for (GoodReceiptItem item : receipt.getItems()) {
+        totalReceived.merge(
+          item.getProduct().getId(),
+          item.getReceivedQuantity(),
+          BigDecimal::add
+        );
+      }
+    }
+
+    // Construir items con expected vs received vs pending
+    List<PurchaseOrderReceiptSummary.ItemSummary> items = order
+      .getItems()
+      .stream()
+      .map(poItem -> {
+        BigDecimal ordered = BigDecimal.valueOf(poItem.getQuantity());
+        BigDecimal received = totalReceived.getOrDefault(
+          poItem.getProduct().getId(),
+          BigDecimal.ZERO
+        );
+        BigDecimal pending = ordered.subtract(received);
+
+        return PurchaseOrderReceiptSummary.ItemSummary.builder()
+          .productId(poItem.getProduct().getId())
+          .productName(poItem.getProduct().getName())
+          .productSku(poItem.getProduct().getSku())
+          .orderedQuantity(ordered)
+          .receivedQuantity(received)
+          .pendingQuantity(pending.max(BigDecimal.ZERO))
+          .fullyReceived(received.compareTo(ordered) >= 0)
+          .build();
+      })
+      .toList();
+
+    return PurchaseOrderReceiptSummary.builder()
+      .orderId(orderId)
+      .orderNumber(order.getOrderNumber())
+      .orderStatus(order.getStatus())
+      .totalReceipts(receipts.size())
+      .items(items)
+      .build();
   }
 
   public boolean determineIfFullyReceived(
@@ -319,22 +383,24 @@ public class WarehouseService {
   // Stock helpers
   // ─────────────────────────────────────────────────────────────
 
-  // FIX #2: Helper centralizado para buscar o crear StockLevel
-  // Evita el constraint violation en nullable=false
   private StockLevel findOrCreateStockLevel(
     Product product,
     Warehouse warehouse
   ) {
-    return stockLevelRepository
-      .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-      .orElseGet(() ->
-        StockLevel.builder()
-          .product(product)
-          .warehouse(warehouse)
-          .currentStock(BigDecimal.ZERO)
-          .pendingStock(BigDecimal.ZERO)
-          .build()
-      );
+    synchronized (stockLevelLock) {
+      return stockLevelRepository
+        .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+        .orElseGet(() ->
+          stockLevelRepository.save(
+            StockLevel.builder()
+              .product(product)
+              .warehouse(warehouse)
+              .currentStock(BigDecimal.ZERO)
+              .pendingStock(BigDecimal.ZERO)
+              .build()
+          )
+        );
+    }
   }
 
   public void addPendingStockByWarehouse(
@@ -491,14 +557,48 @@ public class WarehouseService {
           .warehouseId(p.getWarehouseId())
           .warehouseName(p.getWarehouseName())
           .totalStock(
-            p.getCurrentStock() != null ? p.getCurrentStock() : BigDecimal.ZERO
+            p.getCurrentStock() != null
+              ? BigDecimal.valueOf(p.getCurrentStock())
+              : BigDecimal.ZERO
           )
           .totalPendingStock(
-            p.getPendingStock() != null ? p.getPendingStock() : BigDecimal.ZERO
+            p.getPendingStock() != null
+              ? BigDecimal.valueOf(p.getPendingStock())
+              : BigDecimal.ZERO
           )
           .build()
       )
       .toList();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Products in stock by warehouse (transfer modal)
+  // ─────────────────────────────────────────────────────────────
+
+  @Transactional(readOnly = true)
+  public Page<ProductOnStock> getProductsOnStock(
+    Long warehouseId,
+    String search,
+    Pageable pageable
+  ) {
+    Page<StockLevel> stockPage =
+      stockLevelRepository.findStockWithProductByWarehouse(
+        pageable,
+        warehouseId,
+        search
+      );
+
+    return stockPage.map(sl -> {
+      Product p = sl.getProduct();
+      return new ProductOnStock(
+        p.getId(),
+        p.getInternalCode(),
+        p.getSku(),
+        p.getName(),
+        p.getSapCode(),
+        p.getUom().name()
+      );
+    });
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -538,6 +638,12 @@ public class WarehouseService {
 
   @Transactional
   public void transferStock(TransferStockRequest request) {
+    if (request.fromWarehouseId().equals(request.toWarehouseId())) {
+      throw new IllegalArgumentException(
+        "Source and destination warehouses must be different"
+      );
+    }
+
     Warehouse fromWarehouse = warehouseRepository
       .findById(request.fromWarehouseId())
       .orElseThrow(() ->
@@ -613,9 +719,11 @@ public class WarehouseService {
       .findById(request.warehouseId())
       .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
 
-    StockLevel stock = stockLevelRepository
-      .findByProductIdAndWarehouseId(request.productId(), request.warehouseId())
-      .orElseThrow(() -> new EntityNotFoundException("Stock level not found"));
+    Product product = productRepository
+      .findById(request.productId())
+      .orElseThrow(() -> new EntityNotFoundException("Product not found"));
+
+    StockLevel stock = findOrCreateStockLevel(product, warehouse);
 
     User createdBy = userRepository
       .findById(request.createdById())
@@ -625,10 +733,10 @@ public class WarehouseService {
     BigDecimal difference = request.newStock().subtract(currentStock);
 
     InventoryMovement movement = InventoryMovement.builder()
-      .product(stock.getProduct())
+      .product(product)
       .fromWarehouse(warehouse)
       .toWarehouse(warehouse)
-      .quantity(difference.abs()) // FIX #4: guardar siempre valor absoluto; el tipo indica dirección
+      .quantity(difference) // signed: negativo si reduce stock, positivo si aumenta
       .type(MovementType.ADJUSTMENT)
       .reason(request.reason() != null ? request.reason() : "Adjust stock")
       .entryUnitPrice(request.unitCost())

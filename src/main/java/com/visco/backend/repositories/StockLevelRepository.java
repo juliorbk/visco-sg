@@ -4,6 +4,8 @@ import com.visco.backend.models.entities.StockLevel;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -69,13 +71,13 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // ─────────────────────────────────────────────────────────────
 
   @Query(
-    "SELECT s.warehouse.id               as warehouseId, " +
+    "SELECT s.warehouse.id                 as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
-      "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
-      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
+      "       COUNT(CASE WHEN s.currentStock > 0 THEN 1 END) as currentStock, " +
+      "       COUNT(CASE WHEN s.pendingStock > 0 THEN 1 END) as pendingStock " +
       "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
   )
-  List<WarehouseStockProjection> getGlobalStockByWarehouse();
+  List<GlobalStockProjection> getGlobalStockByWarehouse();
 
   // ─────────────────────────────────────────────────────────────
   // Batch query para lista de productos (ProductService.getProducts)
@@ -93,14 +95,42 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   // ─────────────────────────────────────────────────────────────
+  // Products in stock by warehouse (transfer modal search)
+  // ─────────────────────────────────────────────────────────────
+
+  @Query(
+    value = "SELECT sl FROM StockLevel sl JOIN FETCH sl.product p " +
+      "WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0 " +
+      "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(p.internalCode) LIKE LOWER(CONCAT('%', :search, '%')))",
+    countQuery = "SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p " +
+      "WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0 " +
+      "AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(p.internalCode) LIKE LOWER(CONCAT('%', :search, '%')))"
+  )
+  Page<StockLevel> findStockWithProductByWarehouse(
+    Pageable pageable,
+    @Param("warehouseId") Long warehouseId,
+    @Param("search") String search
+  );
+
+  // ─────────────────────────────────────────────────────────────
   // Projection interface
   // ─────────────────────────────────────────────────────────────
 
   interface WarehouseStockProjection {
-    Long getSupplierId();
     Long getWarehouseId();
     String getWarehouseName();
     BigDecimal getCurrentStock();
     BigDecimal getPendingStock();
+  }
+
+  interface GlobalStockProjection {
+    Long getWarehouseId();
+    String getWarehouseName();
+    Long getCurrentStock();
+    Long getPendingStock();
   }
 }

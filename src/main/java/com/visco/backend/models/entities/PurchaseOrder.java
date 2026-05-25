@@ -101,6 +101,10 @@ public class PurchaseOrder {
   private User approvedBy;
 
   @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "rejected_by_id")
+  private User rejectedBy;
+
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "requisition_id")
   private Requisition requisition;
 

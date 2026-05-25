@@ -4,7 +4,9 @@ import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.GoodReceiptResponse;
 import com.visco.backend.models.dtos.InventoryMovementResponse;
+import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
+import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
@@ -121,6 +123,21 @@ public class WarehouseController {
     return ResponseEntity.ok().build();
   }
 
+  @GetMapping("/stock/on-stock")
+  @Operation(
+    summary = "Get products with stock in a warehouse",
+    description = "Returns paginated products that have stock (currentStock > 0) in the specified warehouse, with optional search"
+  )
+  public ResponseEntity<Page<ProductOnStock>> getProductsOnStock(
+    @RequestParam Long warehouseId,
+    @RequestParam(required = false) String search,
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(
+      warehouseService.getProductsOnStock(warehouseId, search, pageable)
+    );
+  }
+
   @PostMapping("/orders/{id}/receive")
   @Operation(
     summary = "Receive goods",
@@ -164,6 +181,19 @@ public class WarehouseController {
   )
   public ResponseEntity<GoodReceiptResponse> getReceipt(@PathVariable Long id) {
     return ResponseEntity.ok(warehouseService.getReceiptById(id));
+  }
+
+  @GetMapping("/orders/{orderId}/receipt-summary")
+  @Operation(
+    summary = "Get receipt summary for a purchase order",
+    description = "Returns consolidated received vs pending quantities for all items in a PO"
+  )
+  public ResponseEntity<PurchaseOrderReceiptSummary> getReceiptSummary(
+    @PathVariable Long orderId
+  ) {
+    return ResponseEntity.ok(
+      warehouseService.getReceiptSummaryByOrder(orderId)
+    );
   }
 
   @GetMapping("/movements")

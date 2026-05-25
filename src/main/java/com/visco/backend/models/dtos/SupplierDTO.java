@@ -1,13 +1,10 @@
 package com.visco.backend.models.dtos;
 
+import com.visco.backend.models.entities.Supplier;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-
-import com.visco.backend.models.entities.Supplier;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,49 +13,60 @@ import lombok.Setter;
 @Setter
 @Builder
 public class SupplierDTO {
-	private Long id;
-	private String name;
-	private String description;
-	private String address;
-	private String currency;
-	private String contactEmail;
-	private List<String> phoneNumbers;
-	private boolean active;
-	private String sapCode;
-	private List<RepresentativeInfo> representatives;
 
-	@Getter
-	@Setter
-	@Builder
-	public static class RepresentativeInfo {
-		private Long id;
-		private String fullName;
-	}
+  private Long id;
+  private String name;
+  private String description;
+  private String address;
+  private String currency;
+  private String contactEmail;
+  private List<String> phoneNumbers;
+  private boolean active;
+  private List<RepresentativeInfo> representatives;
 
-	public static SupplierDTO fromSupplier(Supplier supplier) {
-		Long id = supplier.getId() != null ? supplier.getId() : 0L;
+  @Getter
+  @Setter
+  @Builder
+  public static class RepresentativeInfo {
 
-		List<String> phones = supplier.getPhoneNumbers() != null
-				? new ArrayList<>(supplier.getPhoneNumbers())
-				: Collections.emptyList();
+    private Long id;
+    private String fullName;
+  }
 
-		List<RepresentativeInfo> reps = supplier.getRepresentatives() != null
-				? supplier.getRepresentatives().stream()
-						.map(r -> RepresentativeInfo.builder().id(r.getId()).fullName(r.getFullName()).build())
-						.collect(Collectors.toList())
-				: Collections.emptyList();
+  public static SupplierDTO fromSupplier(Supplier supplier) {
+    Long id = supplier.getId() != null ? supplier.getId() : 0L;
 
-		return SupplierDTO.builder()
-				.id(id)
-				.name(supplier.getName())
-				.description(supplier.getDescription())
-				.address(supplier.getAddress())
-				.currency(supplier.getCurrency() != null ? supplier.getCurrency().name() : null)
-				.contactEmail(supplier.getEmail())
-				.phoneNumbers(phones)
-				.active(Boolean.TRUE.equals(supplier.getActive()))
-				.sapCode(supplier.getSapCode())
-				.representatives(reps)
-				.build();
-	}
+    List<String> phones =
+      supplier.getPhoneNumbers() != null
+        ? new ArrayList<>(supplier.getPhoneNumbers())
+        : Collections.emptyList();
+
+    List<RepresentativeInfo> reps =
+      supplier.getRepresentatives() != null
+        ? supplier
+            .getRepresentatives()
+            .stream()
+            .map(r ->
+              RepresentativeInfo.builder()
+                .id(r.getId())
+                .fullName(r.getFullName())
+                .build()
+            )
+            .collect(Collectors.toList())
+        : Collections.emptyList();
+
+    return SupplierDTO.builder()
+      .id(id)
+      .name(supplier.getName())
+      .description(supplier.getDescription())
+      .address(supplier.getAddress())
+      .currency(
+        supplier.getCurrency() != null ? supplier.getCurrency().name() : null
+      )
+      .contactEmail(supplier.getEmail())
+      .phoneNumbers(phones)
+      .active(Boolean.TRUE.equals(supplier.getActive()))
+      .representatives(reps)
+      .build();
+  }
 }

@@ -1,5 +1,7 @@
 package com.visco.backend.config;
 
+// Asegúrate de importar tu servicio
+import com.visco.backend.config.CustomUserDetailsService;
 import com.visco.backend.services.JwtService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -9,13 +11,11 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,6 +28,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   private static final String JWT_COOKIE_NAME = "visco_auth_token";
 
   private final JwtService jwtService;
+  // 1. Inyectamos tu nuevo servicio
+  private final CustomUserDetailsService userDetailsService;
 
   @Override
   protected void doFilterInternal(
@@ -50,11 +52,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().getAuthentication() == null
       ) {
         if (jwtService.isTokenValid(token, email)) {
-          var authToken = new UsernamePasswordAuthenticationToken(
-            new User(email, "", List.of(new SimpleGrantedAuthority(jwtService.extractRole(token)))),
-            null,
-            List.of(new SimpleGrantedAuthority(jwtService.extractRole(token)))
+          // 2. Cargamos el usuario desde la base de datos usando el email.
+          // Esto devuelve tu 'UserPrincipal' completo (con el UUID)
+          UserDetails userDetails = userDetailsService.loadUserByUsername(
+            email
           );
+
+          // 3. Pasamos tu 'userDetails' como el "Principal" principal
+          var authToken = new UsernamePasswordAuthenticationToken(
+            userDetails,
+            null,
+            userDetails.getAuthorities()
+          );
+
           authToken.setDetails(
             new WebAuthenticationDetailsSource().buildDetails(request)
           );

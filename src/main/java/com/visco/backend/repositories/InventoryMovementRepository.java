@@ -51,7 +51,13 @@ public interface InventoryMovementRepository
 
   @Query(
     """
-        SELECT COALESCE(SUM(m.quantity), 0)
+        SELECT COALESCE(SUM(
+          CASE
+            WHEN m.type = 'OUTPUT' THEN -m.quantity
+            WHEN m.type = 'TRANSFER' THEN 0
+            ELSE m.quantity
+          END
+        ), 0)
         FROM InventoryMovement m
         WHERE m.product.id = :productId
           AND m.createdAt <= :untilDate
