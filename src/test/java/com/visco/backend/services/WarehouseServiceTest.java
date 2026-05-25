@@ -235,7 +235,7 @@ class WarehouseServiceTest {
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(existingStock));
         when(purchaseOrderRepository.save(any())).thenReturn(order);
-        when(goodReceiptRepository.save(any())).thenAnswer(inv -> {
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
             GoodReceipt gr = inv.getArgument(0);
             gr.setId(1L);
             return gr;
@@ -268,7 +268,7 @@ class WarehouseServiceTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(existingStock));
-        when(goodReceiptRepository.save(any())).thenAnswer(inv -> {
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
             GoodReceipt gr = inv.getArgument(0);
             gr.setId(1L);
             return gr;
@@ -309,7 +309,7 @@ class WarehouseServiceTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(existingStock));
-        when(goodReceiptRepository.save(any())).thenAnswer(inv -> {
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
             GoodReceipt gr = inv.getArgument(0);
             gr.setId(2L);
             return gr;
@@ -382,6 +382,11 @@ class WarehouseServiceTest {
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(dest));
         when(goodReceiptRepository.findByPurchaseOrderId(ORDER_ID)).thenReturn(List.of());
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(buildUser(UserRole.WAREHOUSEMAN)));
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
+            GoodReceipt gr = inv.getArgument(0);
+            gr.setId(1L);
+            return gr;
+        });
 
         var request = new ReceiveGoodsRequest(
                 List.of(new ReceiveItem(99L, BigDecimal.valueOf(5))),
@@ -405,7 +410,7 @@ class WarehouseServiceTest {
         when(userRepository.findById(creator.getId())).thenReturn(Optional.of(creator));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(existingStock));
-        when(goodReceiptRepository.save(any())).thenAnswer(inv -> {
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
             GoodReceipt gr = inv.getArgument(0);
             gr.setId(1L);
             return gr;
@@ -434,19 +439,20 @@ class WarehouseServiceTest {
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.empty());
-        when(goodReceiptRepository.save(any())).thenAnswer(inv -> {
+        when(goodReceiptRepository.saveAndFlush(any())).thenAnswer(inv -> {
             GoodReceipt gr = inv.getArgument(0);
             gr.setId(1L);
             return gr;
         });
+        when(stockLevelRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(purchaseOrderRepository.save(any())).thenReturn(order);
 
         GoodReceiptResponse response = warehouseService.receiveGoods(
                 ORDER_ID, buildReceiveRequest(WAREHOUSE_ID, QUANTITY, USER_ID));
 
         assertThat(response).isNotNull();
-        verify(stockLevelRepository).save(stockLevelCaptor.capture());
-        StockLevel saved = stockLevelCaptor.getValue();
+        verify(stockLevelRepository, times(2)).save(stockLevelCaptor.capture());
+        StockLevel saved = stockLevelCaptor.getAllValues().get(1);
         assertThat(saved.getCurrentStock()).isEqualByComparingTo(BigDecimal.valueOf(QUANTITY));
     }
 
@@ -549,6 +555,7 @@ class WarehouseServiceTest {
                 .thenReturn(Optional.of(sourceStock));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID_2))
                 .thenReturn(Optional.empty());
+        when(stockLevelRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
         warehouseService.transferStock(request);
@@ -556,7 +563,7 @@ class WarehouseServiceTest {
         verify(stockLevelRepository).save(sourceStock);
         // Verify the newly created destination stock
         ArgumentCaptor<StockLevel> captorForDest = ArgumentCaptor.forClass(StockLevel.class);
-        verify(stockLevelRepository, times(2)).save(captorForDest.capture());
+        verify(stockLevelRepository, times(3)).save(captorForDest.capture());
         StockLevel newDest = captorForDest.getAllValues().stream()
                 .filter(sl -> sl.getWarehouse().equals(to))
                 .findFirst().orElseThrow();
@@ -670,6 +677,7 @@ class WarehouseServiceTest {
                 BigDecimal.valueOf(80), "Correction", USER_ID, UNIT_PRICE);
 
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(wh));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(stock));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
@@ -697,6 +705,7 @@ class WarehouseServiceTest {
                 BigDecimal.valueOf(30), "Reduce", USER_ID, null);
 
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(wh));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(stock));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
@@ -705,7 +714,7 @@ class WarehouseServiceTest {
 
         assertThat(stock.getCurrentStock()).isEqualByComparingTo("30");
         verify(inventoryMovementRepository).save(movementCaptor.capture());
-        assertThat(movementCaptor.getValue().getQuantity()).isEqualByComparingTo("20");
+        assertThat(movementCaptor.getValue().getQuantity()).isEqualByComparingTo("-20");
     }
 
     @Test
@@ -721,17 +730,25 @@ class WarehouseServiceTest {
     }
 
     @Test
-    void shouldThrowEntityNotFoundException_whenStockLevelNotFoundForAdjust() {
-        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(buildWarehouse()));
+    void shouldCreateStockLevel_whenNoneExistsForAdjust() {
+        Warehouse wh = buildWarehouse();
+        Product product = buildProduct();
+        User user = buildUser(UserRole.WAREHOUSEMAN);
+
+        when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(wh));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.empty());
+        when(stockLevelRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
         var request = new AdjustStockRequest(PRODUCT_ID, WAREHOUSE_ID,
                 BigDecimal.valueOf(80), "Test", USER_ID, null);
 
-        assertThatThrownBy(() -> warehouseService.adjustStock(request))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessageContaining("Stock level not found");
+        warehouseService.adjustStock(request);
+
+        verify(stockLevelRepository, times(2)).save(stockLevelCaptor.capture());
+        assertThat(stockLevelCaptor.getAllValues().get(1).getCurrentStock()).isEqualByComparingTo("80");
     }
 
     @Test
@@ -743,6 +760,7 @@ class WarehouseServiceTest {
                 .currentStock(BigDecimal.valueOf(50)).pendingStock(BigDecimal.ZERO).build();
 
         when(warehouseRepository.findById(WAREHOUSE_ID)).thenReturn(Optional.of(wh));
+        when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
         when(stockLevelRepository.findByProductIdAndWarehouseId(PRODUCT_ID, WAREHOUSE_ID))
                 .thenReturn(Optional.of(stock));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
@@ -787,8 +805,8 @@ class WarehouseServiceTest {
 
         warehouseService.addPendingStockByWarehouse(PRODUCT_ID, WAREHOUSE_ID, BigDecimal.valueOf(10));
 
-        verify(stockLevelRepository).save(stockLevelCaptor.capture());
-        assertThat(stockLevelCaptor.getValue().getPendingStock()).isEqualByComparingTo("10");
+        verify(stockLevelRepository, times(2)).save(stockLevelCaptor.capture());
+        assertThat(stockLevelCaptor.getAllValues().get(1).getPendingStock()).isEqualByComparingTo("10");
     }
 
     @Test
