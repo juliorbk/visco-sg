@@ -15,6 +15,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   Optional<Product> findBySku(String sku);
 
+  Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+
   Page<Product> findByWarehouse(Long warehouseId, Pageable pageable);
   // Repository method automatically supports pagination
   Page<Product> findAll(Pageable pageable);

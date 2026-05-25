@@ -249,7 +249,7 @@ public class ProductService {
   }
 
   @Transactional(readOnly = true)
-  public Page<Product> getProductsByCategory(
+  public Page<ProductDTO> getProductsByCategory(
     Long categoryId,
     Pageable pageable
   ) {
@@ -262,23 +262,21 @@ public class ProductService {
           getTotalPendingStock(product.getId())
         )
       );
-
   }
 
   @Transactional(readOnly = true)
-  public Page<Product> getProductsByWarehouse(
+  public Page<ProductDTO> getProductsByWarehouse(
     Long warehouseId,
     Pageable pageable
   ) {
     return productRepository
       .findByWarehouse(warehouseId, pageable)
-      .stream()
       .map(product ->
         ProductDTO.fromEntity(
           product,
           getTotalStock(product.getId()),
           getTotalPendingStock(product.getId())
         )
-      )
+      );
   }
 }

@@ -28,48 +28,71 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Invoices", description = "Invoice management endpoints")
 public class InvoiceController {
 
-    private final InvoiceService invoiceService;
+  private final InvoiceService invoiceService;
 
-    @PostMapping
-    @Operation(summary = "Create invoice", description = "Creates a new invoice for a purchase order")
-    public ResponseEntity<InvoiceResponse> createInvoice(
-        @Valid @RequestBody CreateInvoiceRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(invoiceService.createInvoice(request));
-    }
+  @PostMapping
+  @Operation(
+    summary = "Create invoice",
+    description = "Creates a new invoice for a purchase order"
+  )
+  public ResponseEntity<InvoiceResponse> createInvoice(
+    @Valid @RequestBody CreateInvoiceRequest request
+  ) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(
+      invoiceService.createInvoice(request)
+    );
+  }
 
-    @GetMapping
-    @Operation(summary = "List all invoices", description = "Returns a paginated list of all invoices")
-    public ResponseEntity<Page<InvoiceResponse>> getAllInvoices(Pageable pageable) {
-        return ResponseEntity.ok(invoiceService.getAllInvoices(pageable));
-    }
+  @GetMapping
+  @Operation(
+    summary = "List all invoices",
+    description = "Returns a paginated list of all invoices"
+  )
+  public ResponseEntity<Page<InvoiceResponse>> getAllInvoices(
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(invoiceService.getAllInvoices(pageable));
+  }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get invoice by ID", description = "Returns a specific invoice")
-    public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable Long id) {
-        return ResponseEntity.ok(invoiceService.getInvoiceById(id));
-    }
+  @GetMapping("/{id}")
+  @Operation(
+    summary = "Get invoice by ID",
+    description = "Returns a specific invoice"
+  )
+  public ResponseEntity<InvoiceResponse> getInvoice(@PathVariable Long id) {
+    return ResponseEntity.ok(invoiceService.getInvoiceById(id));
+  }
 
-    @GetMapping("/by-order/{orderId}")
-    @Operation(summary = "Get invoices by purchase order", description = "Returns all invoices associated with a purchase order")
-    public ResponseEntity<List<InvoiceResponse>> getInvoicesByOrder(@PathVariable Long orderId) {
-        return ResponseEntity.ok(invoiceService.getInvoicesByOrderId(orderId));
-    }
+  @GetMapping("/by-order/{orderId}")
+  @Operation(
+    summary = "Get invoices by purchase order",
+    description = "Returns all invoices associated with a purchase order"
+  )
+  public ResponseEntity<List<InvoiceResponse>> getInvoicesByOrder(
+    @PathVariable Long orderId
+  ) {
+    return ResponseEntity.ok(invoiceService.getInvoicesByOrderId(orderId));
+  }
 
-    @PatchMapping("/{id}/pay")
-    @Operation(summary = "Mark invoice as paid", description = "Marks an invoice as paid with a payment date")
-    public ResponseEntity<InvoiceResponse> markAsPaid(
-        @PathVariable Long id,
-        @RequestBody Map<String, Object> body) {
-        LocalDate paymentDate = body.get("paymentDate") != null
-            ? LocalDate.parse(body.get("paymentDate").toString())
-            : LocalDate.now();
-        return ResponseEntity.ok(invoiceService.markAsPaid(id, paymentDate));
-    }
+  @PatchMapping("/{id}/pay")
+  @Operation(
+    summary = "Mark invoice as paid",
+    description = "Marks an invoice as paid with a payment date"
+  )
+  public ResponseEntity<InvoiceResponse> markAsPaid(
+    @PathVariable Long id,
+    @RequestBody Map<String, Object> body
+  ) {
+    LocalDate paymentDate =
+      body.get("paymentDate") != null
+        ? LocalDate.parse(body.get("paymentDate").toString())
+        : LocalDate.now();
+    return ResponseEntity.ok(invoiceService.markAsPaid(id, paymentDate));
+  }
 
-    @PatchMapping("/{id}/cancel")
-    @Operation(summary = "Cancel invoice", description = "Cancels an invoice")
-    public ResponseEntity<InvoiceResponse> cancelInvoice(@PathVariable Long id) {
-        return ResponseEntity.ok(invoiceService.cancelInvoice(id));
-    }
+  @PatchMapping("/{id}/cancel")
+  @Operation(summary = "Cancel invoice", description = "Cancels an invoice")
+  public ResponseEntity<InvoiceResponse> cancelInvoice(@PathVariable Long id) {
+    return ResponseEntity.ok(invoiceService.cancelInvoice(id));
+  }
 }
