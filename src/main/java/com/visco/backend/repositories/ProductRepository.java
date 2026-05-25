@@ -56,11 +56,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   Long getNextInternalCodeSequence();
 
   @Query(
-    "SELECT p FROM Product p WHERE " +
-      "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(p.internalCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-      "AND (:category IS NULL OR LOWER(p.category.name) = LOWER(:category))"
+    """
+    SELECT p FROM Product p WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
+    """
   )
   Page<Product> findBySearchAndCategory(
     Pageable pageable,

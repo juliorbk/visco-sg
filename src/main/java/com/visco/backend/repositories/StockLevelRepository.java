@@ -99,16 +99,22 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // ─────────────────────────────────────────────────────────────
 
   @Query(
-    value = "SELECT sl FROM StockLevel sl JOIN FETCH sl.product p " +
-      "WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0 " +
-      "AND (:search IS NULL OR LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(CAST(p.sku AS string)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(CAST(p.internalCode AS string)) LIKE LOWER(CONCAT('%', :search, '%')))",
-    countQuery = "SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p " +
-      "WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0 " +
-      "AND (:search IS NULL OR LOWER(CAST(p.name AS string)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(CAST(p.sku AS string)) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(CAST(p.internalCode AS string)) LIKE LOWER(CONCAT('%', :search, '%')))"
+    value = """
+    SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
+    WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
+    AND (CAST(:search AS string) IS NULL
+      OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    """,
+    countQuery = """
+    SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
+    WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
+    AND (CAST(:search AS string) IS NULL
+      OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    """
   )
   Page<StockLevel> findStockWithProductByWarehouse(
     Pageable pageable,
