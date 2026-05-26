@@ -46,6 +46,9 @@ public class Employee {
   @Column(name = "gender")
   private String gender;
 
+  @Column(name = "phone", length = 20)
+  private String phone;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "cost_center_id")
   private CostCenter costCenter;
