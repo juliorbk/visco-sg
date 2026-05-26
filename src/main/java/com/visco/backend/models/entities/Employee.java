@@ -34,8 +34,17 @@ public class Employee {
   @Column(name = "document_number", nullable = false, unique = true)
   private String documentNumber;
 
-  @Column(length = 20)
-  private String phone;
+  @Column(name = "shirt_size")
+  private String shirtSize;
+
+  @Column(name = "pants_size")
+  private String pantsSize;
+
+  @Column(name = "shoes_size")
+  private String shoesSize;
+
+  @Column(name = "gender")
+  private String gender;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "cost_center_id")

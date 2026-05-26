@@ -28,10 +28,6 @@ public class CostCenter {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // Columna: CC (Ej: 100, 101)
-  @Column(name = "internal_cc", length = 50)
-  private String internalCc;
-
   // Columna: CENTRO DE COSTOS (Ej: 1907152100) - Este es el identificador principal
   @Column(nullable = false, unique = true, length = 100)
   private String code;
