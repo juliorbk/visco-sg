@@ -24,39 +24,42 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final UserRepository userRepository;
-    private final CostCenterRepository costCenterRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final EmailService emailService;
-    private final AuthenticationManager authenticationManager;
+  private final UserRepository userRepository;
+  private final CostCenterRepository costCenterRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtService jwtService;
+  private final EmailService emailService;
+  private final AuthenticationManager authenticationManager;
 
-    @Transactional
-    public AuthResponse register(UserRegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            log.warn("Registro fallido: Email ya registrado ({})", request.getEmail());
-            throw new IllegalArgumentException("Email address is already in use");
-        }
+  @Transactional
+  public AuthResponse register(UserRegisterRequest request) {
+    if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+      log.warn(
+        "Registro fallido: Email ya registrado ({})",
+        request.getEmail()
+      );
+      throw new IllegalArgumentException("Email address is already in use");
+    }
 
-        CostCenter costCenter = null;
-        if (request.getCostCenterId() != null) {
-            costCenter = costCenterRepository
-                .findById(request.getCostCenterId())
-                .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
-        }
+    CostCenter costCenter = null;
+    if (request.getCostCenterId() != null) {
+      costCenter = costCenterRepository
+        .findById(request.getCostCenterId())
+        .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
+    }
 
-        User newUser = User.builder()
-            .name(request.getName())
-            .email(request.getEmail())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(request.getRole())
-            .costCenter(costCenter)
-            .active(true)
-            .build();
+    User newUser = User.builder()
+      .name(request.getName())
+      .email(request.getEmail())
+      .password(passwordEncoder.encode(request.getPassword()))
+      .role(request.getRole())
+      .costCenter(costCenter)
+      .active(true)
+      .build();
 
-        userRepository.save(newUser);
-        log.info("Registro exitoso para usuario ID: {}", newUser.getId());
-
+    userRepository.save(newUser);
+    log.info("Registro exitoso para usuario ID: {}", newUser.getId());
+    /* 
         try {
             emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
         } catch (Exception e) {
@@ -66,57 +69,62 @@ public class AuthService {
                 e.getMessage()
             );
         }
+*/
+    return buildResponse(newUser);
+  }
 
-        return buildResponse(newUser);
+  public AuthResponse login(LoginRequest request) {
+    log.info("Intento de login para el usuario: {}", request.getEmail());
+
+    try {
+      authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+          request.getEmail(),
+          request.getPassword()
+        )
+      );
+      log.info("Autenticacion exitosa para: {}", request.getEmail());
+    } catch (BadCredentialsException e) {
+      log.warn("Credenciales invalidas para: {}", request.getEmail());
+      throw e;
     }
 
-    public AuthResponse login(LoginRequest request) {
-        log.info("Intento de login para el usuario: {}", request.getEmail());
+    User user = userRepository
+      .findByEmail(request.getEmail())
+      .orElseThrow(() -> {
+        log.error(
+          "Inconsistencia: Usuario autenticado pero no encontrado en DB ({})",
+          request.getEmail()
+        );
+        return new BadCredentialsException("Invalid credentials");
+      });
 
-        try {
-            authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-            log.info("Autenticacion exitosa para: {}", request.getEmail());
-        } catch (BadCredentialsException e) {
-            log.warn("Credenciales invalidas para: {}", request.getEmail());
-            throw e;
-        }
+    log.debug("Generando JWT para usuario: {}", request.getEmail());
 
-        User user = userRepository
-            .findByEmail(request.getEmail())
-            .orElseThrow(() -> {
-                log.error(
-                    "Inconsistencia: Usuario autenticado pero no encontrado en DB ({})",
-                    request.getEmail()
-                );
-                return new BadCredentialsException("Invalid credentials");
-            });
+    // Retornamos la info completa para que el controlador decida qué hacer con ella
+    return AuthResponse.builder()
+      .token(jwtService.generateToken(user))
+      .user(UserDTO.fromUser(user))
+      .build();
+  }
 
-        log.debug("Generando JWT para usuario: {}", request.getEmail());
+  private AuthResponse buildResponse(User user) {
+    return AuthResponse.builder()
+      .token(jwtService.generateToken(user))
+      .user(UserDTO.fromUser(user))
+      .build();
+  }
 
-        // Retornamos la info completa para que el controlador decida qué hacer con ella
-        return AuthResponse.builder()
-            .token(jwtService.generateToken(user))
-            .user(UserDTO.fromUser(user))
-            .build();
-    }
+  public String refreshToken(User user) {
+    return jwtService.generateToken(user);
+  }
 
-    private AuthResponse buildResponse(User user) {
-        return AuthResponse.builder()
-            .token(jwtService.generateToken(user))
-            .user(UserDTO.fromUser(user))
-            .build();
-    }
-
-    public String refreshToken(User user) {
-        return jwtService.generateToken(user);
-    }
-
-    public UserDTO getCurrentUser(String email) {
-        User user = userRepository
-            .findByEmailWithCostCenter(email)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-        return UserDTO.fromUser(user);
-    }
+  public UserDTO getCurrentUser(String email) {
+    User user = userRepository
+      .findByEmailWithCostCenter(email)
+      .orElseThrow(() ->
+        new UsernameNotFoundException("User not found: " + email)
+      );
+    return UserDTO.fromUser(user);
+  }
 }
