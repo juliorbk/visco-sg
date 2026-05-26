@@ -78,13 +78,15 @@ public class SecurityConfig {
             "/api/auth/register",
             "/api/auth/login",
             "/api/cost-centers/all",
+            "/api/management/**",
+            "/api/general-management/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/health"
           )
           .permitAll()
           // Solo ADMIN (y cost-centers requiere al menos autenticación)
-          .requestMatchers("/api/users/**", "/api/cost-centers/**")
+          .requestMatchers("/api/users/**", "/api/employees/**", "/api/cost-centers/**")
           .hasRole("ADMIN")
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
