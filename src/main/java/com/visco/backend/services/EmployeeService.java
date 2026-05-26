@@ -32,20 +32,25 @@ public class EmployeeService {
     return employeeRepository
       .findById(id)
       .map(EmployeeResponseDto::fromEntity)
-      .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+      .orElseThrow(() ->
+        new EntityNotFoundException("Employee not found: " + id)
+      );
   }
 
   @Transactional
   public EmployeeResponseDto createEmployee(EmployeeRequestDto request) {
     Employee.EmployeeBuilder builder = Employee.builder()
       .fullName(request.fullName())
-      .documentNumber(request.documentNumber())
-      .phone(request.phone());
+      .documentNumber(request.documentNumber());
 
     if (request.costCenterId() != null) {
       CostCenter cc = costCenterRepository
         .findById(request.costCenterId())
-        .orElseThrow(() -> new EntityNotFoundException("Cost center not found: " + request.costCenterId()));
+        .orElseThrow(() ->
+          new EntityNotFoundException(
+            "Cost center not found: " + request.costCenterId()
+          )
+        );
       builder.costCenter(cc);
     }
 
@@ -53,23 +58,33 @@ public class EmployeeService {
       builder.active(request.isActive());
     }
 
-    return EmployeeResponseDto.fromEntity(employeeRepository.save(builder.build()));
+    return EmployeeResponseDto.fromEntity(
+      employeeRepository.save(builder.build())
+    );
   }
 
   @Transactional
-  public EmployeeResponseDto updateEmployee(Long id, EmployeeRequestDto request) {
+  public EmployeeResponseDto updateEmployee(
+    Long id,
+    EmployeeRequestDto request
+  ) {
     Employee employee = employeeRepository
       .findById(id)
-      .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+      .orElseThrow(() ->
+        new EntityNotFoundException("Employee not found: " + id)
+      );
 
     employee.setFullName(request.fullName());
     employee.setDocumentNumber(request.documentNumber());
-    employee.setPhone(request.phone());
 
     if (request.costCenterId() != null) {
       CostCenter cc = costCenterRepository
         .findById(request.costCenterId())
-        .orElseThrow(() -> new EntityNotFoundException("Cost center not found: " + request.costCenterId()));
+        .orElseThrow(() ->
+          new EntityNotFoundException(
+            "Cost center not found: " + request.costCenterId()
+          )
+        );
       employee.setCostCenter(cc);
     } else {
       employee.setCostCenter(null);
@@ -86,7 +101,9 @@ public class EmployeeService {
   public void deactivateEmployee(Long id) {
     Employee employee = employeeRepository
       .findById(id)
-      .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+      .orElseThrow(() ->
+        new EntityNotFoundException("Employee not found: " + id)
+      );
     employee.setActive(false);
     employeeRepository.save(employee);
   }
@@ -95,7 +112,9 @@ public class EmployeeService {
   public void activateEmployee(Long id) {
     Employee employee = employeeRepository
       .findById(id)
-      .orElseThrow(() -> new EntityNotFoundException("Employee not found: " + id));
+      .orElseThrow(() ->
+        new EntityNotFoundException("Employee not found: " + id)
+      );
     employee.setActive(true);
     employeeRepository.save(employee);
   }

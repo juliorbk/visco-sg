@@ -6,7 +6,6 @@ public record EmployeeResponseDto(
   Long id,
   String fullName,
   String documentNumber,
-  String phone,
   Long costCenterId,
   String costCenterDescription,
   Boolean isActive
@@ -16,7 +15,6 @@ public record EmployeeResponseDto(
       emp.getId(),
       emp.getFullName(),
       emp.getDocumentNumber(),
-      emp.getPhone(),
       emp.getCostCenter() != null ? emp.getCostCenter().getId() : null,
       emp.getCostCenter() != null ? emp.getCostCenter().getFullDescription() : null,
       emp.isActive()

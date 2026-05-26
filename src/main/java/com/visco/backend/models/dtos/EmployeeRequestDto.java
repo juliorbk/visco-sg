@@ -12,9 +12,7 @@ public record EmployeeRequestDto(
   @Size(max = 50)
   String documentNumber,
 
-  @Size(max = 20)
-  String phone,
-
+  @NotBlank(message = "El ID desl centro de costo es obligatorio")
   Long costCenterId,
 
   Boolean isActive
