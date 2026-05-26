@@ -19,7 +19,7 @@ public class ManagementService {
     return managementRepository
       .findAllByOrderByDescriptionAsc()
       .stream()
-      .map(m -> new ManagementDTO(m.getId(), m.getCode(), m.getDescription()))
+      .map(m -> new ManagementDTO(m.getId(), m.getCode(), m.getDescription(), m.getGeneralManagement().getId()))
       .toList();
   }
 
@@ -27,7 +27,7 @@ public class ManagementService {
   public ManagementDTO getById(Long id) {
     return managementRepository
       .findById(id)
-      .map(m -> new ManagementDTO(m.getId(), m.getCode(), m.getDescription()))
+      .map(m -> new ManagementDTO(m.getId(), m.getCode(), m.getDescription(), m.getGeneralManagement().getId()))
       .orElseThrow(() -> new EntityNotFoundException("Management not found: " + id));
   }
 }

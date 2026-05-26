@@ -11,6 +11,7 @@ public record CostCenterResponseDto(
   Long managementId,
   String managementCode,
   String managementDescription,
+  Long generalManagementId,
   String generalManagementCode,
   String generalManagementDescription
 ) {
@@ -24,6 +25,7 @@ public record CostCenterResponseDto(
       cc.getManagement().getId(),
       cc.getManagement().getCode(),
       cc.getManagement().getDescription(),
+      cc.getManagement().getGeneralManagement().getId(),
       cc.getManagement().getGeneralManagement().getCode(),
       cc.getManagement().getGeneralManagement().getDescription()
     );
