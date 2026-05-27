@@ -74,22 +74,8 @@ class StatsServiceTest {
       new BigDecimal("5000")
     );
     when(
-      orderRepository.getMonthlySpending(org.mockito.ArgumentMatchers.any())
-    ).thenReturn(
-      List.of(
-        new PurchaseOrderRepository.MonthlySpendingProjection() {
-          @Override
-          public java.time.LocalDate getMonth() {
-            return java.time.LocalDate.now();
-          }
-
-          @Override
-          public BigDecimal getTotal() {
-            return new BigDecimal("15000.00");
-          }
-        }
-      )
-    );
+      orderRepository.getTotalSpendingSince(org.mockito.ArgumentMatchers.any())
+    ).thenReturn(new BigDecimal("15000.00"));
 
     KpiStatsDTO kpis = statsService.getKpis();
 
@@ -107,8 +93,8 @@ class StatsServiceTest {
       BigDecimal.ZERO
     );
     when(
-      orderRepository.getMonthlySpending(org.mockito.ArgumentMatchers.any())
-    ).thenReturn(List.of());
+      orderRepository.getTotalSpendingSince(org.mockito.ArgumentMatchers.any())
+    ).thenReturn(BigDecimal.ZERO);
 
     KpiStatsDTO kpis = statsService.getKpis();
 
@@ -126,8 +112,8 @@ class StatsServiceTest {
       BigDecimal.ZERO
     );
     when(
-      orderRepository.getMonthlySpending(org.mockito.ArgumentMatchers.any())
-    ).thenReturn(List.of());
+      orderRepository.getTotalSpendingSince(org.mockito.ArgumentMatchers.any())
+    ).thenReturn(BigDecimal.ZERO);
 
     KpiStatsDTO kpis = statsService.getKpis();
 
@@ -142,22 +128,8 @@ class StatsServiceTest {
       new BigDecimal("100")
     );
     when(
-      orderRepository.getMonthlySpending(org.mockito.ArgumentMatchers.any())
-    ).thenReturn(
-      List.of(
-        new PurchaseOrderRepository.MonthlySpendingProjection() {
-          @Override
-          public java.time.LocalDate getMonth() {
-            return java.time.LocalDate.now();
-          }
-
-          @Override
-          public BigDecimal getTotal() {
-            return null;
-          }
-        }
-      )
-    );
+      orderRepository.getTotalSpendingSince(org.mockito.ArgumentMatchers.any())
+    ).thenReturn(BigDecimal.ZERO);
 
     KpiStatsDTO kpis = statsService.getKpis();
 

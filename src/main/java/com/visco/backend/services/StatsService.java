@@ -55,11 +55,9 @@ public class StatsService {
       .withHour(0)
       .withMinute(0)
       .withSecond(0);
-    BigDecimal monthlySpend = orderRepository
-      .getMonthlySpending(firstOfMonth)
-      .stream()
-      .map(p -> p.getTotal() != null ? p.getTotal() : BigDecimal.ZERO)
-      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal monthlySpend = orderRepository.getTotalSpendingSince(
+      firstOfMonth
+    );
 
     return KpiStatsDTO.builder()
       .totalOrders(totalOrders)
@@ -136,10 +134,9 @@ public class StatsService {
         )
       );
 
-    BigDecimal grandTotal = byCategory
-      .values()
-      .stream()
-      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal grandTotal = orderRepository.getTotalSpendingSince(
+      sixMonthsAgo
+    );
 
     Map<String, Double> byCategoryPercent = byCategory
       .entrySet()

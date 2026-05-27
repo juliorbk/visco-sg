@@ -38,6 +38,11 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Lo
     )
     List<MonthlySpendingProjection> getMonthlySpending(@Param("from") LocalDateTime from);
 
+    @Query("SELECT COALESCE(SUM(i.unitPrice * i.quantity), 0) " +
+        "FROM PurchaseOrder o JOIN o.items i " +
+        "WHERE o.createdAt >= :from")
+    BigDecimal getTotalSpendingSince(@Param("from") LocalDateTime from);
+
     @Query(
         "SELECT s.id as supplierId, s.name as supplierName, " +
             "FUNCTION('DATE_TRUNC', 'month', o.createdAt) as month, " +
