@@ -10,7 +10,6 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -63,9 +62,6 @@ public class StockLevel {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "warehouse_id")
   private Warehouse warehouse;
-
-  @Version
-  private Long version;
 
   // Stock físico presente en el almacén
   @Builder.Default
