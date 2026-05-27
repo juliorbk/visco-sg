@@ -31,6 +31,73 @@ public class ProductService {
   private final CategoryRepository categoryRepository;
   private final SupplierRepository supplierRepository;
 
+  // ─────────────────────────────────────────────────────────────
+  // Shared page mapping helper — single source of truth
+  // Eliminates duplicated stock-map logic and does one batch
+  // query per page instead of N individual queries.
+  // ─────────────────────────────────────────────────────────────
+
+  private Page<ProductDTO> toProductDTOPage(
+    Page<Product> products,
+    Pageable pageable
+  ) {
+    List<Long> ids = products.stream().map(Product::getId).toList();
+
+    if (ids.isEmpty()) {
+      return Page.empty(pageable);
+    }
+
+    Map<Long, BigDecimal[]> stockMap = stockLevelRepository
+      .sumStockByProductIds(ids)
+      .stream()
+      .collect(
+        Collectors.toMap(
+          row -> (Long) row[0],
+          row ->
+            new BigDecimal[] {
+              row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
+              row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
+            }
+        )
+      );
+
+    List<ProductDTO> dtos = products
+      .stream()
+      .map(product -> {
+        BigDecimal[] stocks = stockMap.getOrDefault(
+          product.getId(),
+          new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
+        );
+        return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
+      })
+      .toList();
+
+    // Explicit hint to GC — stockMap can be large and is no longer needed
+    stockMap.clear();
+
+    return new PageImpl<>(dtos, pageable, products.getTotalElements());
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Stock helpers — used only for single-product lookups
+  // ─────────────────────────────────────────────────────────────
+
+  private BigDecimal getTotalStock(Long productId) {
+    BigDecimal v = stockLevelRepository.getTotalStockByProductId(productId);
+    return v != null ? v : BigDecimal.ZERO;
+  }
+
+  private BigDecimal getTotalPendingStock(Long productId) {
+    BigDecimal v = stockLevelRepository.getTotalPendingStockByProductId(
+      productId
+    );
+    return v != null ? v : BigDecimal.ZERO;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Writes
+  // ─────────────────────────────────────────────────────────────
+
   @Transactional
   public ProductDTO createProduct(CreateProductRequest dto) {
     if (productRepository.findBySku(dto.sku()).isPresent()) {
@@ -67,7 +134,7 @@ public class ProductService {
 
     Product savedProduct = productRepository.save(product);
 
-    // Producto nuevo: todos los stocks en 0
+    // New product — all stocks are zero, no DB query needed
     return ProductDTO.fromEntity(
       savedProduct,
       BigDecimal.ZERO,
@@ -78,146 +145,6 @@ public class ProductService {
   private String generateNextInternalCode() {
     Long nextVal = productRepository.getNextInternalCodeSequence();
     return String.format("%06d", nextVal);
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Stock helpers — fuente de verdad: currentStock, pendingStock
-  // ─────────────────────────────────────────────────────────────
-
-  private BigDecimal getTotalStock(Long productId) {
-    BigDecimal v = stockLevelRepository.getTotalStockByProductId(productId);
-    return v != null ? v : BigDecimal.ZERO;
-  }
-
-  private BigDecimal getTotalPendingStock(Long productId) {
-    BigDecimal v = stockLevelRepository.getTotalPendingStockByProductId(
-      productId
-    );
-    return v != null ? v : BigDecimal.ZERO;
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Queries públicas
-  // ─────────────────────────────────────────────────────────────
-
-  @Transactional(readOnly = true)
-  public ProductDTO getProductByInternalCode(String internalCode) {
-    Product product = productRepository
-      .findByInternalCode(internalCode)
-      .orElseThrow(() ->
-        new EntityNotFoundException(
-          "Producto no encontrado con código interno: " + internalCode
-        )
-      );
-    return ProductDTO.fromEntity(
-      product,
-      getTotalStock(product.getId()),
-      getTotalPendingStock(product.getId())
-    );
-  }
-
-  @Transactional(readOnly = true)
-  public Page<ProductDTO> getProducts(
-    Pageable pageable,
-    String search,
-    String category,
-    String sortBy,
-    String sortDir
-  ) {
-    if ("stock".equals(sortBy)) {
-      Page<Product> products;
-      if ("desc".equalsIgnoreCase(sortDir)) {
-        products = productRepository.findBySearchAndCategoryOrderByStockDesc(
-          pageable,
-          search,
-          category
-        );
-      } else {
-        products = productRepository.findBySearchAndCategoryOrderByStockAsc(
-          pageable,
-          search,
-          category
-        );
-      }
-
-      List<Long> productIds = products.stream().map(Product::getId).toList();
-
-      Map<Long, BigDecimal[]> stockMap = stockLevelRepository
-        .sumStockByProductIds(productIds)
-        .stream()
-        .collect(
-          Collectors.toMap(
-            row -> (Long) row[0],
-            row ->
-              new BigDecimal[] {
-                row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
-                row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
-              }
-          )
-        );
-
-      List<ProductDTO> dtos = products
-        .stream()
-        .map(product -> {
-          BigDecimal[] stocks = stockMap.getOrDefault(
-            product.getId(),
-            new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
-          );
-          return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
-        })
-        .toList();
-
-      return new PageImpl<>(dtos, pageable, products.getTotalElements());
-    }
-
-    Page<Product> products = productRepository.findBySearchAndCategory(
-      pageable,
-      search,
-      category
-    );
-
-    List<Long> productIds = products.stream().map(Product::getId).toList();
-
-    Map<Long, BigDecimal[]> stockMap = stockLevelRepository
-      .sumStockByProductIds(productIds)
-      .stream()
-      .collect(
-        Collectors.toMap(
-          row -> (Long) row[0],
-          row ->
-            new BigDecimal[] {
-              row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO,
-              row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO,
-            }
-        )
-      );
-
-    List<ProductDTO> dtos = products
-      .stream()
-      .map(product -> {
-        BigDecimal[] stocks = stockMap.getOrDefault(
-          product.getId(),
-          new BigDecimal[] { BigDecimal.ZERO, BigDecimal.ZERO }
-        );
-        return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
-      })
-      .toList();
-
-    return new PageImpl<>(dtos, pageable, products.getTotalElements());
-  }
-
-  @Transactional(readOnly = true)
-  public ProductDTO getProductById(Long id) {
-    Product product = productRepository
-      .findById(id)
-      .orElseThrow(() ->
-        new EntityNotFoundException("Producto no encontrado: " + id)
-      );
-    return ProductDTO.fromEntity(
-      product,
-      getTotalStock(product.getId()),
-      getTotalPendingStock(product.getId())
-    );
   }
 
   @Transactional
@@ -283,20 +210,85 @@ public class ProductService {
     return categoryRepository.save(category);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Reads
+  // ─────────────────────────────────────────────────────────────
+
+  @Transactional(readOnly = true)
+  public ProductDTO getProductByInternalCode(String internalCode) {
+    Product product = productRepository
+      .findByInternalCode(internalCode)
+      .orElseThrow(() ->
+        new EntityNotFoundException(
+          "Producto no encontrado con código interno: " + internalCode
+        )
+      );
+    return ProductDTO.fromEntity(
+      product,
+      getTotalStock(product.getId()),
+      getTotalPendingStock(product.getId())
+    );
+  }
+
+  @Transactional(readOnly = true)
+  public ProductDTO getProductById(Long id) {
+    Product product = productRepository
+      .findById(id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Producto no encontrado: " + id)
+      );
+    return ProductDTO.fromEntity(
+      product,
+      getTotalStock(product.getId()),
+      getTotalPendingStock(product.getId())
+    );
+  }
+
+  @Transactional(readOnly = true)
+  public Page<ProductDTO> getProducts(
+    Pageable pageable,
+    String search,
+    String category,
+    String sortBy,
+    String sortDir
+  ) {
+    Page<Product> products;
+
+    if ("stock".equals(sortBy)) {
+      products = "desc".equalsIgnoreCase(sortDir)
+        ? productRepository.findBySearchAndCategoryOrderByStockDesc(
+            pageable,
+            search,
+            category
+          )
+        : productRepository.findBySearchAndCategoryOrderByStockAsc(
+            pageable,
+            search,
+            category
+          );
+    } else {
+      products = productRepository.findBySearchAndCategory(
+        pageable,
+        search,
+        category
+      );
+    }
+
+    return toProductDTOPage(products, pageable);
+  }
+
   @Transactional(readOnly = true)
   public Page<ProductDTO> getProductsByCategory(
     Long categoryId,
     Pageable pageable
   ) {
-    return productRepository
-      .findByCategoryId(categoryId, pageable)
-      .map(product ->
-        ProductDTO.fromEntity(
-          product,
-          getTotalStock(product.getId()),
-          getTotalPendingStock(product.getId())
-        )
-      );
+    // Fixed: was doing one getTotalStock() + getTotalPendingStock() query per
+    // product (N+1). Now uses a single batch query via toProductDTOPage().
+    Page<Product> products = productRepository.findByCategoryId(
+      categoryId,
+      pageable
+    );
+    return toProductDTOPage(products, pageable);
   }
 
   @Transactional(readOnly = true)
@@ -304,14 +296,11 @@ public class ProductService {
     Long warehouseId,
     Pageable pageable
   ) {
-    return productRepository
-      .findByWarehouse(warehouseId, pageable)
-      .map(product ->
-        ProductDTO.fromEntity(
-          product,
-          getTotalStock(product.getId()),
-          getTotalPendingStock(product.getId())
-        )
-      );
+    // Fixed: same N+1 issue as getProductsByCategory above.
+    Page<Product> products = productRepository.findByWarehouse(
+      warehouseId,
+      pageable
+    );
+    return toProductDTOPage(products, pageable);
   }
 }

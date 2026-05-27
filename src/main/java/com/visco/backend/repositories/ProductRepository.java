@@ -29,7 +29,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Pageable pageable
   );
 
-  // Repository method automatically supports pagination
   Page<Product> findAll(Pageable pageable);
 
   @Query(
@@ -39,7 +38,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   )
   Long countProductsBelowReorderPoint();
 
-  // Productos bajo reorder point con su stock actual
   @Query(
     "SELECT p FROM Product p " +
       "JOIN StockLevel s ON s.product.id = p.id " +
@@ -48,7 +46,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   )
   List<Product> findProductsBelowReorderPoint();
 
-  // Total de unidades en inventario
   @Query("SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s")
   BigDecimal getTotalInventoryUnits();
 
@@ -85,19 +82,30 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Param("category") String category
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // Stock sort: LEFT JOIN + GROUP BY instead of a correlated
+  // subquery in ORDER BY. The old version ran one subquery per
+  // row before pagination, which timed out on Render's free
+  // Postgres and returned a 502.
+  // ─────────────────────────────────────────────────────────────
+
   @Query(
     value = """
     SELECT p FROM Product p
-    WHERE (CAST(:search AS String) IS NULL
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
       AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
-    ORDER BY (SELECT COALESCE(SUM(sl.currentStock), 0) FROM StockLevel sl WHERE sl.product.id = p.id) ASC
+    GROUP BY p.id
+    ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
-    WHERE (CAST(:search AS String) IS NULL
+    SELECT COUNT(DISTINCT p.id) FROM Product p
+    WHERE
+      (CAST(:search AS String) IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
@@ -113,16 +121,20 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query(
     value = """
     SELECT p FROM Product p
-    WHERE (CAST(:search AS String) IS NULL
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
       AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
-    ORDER BY (SELECT COALESCE(SUM(sl.currentStock), 0) FROM StockLevel sl WHERE sl.product.id = p.id) DESC
+    GROUP BY p.id
+    ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
-    WHERE (CAST(:search AS String) IS NULL
+    SELECT COUNT(DISTINCT p.id) FROM Product p
+    WHERE
+      (CAST(:search AS String) IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
@@ -156,7 +168,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     BigDecimal getReorderPoint();
   }
 
-  //Total de productos activos
   @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true")
   long countTotalActiveProducts();
 }
