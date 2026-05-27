@@ -86,9 +86,6 @@ public class Supplier {
   @Column(nullable = false, columnDefinition = "TEXT")
   private String description;
 
-  @Version
-  private Long version;
-
   @Column(name = "created_at", nullable = false, updatable = false)
   @CreatedDate
   private LocalDateTime createdAt = LocalDateTime.now();
