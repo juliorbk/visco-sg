@@ -12,7 +12,6 @@ import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -126,11 +125,22 @@ public class ProductService {
     String sortDir
   ) {
     if ("stock".equals(sortBy)) {
-      List<Product> allProducts = productRepository
-        .findBySearchAndCategory(Pageable.unpaged(), search, category)
-        .getContent();
+      Page<Product> products;
+      if ("desc".equalsIgnoreCase(sortDir)) {
+        products = productRepository.findBySearchAndCategoryOrderByStockDesc(
+          pageable,
+          search,
+          category
+        );
+      } else {
+        products = productRepository.findBySearchAndCategoryOrderByStockAsc(
+          pageable,
+          search,
+          category
+        );
+      }
 
-      List<Long> productIds = allProducts.stream().map(Product::getId).toList();
+      List<Long> productIds = products.stream().map(Product::getId).toList();
 
       Map<Long, BigDecimal[]> stockMap = stockLevelRepository
         .sumStockByProductIds(productIds)
@@ -146,14 +156,7 @@ public class ProductService {
           )
         );
 
-      Comparator<ProductDTO> comparator = Comparator.comparing(
-        ProductDTO::getTotalStock
-      );
-      if ("desc".equalsIgnoreCase(sortDir)) {
-        comparator = comparator.reversed();
-      }
-
-      List<ProductDTO> allDtos = allProducts
+      List<ProductDTO> dtos = products
         .stream()
         .map(product -> {
           BigDecimal[] stocks = stockMap.getOrDefault(
@@ -162,16 +165,9 @@ public class ProductService {
           );
           return ProductDTO.fromEntity(product, stocks[0], stocks[1]);
         })
-        .sorted(comparator)
         .toList();
 
-      long total = allDtos.size();
-      int start = (int) pageable.getOffset();
-      int end = Math.min(start + pageable.getPageSize(), allDtos.size());
-      List<ProductDTO> pageContent =
-        start >= allDtos.size() ? List.of() : allDtos.subList(start, end);
-
-      return new PageImpl<>(pageContent, pageable, total);
+      return new PageImpl<>(dtos, pageable, products.getTotalElements());
     }
 
     Page<Product> products = productRepository.findBySearchAndCategory(
