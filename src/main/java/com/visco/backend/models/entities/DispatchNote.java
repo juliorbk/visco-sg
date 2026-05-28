@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +23,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import jakarta.persistence.Version;
 
 @Entity
 @Table(
@@ -53,14 +52,15 @@ public class DispatchNote {
   @ToString.Exclude
   private Warehouse warehouse;
 
+  @Version
+  @Column(nullable = false)
+  private Long version;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "withdrawn_by_id", nullable = false)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Employee withdrawnBy;
-
-  @Version
-  private Long version;
 
   @Column(length = 1000)
   private String notes;

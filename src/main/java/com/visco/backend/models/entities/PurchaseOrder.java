@@ -16,6 +16,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +26,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import jakarta.persistence.Version;
 
 @Entity
 @Table(
@@ -60,9 +59,6 @@ public class PurchaseOrder {
 
   @Column(nullable = false)
   private String description;
-
-  @Version
-  private Long version;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
@@ -137,6 +133,10 @@ public class PurchaseOrder {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Warehouse destinationWarehouse;
+
+  @Version
+  @Column(nullable = false)
+  private Long version;
 
   // Relación bidireccional con los items de la orden
   @OneToMany(

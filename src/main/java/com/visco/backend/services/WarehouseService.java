@@ -398,20 +398,18 @@ public class WarehouseService {
     Product product,
     Warehouse warehouse
   ) {
-    synchronized (stockLevelLock) {
-      return stockLevelRepository
-        .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-        .orElseGet(() ->
-          stockLevelRepository.save(
-            StockLevel.builder()
-              .product(product)
-              .warehouse(warehouse)
-              .currentStock(BigDecimal.ZERO)
-              .pendingStock(BigDecimal.ZERO)
-              .build()
-          )
-        );
-    }
+    return stockLevelRepository
+      .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
+      .orElseGet(() ->
+        stockLevelRepository.save(
+          StockLevel.builder()
+            .product(product)
+            .warehouse(warehouse)
+            .currentStock(BigDecimal.ZERO)
+            .pendingStock(BigDecimal.ZERO)
+            .build()
+        )
+      );
   }
 
   public void addPendingStockByWarehouse(

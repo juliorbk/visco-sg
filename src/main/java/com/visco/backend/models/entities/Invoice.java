@@ -14,7 +14,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,9 +28,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Version;
 
 @Entity
 @Table(
@@ -63,9 +62,6 @@ public class Invoice {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Supplier supplier;
-
-  @Version
-  private Long version;
 
   @Column(name = "invoice_date", nullable = false)
   private LocalDate invoiceDate;
@@ -107,6 +103,10 @@ public class Invoice {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private List<InvoiceItem> items = new ArrayList<>();
+
+  @Version
+  @Column(nullable = false)
+  private Long version;
 
   @PrePersist
   protected void onCreate() {

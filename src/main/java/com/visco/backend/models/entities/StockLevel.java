@@ -10,6 +10,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,4 +73,8 @@ public class StockLevel {
   @Builder.Default
   @Column(nullable = false)
   private BigDecimal pendingStock = BigDecimal.ZERO;
+
+  @Version
+  @Column(nullable = false)
+  private Long version;
 }

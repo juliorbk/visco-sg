@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,8 +23,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
-import jakarta.persistence.Version;
 
 // Nota de recepción — se crea cuando llega mercancía al warehouse
 // Registra qué productos llegaron y en qué cantidad contra una orden de compra
@@ -54,9 +53,6 @@ public class GoodReceipt {
   @ToString.Exclude
   private PurchaseOrder purchaseOrder;
 
-  @Version
-  private Long version;
-
   @Column(name = "received_at", nullable = false)
   private LocalDateTime receivedAt;
 
@@ -74,6 +70,10 @@ public class GoodReceipt {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private User receivedBy;
+
+  @Version
+  @Column(nullable = false)
+  private Long version;
 
   @OneToMany(
     mappedBy = "goodReceipt",
