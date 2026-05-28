@@ -86,7 +86,11 @@ public class SecurityConfig {
           )
           .permitAll()
           // Solo ADMIN (y cost-centers requiere al menos autenticación)
-          .requestMatchers("/api/users/**", "/api/employees/**", "/api/cost-centers/**")
+          .requestMatchers(
+            "/api/users/**",
+            "/api/employees/**",
+            "/api/cost-centers/**"
+          )
           .hasRole("ADMIN")
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
@@ -107,7 +111,7 @@ public class SecurityConfig {
           .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos
-          .requestMatchers("/api/inventory/**")
+          .requestMatchers("/api/inventory/**", "/api/warehouse/dispatches/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN")
           .requestMatchers("/api/dashboard/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
