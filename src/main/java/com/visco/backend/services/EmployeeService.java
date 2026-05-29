@@ -33,7 +33,7 @@ public class EmployeeService {
     Long costCenterId
   ) {
     return employeeRepository
-      .findByCostCenterId(pageable, costCenterId)
+      .findByCostCenterId(costCenterId, pageable)
       .map(EmployeeResponseDto::fromEntity);
   }
 
