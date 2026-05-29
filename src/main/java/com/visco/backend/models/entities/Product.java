@@ -2,6 +2,7 @@ package com.visco.backend.models.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -14,11 +15,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(
@@ -34,6 +39,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Product {
 
   @Id
@@ -64,7 +70,6 @@ public class Product {
   @Column(nullable = false)
   private Uom uom;
 
-  // Punto de reorden global (cuándo hay que comprar más)
   @Column(name = "reorder_point", nullable = false)
   private BigDecimal reorderPoint;
 
@@ -83,5 +88,11 @@ public class Product {
   @JoinColumn(name = "category_id", referencedColumnName = "id")
   private Category category;
 
-  // ELIMINADOS: currentStock, warehouses, location y getCalculatedStatus()
+  @CreatedDate
+  @Column(name = "created_at", updatable = false)
+  private LocalDateTime createdAt;
+
+  @LastModifiedDate
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

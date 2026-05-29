@@ -2,6 +2,7 @@ package com.visco.backend.models.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,44 +11,30 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-/**
- * Representa el nivel de stock de un producto en un almacén específico.
- *
- * Definición de campos:
- *
- *   currentStock  — Unidades físicamente presentes en el almacén.
- *                   Se incrementa al recibir mercancía (GoodReceipt).
- *                   Se decrementa en transferencias salientes y ajustes.
- *                   Es la fuente de verdad del inventario físico.
- *
- *   pendingStock  — Unidades en tránsito: órdenes de compra aprobadas
- *                   que aún no han sido recibidas físicamente.
- *                   Se incrementa al aprobar una PO.
- *                   Se decrementa al recibir la mercancía.
- */
 @Getter
 @Setter
 @Entity
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Table(
   name = "stock_levels",
   indexes = {
     @Index(name = "idx_sl_product", columnList = "product_id"),
     @Index(name = "idx_sl_warehouse", columnList = "warehouse_id"),
-    @Index(
-      name = "idx_sl_product_warehouse",
-      columnList = "product_id,warehouse_id"
-    ),
+    @Index(name = "idx_sl_product_warehouse", columnList = "product_id,warehouse_id"),
   }
 )
 public class StockLevel {
@@ -57,24 +44,26 @@ public class StockLevel {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id")
+  @JoinColumn(name = "product_id", nullable = false)
   private Product product;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "warehouse_id")
+  @JoinColumn(name = "warehouse_id", nullable = false)
   private Warehouse warehouse;
 
-  // Stock físico presente en el almacén
   @Builder.Default
   @Column(nullable = false)
   private BigDecimal currentStock = BigDecimal.ZERO;
 
-  // Stock en tránsito (POs aprobadas no recibidas aún)
   @Builder.Default
   @Column(nullable = false)
   private BigDecimal pendingStock = BigDecimal.ZERO;
 
-  @Version
-  @Column(nullable = false)
-  private Long version;
+  @CreatedDate
+  @Column(name = "created_at", updatable = false)
+  private LocalDateTime createdAt;
+
+  @LastModifiedDate
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

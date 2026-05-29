@@ -2,6 +2,7 @@ package com.visco.backend.models.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -9,18 +10,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "cost_centers")
 public class CostCenter {
 
@@ -28,15 +34,12 @@ public class CostCenter {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // Columna: CENTRO DE COSTOS (Ej: 1907152100) - Este es el identificador principal
   @Column(nullable = false, unique = true, length = 100)
   private String code;
 
-  // Columna: DESCRIPCION COMPLETA (Ej: SUPERINTENDENCIA DE LABORATORIO)
   @Column(name = "full_description", nullable = false)
   private String fullDescription;
 
-  // Columna: DESCRIPCION DIVISION (Ej: SPTCIA. DE LABORATORIO)
   @Column(name = "division_description")
   private String divisionDescription;
 
@@ -49,4 +52,12 @@ public class CostCenter {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Management management;
+
+  @CreatedDate
+  @Column(name = "created_at", updatable = false)
+  private LocalDateTime createdAt;
+
+  @LastModifiedDate
+  @Column(name = "updated_at")
+  private LocalDateTime updatedAt;
 }

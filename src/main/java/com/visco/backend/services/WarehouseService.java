@@ -27,7 +27,6 @@ import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
-import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.User;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.DispatchNoteRepository;
@@ -70,12 +69,6 @@ public class WarehouseService {
   private final EmployeeRepository employeeRepository;
   private final LocationRepository locationRepository;
 
-  private final Object stockLevelLock = new Object();
-
-  // ─────────────────────────────────────────────────────────────
-  // Warehouse CRUD
-  // ─────────────────────────────────────────────────────────────
-
   @Transactional
   public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
     User responsible = userRepository
@@ -113,10 +106,6 @@ public class WarehouseService {
       );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Goods receiving
-  // ─────────────────────────────────────────────────────────────
-
   @Transactional
   @CacheEvict(value = "dashboard", allEntries = true)
   public GoodReceiptResponse receiveGoods(
@@ -139,8 +128,6 @@ public class WarehouseService {
       );
     }
 
-    // FIX #1: El warehouse de destino debe ser el del request (lo que el operador indica),
-    // no siempre el de la PO. Validamos que exista antes de usarlo.
     Warehouse destWarehouse = warehouseRepository
       .findById(request.destinationWarehouseId())
       .orElseThrow(() ->
@@ -163,19 +150,17 @@ public class WarehouseService {
       );
     }
 
-    // Asumiendo que orderId es numérico (ej. 1, 25, 300)
     int currentYear = Year.now().getValue();
 
-    // Resultado para el ID 15: RC-0015/2026
     GoodReceipt receipt = GoodReceipt.builder()
-      .receiptNumber("PENDING") // temporal — se sobreescribe tras el save
+      .receiptNumber("PENDING")
       .purchaseOrder(order)
       .destinationWarehouseId(destWarehouse.getId())
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
 
-    receipt = goodReceiptRepository.saveAndFlush(receipt); // obtiene el ID real de la BD
+    receipt = goodReceiptRepository.saveAndFlush(receipt);
 
     String receiptNumber = String.format(
       "RC-%04d/%d",
@@ -241,19 +226,15 @@ public class WarehouseService {
 
       receipt.getItems().add(item);
 
-      // FIX #2: Usar findOrCreate para evitar
-      // constraint violation en columna nullable=false
-      StockLevel stockLevel = findOrCreateStockLevel(
-        poItem.getProduct(),
-        destWarehouse
+      // Operación atómica: upsert + increment en una sola sentencia SQL
+      stockLevelRepository.addCurrentStockAtomic(
+        poItem.getProduct().getId(),
+        destWarehouse.getId(),
+        received
       );
 
-      stockLevel.setCurrentStock(stockLevel.getCurrentStock().add(received));
-
-      stockLevelRepository.save(stockLevel);
-
-      // Descontar pending stock al recibir mercancía
-      substractPendingStock(
+      // Descontar pending stock atómicamente
+      stockLevelRepository.subtractPendingStockAtomic(
         poItem.getProduct().getId(),
         destWarehouse.getId(),
         received
@@ -300,7 +281,6 @@ public class WarehouseService {
       orderId
     );
 
-    // Acumular todo lo recibido por producto
     Map<Long, BigDecimal> totalReceived = new HashMap<>();
     for (GoodReceipt receipt : receipts) {
       for (GoodReceiptItem item : receipt.getItems()) {
@@ -312,7 +292,6 @@ public class WarehouseService {
       }
     }
 
-    // Construir items con expected vs received vs pending
     List<PurchaseOrderReceiptSummary.ItemSummary> items = order
       .getItems()
       .stream()
@@ -411,48 +390,27 @@ public class WarehouseService {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Stock helpers
+  // Stock helpers — operaciones atómicas vía SQL nativo
   // ─────────────────────────────────────────────────────────────
-
-  private StockLevel findOrCreateStockLevel(
-    Product product,
-    Warehouse warehouse
-  ) {
-    return stockLevelRepository
-      .findByProductIdAndWarehouseId(product.getId(), warehouse.getId())
-      .orElseGet(() ->
-        stockLevelRepository.save(
-          StockLevel.builder()
-            .product(product)
-            .warehouse(warehouse)
-            .currentStock(BigDecimal.ZERO)
-            .pendingStock(BigDecimal.ZERO)
-            .build()
-        )
-      );
-  }
 
   public void addPendingStockByWarehouse(
     Long productId,
     Long warehouseId,
     BigDecimal quantity
   ) {
-    Warehouse warehouse = warehouseRepository
+    warehouseRepository
       .findById(warehouseId)
       .orElseThrow(() ->
         new EntityNotFoundException("Warehouse not found: " + warehouseId)
       );
 
-    // FIX #2: Reemplaza orElseGet inline por el helper centralizado
-    Product product = productRepository
+    productRepository
       .findById(productId)
       .orElseThrow(() ->
         new EntityNotFoundException("Product not found: " + productId)
       );
 
-    StockLevel level = findOrCreateStockLevel(product, warehouse);
-    level.setPendingStock(level.getPendingStock().add(quantity));
-    stockLevelRepository.save(level);
+    stockLevelRepository.addPendingStockAtomic(productId, warehouseId, quantity);
   }
 
   public void addCurrentStock(
@@ -460,12 +418,7 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    stockLevelRepository
-      .findByProductIdAndWarehouseId(productId, warehouseId)
-      .ifPresent(level -> {
-        level.setCurrentStock(level.getCurrentStock().add(quantity));
-        stockLevelRepository.save(level);
-      });
+    stockLevelRepository.addCurrentStockAtomic(productId, warehouseId, quantity);
   }
 
   public void substractPendingStock(
@@ -473,14 +426,7 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    stockLevelRepository
-      .findByProductIdAndWarehouseId(productId, warehouseId)
-      .ifPresent(level -> {
-        // FIX #3: Evitar pending stock negativo — clamp a 0
-        BigDecimal newPending = level.getPendingStock().subtract(quantity);
-        level.setPendingStock(newPending.max(BigDecimal.ZERO));
-        stockLevelRepository.save(level);
-      });
+    stockLevelRepository.subtractPendingStockAtomic(productId, warehouseId, quantity);
   }
 
   public void substractCurrentStock(
@@ -488,26 +434,31 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    stockLevelRepository
-      .findByProductIdAndWarehouseId(productId, warehouseId)
-      .ifPresent(level -> {
-        // FIX #3: Evitar stock negativo — lanzar excepción si no hay suficiente
-        if (level.getCurrentStock().compareTo(quantity) < 0) {
-          throw new IllegalArgumentException(
-            "Insufficient stock for product " +
-              productId +
-              " in warehouse " +
-              warehouseId
-          );
-        }
-        level.setCurrentStock(level.getCurrentStock().subtract(quantity));
-        stockLevelRepository.save(level);
-      });
+    int updated = stockLevelRepository.subtractCurrentStockAtomic(
+      productId, warehouseId, quantity
+    );
+    if (updated == 0) {
+      // Puede ser que no exista stock level o que no haya suficiente stock
+      stockLevelRepository
+        .findByProductIdAndWarehouseId(productId, warehouseId)
+        .ifPresentOrElse(
+          level -> {
+            if (level.getCurrentStock().compareTo(quantity) < 0) {
+              throw new IllegalArgumentException(
+                "Insufficient stock for product " +
+                  productId + " in warehouse " + warehouseId
+              );
+            }
+          },
+          () -> {
+            throw new EntityNotFoundException(
+              "Stock level not found for product " +
+                productId + " in warehouse " + warehouseId
+            );
+          }
+        );
+    }
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // Receipts queries
-  // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
   public List<GoodReceiptResponse> getReceiptsByOrderId(Long orderId) {
@@ -532,10 +483,6 @@ public class WarehouseService {
       );
     return toResponse(receipt);
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // Stock breakdown & summary
-  // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
   public ProductStockBreakdown getStockBreakdownByProduct(Long productId) {
@@ -600,10 +547,6 @@ public class WarehouseService {
       .toList();
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Products in stock by warehouse (transfer modal)
-  // ─────────────────────────────────────────────────────────────
-
   @Transactional(readOnly = true)
   public Page<ProductOnStock> getProductsOnStock(
     Long warehouseId,
@@ -633,10 +576,6 @@ public class WarehouseService {
       );
     });
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // All products in warehouse (including zero stock)
-  // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
   public Page<ProductOnStock> getAllProductsInWarehouse(
@@ -672,10 +611,6 @@ public class WarehouseService {
       );
     });
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // Private mapper
-  // ─────────────────────────────────────────────────────────────
 
   private GoodReceiptResponse toResponse(GoodReceipt receipt) {
     List<GoodReceiptItemResponse> itemResponses = receipt
@@ -731,45 +666,35 @@ public class WarehouseService {
         new EntityNotFoundException("Destination warehouse not found")
       );
 
-    StockLevel sourceStock = stockLevelRepository
-      .findByProductIdAndWarehouseId(
-        request.productId(),
-        request.fromWarehouseId()
-      )
-      .orElseThrow(() ->
-        new EntityNotFoundException(
-          "Stock level not found for source warehouse"
-        )
-      );
-
-    // FIX #3: Validar stock suficiente antes de transferir
-    if (sourceStock.getCurrentStock().compareTo(request.quantity()) < 0) {
+    // Validar stock suficiente antes de transferir
+    BigDecimal currentStock = stockLevelRepository.getStockByProductAndWarehouse(
+      request.productId(), request.fromWarehouseId()
+    );
+    if (currentStock == null || currentStock.compareTo(request.quantity()) < 0) {
       throw new IllegalArgumentException(
         "Insufficient stock in the source warehouse for this transfer."
       );
     }
 
-    // FIX #2: Usar helper centralizado para destino
-    Product product = sourceStock.getProduct();
-    StockLevel destinationStock = findOrCreateStockLevel(product, toWarehouse);
-
-    sourceStock.setCurrentStock(
-      sourceStock.getCurrentStock().subtract(request.quantity())
+    // Operaciones atómicas: debitar origen y acreditar destino
+    stockLevelRepository.subtractCurrentStockAtomic(
+      request.productId(), request.fromWarehouseId(), request.quantity()
     );
 
-    destinationStock.setCurrentStock(
-      destinationStock.getCurrentStock().add(request.quantity())
+    stockLevelRepository.addCurrentStockAtomic(
+      request.productId(), request.toWarehouseId(), request.quantity()
     );
 
-    stockLevelRepository.save(sourceStock);
-    stockLevelRepository.save(destinationStock);
+    Product product = productRepository
+      .findById(request.productId())
+      .orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
     InventoryMovement movement = InventoryMovement.builder()
-      .product(sourceStock.getProduct())
+      .product(product)
       .fromWarehouse(fromWarehouse)
       .toWarehouse(toWarehouse)
       .quantity(request.quantity())
@@ -846,7 +771,7 @@ public class WarehouseService {
 
       note.getItems().add(item);
 
-      StockLevel stockLevel = findOrCreateStockLevel(product, warehouse);
+      // Operación atómica: debitar stock
       substractCurrentStock(
         product.getId(),
         warehouse.getId(),
@@ -897,20 +822,27 @@ public class WarehouseService {
       .findById(request.productId())
       .orElseThrow(() -> new EntityNotFoundException("Product not found"));
 
-    StockLevel stock = findOrCreateStockLevel(product, warehouse);
-
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-    BigDecimal currentStock = stock.getCurrentStock();
+    BigDecimal currentStock = stockLevelRepository.getStockByProductAndWarehouse(
+      product.getId(), warehouse.getId()
+    );
+    if (currentStock == null) currentStock = BigDecimal.ZERO;
+
     BigDecimal difference = request.newStock().subtract(currentStock);
+
+    // Operación atómica: upsert con valor exacto
+    stockLevelRepository.setCurrentStockAtomic(
+      product.getId(), warehouse.getId(), request.newStock()
+    );
 
     InventoryMovement movement = InventoryMovement.builder()
       .product(product)
       .fromWarehouse(warehouse)
       .toWarehouse(warehouse)
-      .quantity(difference) // signed: negativo si reduce stock, positivo si aumenta
+      .quantity(difference)
       .type(MovementType.ADJUSTMENT)
       .reason(request.reason() != null ? request.reason() : "Adjust stock")
       .entryUnitPrice(request.unitCost())
@@ -918,15 +850,8 @@ public class WarehouseService {
       .createdBy(createdBy)
       .build();
 
-    stock.setCurrentStock(request.newStock());
-
-    stockLevelRepository.save(stock);
     inventoryMovementRepository.save(movement);
   }
-
-  // ─────────────────────────────────────────────────────────────
-  // Kardex / Inventory Movements listing
-  // ─────────────────────────────────────────────────────────────
 
   @Transactional(readOnly = true)
   public Page<InventoryMovementResponse> getMovements(
@@ -958,12 +883,9 @@ public class WarehouseService {
         pageable
       );
 
-    // FIX #5: El balance acumulado se calculaba mal — siempre sumaba al openingBalance fijo
-    // en lugar de acumular. Usamos AtomicReference para acumular dentro del lambda.
     AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
 
     return movementsPage.map(m -> {
-      // Outputs y adjustments negativos restan; inputs y transfers suman
       BigDecimal qty = (m.getType() == MovementType.OUTPUT)
         ? m.getQuantity().negate()
         : m.getQuantity();

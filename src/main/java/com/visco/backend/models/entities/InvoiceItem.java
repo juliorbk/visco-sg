@@ -9,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
@@ -71,4 +73,12 @@ public class InvoiceItem {
 
   @Column(length = 500)
   private String notes;
+
+  @PrePersist
+  @PreUpdate
+  private void computeLineTotal() {
+    if (quantity != null && unitPrice != null) {
+      this.lineTotal = quantity.multiply(unitPrice);
+    }
+  }
 }
