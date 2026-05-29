@@ -28,6 +28,16 @@ public class EmployeeService {
   }
 
   @Transactional(readOnly = true)
+  public Page<EmployeeResponseDto> getEmployeesByCostCenter(
+    Pageable pageable,
+    Long costCenterId
+  ) {
+    return employeeRepository
+      .findByCostCenterId(pageable, costCenterId)
+      .map(EmployeeResponseDto::fromEntity);
+  }
+
+  @Transactional(readOnly = true)
   public EmployeeResponseDto getEmployeeById(Long id) {
     return employeeRepository
       .findById(id)

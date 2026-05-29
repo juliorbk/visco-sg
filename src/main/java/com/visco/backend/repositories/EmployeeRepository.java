@@ -10,4 +10,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
   Page<Employee> findAllByOrderByFullNameAsc(Pageable pageable);
 
   Optional<Employee> findByDocumentNumber(String documentNumber);
+
+  Page<Employee> findByCostCenterId(Long costCenterId, Pageable pageable);
 }

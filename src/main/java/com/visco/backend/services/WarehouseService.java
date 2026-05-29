@@ -27,6 +27,7 @@ import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
+import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.User;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.DispatchNoteRepository;
@@ -410,7 +411,11 @@ public class WarehouseService {
         new EntityNotFoundException("Product not found: " + productId)
       );
 
-    stockLevelRepository.addPendingStockAtomic(productId, warehouseId, quantity);
+    stockLevelRepository.addPendingStockAtomic(
+      productId,
+      warehouseId,
+      quantity
+    );
   }
 
   public void addCurrentStock(
@@ -418,7 +423,11 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    stockLevelRepository.addCurrentStockAtomic(productId, warehouseId, quantity);
+    stockLevelRepository.addCurrentStockAtomic(
+      productId,
+      warehouseId,
+      quantity
+    );
   }
 
   public void substractPendingStock(
@@ -426,7 +435,11 @@ public class WarehouseService {
     Long warehouseId,
     BigDecimal quantity
   ) {
-    stockLevelRepository.subtractPendingStockAtomic(productId, warehouseId, quantity);
+    stockLevelRepository.subtractPendingStockAtomic(
+      productId,
+      warehouseId,
+      quantity
+    );
   }
 
   public void substractCurrentStock(
@@ -435,7 +448,9 @@ public class WarehouseService {
     BigDecimal quantity
   ) {
     int updated = stockLevelRepository.subtractCurrentStockAtomic(
-      productId, warehouseId, quantity
+      productId,
+      warehouseId,
+      quantity
     );
     if (updated == 0) {
       // Puede ser que no exista stock level o que no haya suficiente stock
@@ -446,14 +461,18 @@ public class WarehouseService {
             if (level.getCurrentStock().compareTo(quantity) < 0) {
               throw new IllegalArgumentException(
                 "Insufficient stock for product " +
-                  productId + " in warehouse " + warehouseId
+                  productId +
+                  " in warehouse " +
+                  warehouseId
               );
             }
           },
           () -> {
             throw new EntityNotFoundException(
               "Stock level not found for product " +
-                productId + " in warehouse " + warehouseId
+                productId +
+                " in warehouse " +
+                warehouseId
             );
           }
         );
@@ -667,10 +686,14 @@ public class WarehouseService {
       );
 
     // Validar stock suficiente antes de transferir
-    BigDecimal currentStock = stockLevelRepository.getStockByProductAndWarehouse(
-      request.productId(), request.fromWarehouseId()
-    );
-    if (currentStock == null || currentStock.compareTo(request.quantity()) < 0) {
+    BigDecimal currentStock =
+      stockLevelRepository.getStockByProductAndWarehouse(
+        request.productId(),
+        request.fromWarehouseId()
+      );
+    if (
+      currentStock == null || currentStock.compareTo(request.quantity()) < 0
+    ) {
       throw new IllegalArgumentException(
         "Insufficient stock in the source warehouse for this transfer."
       );
@@ -678,11 +701,15 @@ public class WarehouseService {
 
     // Operaciones atómicas: debitar origen y acreditar destino
     stockLevelRepository.subtractCurrentStockAtomic(
-      request.productId(), request.fromWarehouseId(), request.quantity()
+      request.productId(),
+      request.fromWarehouseId(),
+      request.quantity()
     );
 
     stockLevelRepository.addCurrentStockAtomic(
-      request.productId(), request.toWarehouseId(), request.quantity()
+      request.productId(),
+      request.toWarehouseId(),
+      request.quantity()
     );
 
     Product product = productRepository
@@ -826,16 +853,20 @@ public class WarehouseService {
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-    BigDecimal currentStock = stockLevelRepository.getStockByProductAndWarehouse(
-      product.getId(), warehouse.getId()
-    );
+    BigDecimal currentStock =
+      stockLevelRepository.getStockByProductAndWarehouse(
+        product.getId(),
+        warehouse.getId()
+      );
     if (currentStock == null) currentStock = BigDecimal.ZERO;
 
     BigDecimal difference = request.newStock().subtract(currentStock);
 
     // Operación atómica: upsert con valor exacto
     stockLevelRepository.setCurrentStockAtomic(
-      product.getId(), warehouse.getId(), request.newStock()
+      product.getId(),
+      warehouse.getId(),
+      request.newStock()
     );
 
     InventoryMovement movement = InventoryMovement.builder()

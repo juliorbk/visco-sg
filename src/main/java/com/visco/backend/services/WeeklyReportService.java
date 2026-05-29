@@ -87,7 +87,12 @@ public class WeeklyReportService {
         critical = critical.subList(0, maxCriticalItems);
       }
 
-      byte[] excelBytes = buildExcelFile(kpis, recentOrders, critical, overstock);
+      byte[] excelBytes = buildExcelFile(
+        kpis,
+        recentOrders,
+        critical,
+        overstock
+      );
       LocalDateTime now = LocalDateTime.now();
       String weekStart = now
         .minusDays(now.getDayOfWeek().getValue() - 1)
