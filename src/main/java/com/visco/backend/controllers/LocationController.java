@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,12 +32,13 @@ public class LocationController {
   private final LocationService locationService;
 
   @GetMapping("/warehouse/{warehouseId}")
-  @Operation(summary = "List locations by warehouse", description = "Returns a paginated list of locations for a specific warehouse")
+  @Operation(summary = "List locations by warehouse", description = "Returns a paginated list of locations for a specific warehouse with optional search")
   public ResponseEntity<Page<LocationDTO>> getLocationsByWarehouse(
     @PathVariable Long warehouseId,
+    @RequestParam(required = false) String search,
     Pageable pageable
   ) {
-    return ResponseEntity.ok(locationService.getLocationsByWarehouse(warehouseId, pageable));
+    return ResponseEntity.ok(locationService.getLocationsByWarehouseWithSearch(warehouseId, search, pageable));
   }
 
   @GetMapping("/warehouse/{warehouseId}/active")

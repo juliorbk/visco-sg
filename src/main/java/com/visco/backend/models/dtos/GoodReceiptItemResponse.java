@@ -10,5 +10,7 @@ public record GoodReceiptItemResponse(
     String productSku,
     BigDecimal expectedQuantity, // Cantidad que se ordenó
     BigDecimal receivedQuantity, // Cantidad que llegó
-    BigDecimal difference) {     // received - expected (negativo si falta mercancía)
+    BigDecimal difference,       // received - expected (negativo si falta mercancía)
+    Long locationId,
+    String locationCode) {
 }

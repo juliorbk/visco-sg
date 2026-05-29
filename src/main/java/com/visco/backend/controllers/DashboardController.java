@@ -46,8 +46,18 @@ public class DashboardController {
   }
 
   @GetMapping("/critical-inventory")
-  @Operation(summary = "Productos bajo su punto de reorden")
+  @Operation(
+    summary = "Productos bajo su punto de reorden"
+  )
   public ResponseEntity<List<CriticalInventoryItemDTO>> getCriticalInventory() {
     return ResponseEntity.ok(statsService.getCriticalInventory());
+  }
+
+  @GetMapping("/overstock-inventory")
+  @Operation(
+    summary = "Productos en o por encima de su stock máximo"
+  )
+  public ResponseEntity<List<CriticalInventoryItemDTO>> getOverstockInventory() {
+    return ResponseEntity.ok(statsService.getOverstockInventory());
   }
 }

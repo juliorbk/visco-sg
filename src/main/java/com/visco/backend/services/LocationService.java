@@ -33,6 +33,17 @@ public class LocationService {
   }
 
   @Transactional(readOnly = true)
+  public Page<LocationDTO> getLocationsByWarehouseWithSearch(
+    Long warehouseId,
+    String search,
+    Pageable pageable
+  ) {
+    return locationRepository
+      .findByWarehouseIdWithSearch(warehouseId, search, pageable)
+      .map(LocationDTO::fromEntity);
+  }
+
+  @Transactional(readOnly = true)
   public List<LocationDTO> getActiveLocationsByWarehouse(Long warehouseId) {
     return locationRepository
       .findByWarehouseIdAndActiveTrue(warehouseId)

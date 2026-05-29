@@ -56,4 +56,11 @@ public class GoodReceiptItem {
 
   @Column(name = "received_quantity", nullable = false)
   private BigDecimal receivedQuantity; // Lo que realmente llegó
+
+  // Ubicación dentro del almacén donde se colocó la mercancía
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "location_id")
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Location location;
 }

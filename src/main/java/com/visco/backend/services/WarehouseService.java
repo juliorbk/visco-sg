@@ -21,6 +21,7 @@ import com.visco.backend.models.entities.Employee;
 import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.InventoryMovement;
+import com.visco.backend.models.entities.Location;
 import com.visco.backend.models.entities.MovementType;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
@@ -33,6 +34,7 @@ import com.visco.backend.repositories.DispatchNoteRepository;
 import com.visco.backend.repositories.EmployeeRepository;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.InventoryMovementRepository;
+import com.visco.backend.repositories.LocationRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.StockLevelRepository;
@@ -66,6 +68,7 @@ public class WarehouseService {
   private final InventoryMovementRepository inventoryMovementRepository;
   private final DispatchNoteRepository dispatchNoteRepository;
   private final EmployeeRepository employeeRepository;
+  private final LocationRepository locationRepository;
 
   private final Object stockLevelLock = new Object();
 
@@ -146,6 +149,20 @@ public class WarehouseService {
         )
       );
 
+    Location location = locationRepository
+      .findById(request.locationId())
+      .orElseThrow(() ->
+        new EntityNotFoundException(
+          "Location not found: " + request.locationId()
+        )
+      );
+
+    if (!location.getWarehouse().getId().equals(destWarehouse.getId())) {
+      throw new IllegalArgumentException(
+        "Location does not belong to the specified warehouse"
+      );
+    }
+
     // Asumiendo que orderId es numérico (ej. 1, 25, 300)
     int currentYear = Year.now().getValue();
 
@@ -219,6 +236,7 @@ public class WarehouseService {
         .product(poItem.getProduct())
         .expectedQuantity(expected)
         .receivedQuantity(received)
+        .location(location)
         .build();
 
       receipt.getItems().add(item);
@@ -369,7 +387,9 @@ public class WarehouseService {
           item.getProduct().getSku(),
           item.getExpectedQuantity(),
           item.getReceivedQuantity(),
-          item.getReceivedQuantity().subtract(item.getExpectedQuantity())
+          item.getReceivedQuantity().subtract(item.getExpectedQuantity()),
+          item.getLocation() != null ? item.getLocation().getId() : null,
+          item.getLocation() != null ? item.getLocation().getCode() : null
         )
       )
       .toList();
@@ -607,7 +627,9 @@ public class WarehouseService {
         p.getSapCode(),
         p.getUom().name(),
         sl.getCurrentStock(),
-        sl.getPendingStock()
+        sl.getPendingStock(),
+        p.getReorderPoint(),
+        p.getMaxStock()
       );
     });
   }
@@ -644,7 +666,9 @@ public class WarehouseService {
         p.getSapCode(),
         p.getUom().name(),
         sl.getCurrentStock(),
-        sl.getPendingStock()
+        sl.getPendingStock(),
+        p.getReorderPoint(),
+        p.getMaxStock()
       );
     });
   }
@@ -664,7 +688,9 @@ public class WarehouseService {
           item.getProduct().getSku(),
           item.getExpectedQuantity(),
           item.getReceivedQuantity(),
-          item.getReceivedQuantity().subtract(item.getExpectedQuantity())
+          item.getReceivedQuantity().subtract(item.getExpectedQuantity()),
+          item.getLocation() != null ? item.getLocation().getId() : null,
+          item.getLocation() != null ? item.getLocation().getCode() : null
         )
       )
       .toList();

@@ -21,12 +21,13 @@ import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.InventoryMovement;
+import com.visco.backend.models.entities.Location;
 import com.visco.backend.models.entities.MovementType;
-import com.visco.backend.models.entities.PaymentMethod;
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
+import com.visco.backend.models.entities.PaymentMethod;
 import com.visco.backend.models.entities.PurchaseOrderType;
 import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.Supplier;
@@ -36,6 +37,9 @@ import com.visco.backend.models.entities.UserRole;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.InventoryMovementRepository;
+import com.visco.backend.repositories.DispatchNoteRepository;
+import com.visco.backend.repositories.EmployeeRepository;
+import com.visco.backend.repositories.LocationRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.StockLevelRepository;
@@ -81,6 +85,15 @@ class WarehouseServiceTest {
   @Mock
   private InventoryMovementRepository inventoryMovementRepository;
 
+  @Mock
+  private LocationRepository locationRepository;
+
+  @Mock
+  private DispatchNoteRepository dispatchNoteRepository;
+
+  @Mock
+  private EmployeeRepository employeeRepository;
+
   @InjectMocks
   private WarehouseService warehouseService;
 
@@ -100,6 +113,7 @@ class WarehouseServiceTest {
   private static final UUID USER_ID = UUID.randomUUID();
   private static final BigDecimal UNIT_PRICE = new BigDecimal("100.00");
   private static final int QUANTITY = 10;
+  private static final Long LOCATION_ID = 1L;
 
   // ── Helpers ──────────────────────────────────────────────────────
 
@@ -159,6 +173,15 @@ class WarehouseServiceTest {
       .build();
   }
 
+  private Location buildLocation() {
+    return Location.builder()
+      .id(LOCATION_ID)
+      .code("A-01")
+      .active(true)
+      .warehouse(buildWarehouse())
+      .build();
+  }
+
   private PurchaseOrder buildPurchaseOrder(PurchaseOrderStatus status) {
     Product product = buildProduct();
     User user = buildUser(UserRole.PROCUREMENT);
@@ -210,7 +233,29 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(qty))),
       "Receiving goods",
       warehouseId,
+      LOCATION_ID,
       receivedById
+    );
+  }
+
+  private ReceiveGoodsRequest buildReceiveRequest(
+    Long warehouseId,
+    int qty,
+    UUID receivedById,
+    Long locationId
+  ) {
+    return new ReceiveGoodsRequest(
+      List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(qty))),
+      "Receiving goods",
+      warehouseId,
+      locationId,
+      receivedById
+    );
+  }
+
+  private void mockLocation() {
+    when(locationRepository.findById(LOCATION_ID)).thenReturn(
+      Optional.of(buildLocation())
     );
   }
 
@@ -268,6 +313,7 @@ class WarehouseServiceTest {
       BigDecimal.valueOf(QUANTITY)
     );
 
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -325,6 +371,7 @@ class WarehouseServiceTest {
       BigDecimal.valueOf(QUANTITY)
     );
 
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -385,6 +432,7 @@ class WarehouseServiceTest {
       .build();
     prevReceipt.setItems(List.of(prevItem));
 
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -511,6 +559,7 @@ class WarehouseServiceTest {
   void shouldThrowEntityNotFoundException_whenProductNotInPurchaseOrder() {
     PurchaseOrder order = buildPurchaseOrder(PurchaseOrderStatus.APPROVED);
     Warehouse dest = buildWarehouse();
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -533,6 +582,7 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(99L, BigDecimal.valueOf(5))),
       "Notes",
       WAREHOUSE_ID,
+      LOCATION_ID,
       USER_ID
     );
 
@@ -551,6 +601,7 @@ class WarehouseServiceTest {
       BigDecimal.valueOf(QUANTITY)
     );
 
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -580,6 +631,7 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(QUANTITY))),
       "Notes",
       WAREHOUSE_ID,
+      LOCATION_ID,
       null
     );
 
@@ -600,6 +652,7 @@ class WarehouseServiceTest {
     Warehouse dest = buildWarehouse();
     User user = buildUser(UserRole.WAREHOUSEMAN);
 
+    mockLocation();
     when(purchaseOrderRepository.findById(ORDER_ID)).thenReturn(
       Optional.of(order)
     );
@@ -649,6 +702,7 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(QUANTITY))),
       "Notes",
       WAREHOUSE_ID,
+      LOCATION_ID,
       USER_ID
     );
 
@@ -669,6 +723,7 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(3))),
       "Notes",
       WAREHOUSE_ID,
+      LOCATION_ID,
       USER_ID
     );
 
@@ -690,6 +745,7 @@ class WarehouseServiceTest {
       List.of(new ReceiveItem(PRODUCT_ID, BigDecimal.valueOf(3))),
       "Notes",
       WAREHOUSE_ID,
+      LOCATION_ID,
       USER_ID
     );
 
