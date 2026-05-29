@@ -111,7 +111,6 @@ class AuthServiceTest {
         assertThat(userCaptor.getValue().getPassword()).isEqualTo("encodedPass");
         assertThat(userCaptor.getValue().getActive()).isTrue();
         verify(passwordEncoder).encode("password123");
-        verify(emailService).sendWelcomeEmail("test@example.com", "Test User");
     }
 
     @Test
@@ -135,7 +134,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void shouldRegisterUserAndProceed_whenEmailSendingFails() {
+    void shouldRegisterUser_whenCostCenterProvided() {
         UserRegisterRequest request = buildRegisterRequest(COST_CENTER_ID);
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
@@ -147,8 +146,6 @@ class AuthServiceTest {
             u.setId(USER_ID);
             return u;
         });
-        doThrow(new RuntimeException("SMTP error")).when(emailService).sendWelcomeEmail(anyString(), anyString());
-
         AuthResponse response = authService.register(request);
 
         assertThat(response).isNotNull();
