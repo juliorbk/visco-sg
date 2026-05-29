@@ -23,16 +23,16 @@ public record DispatchResponse(
       note.getId(),
       note.getDispatchNumber(),
       note.getWarehouse().getName(),
-      note.getWithdrawnBy().getFullName(),
-      note.getWithdrawnBy().getDocumentNumber(),
-      note.getWithdrawnBy().getCostCenter() != null
+      note.getWithdrawnBy() != null ? note.getWithdrawnBy().getFullName() : null,
+      note.getWithdrawnBy() != null ? note.getWithdrawnBy().getDocumentNumber() : null,
+      note.getWithdrawnBy() != null && note.getWithdrawnBy().getCostCenter() != null
         ? note.getWithdrawnBy().getCostCenter().getCode()
         : null,
-      note.getWithdrawnBy().getCostCenter() != null
+      note.getWithdrawnBy() != null && note.getWithdrawnBy().getCostCenter() != null
         ? note.getWithdrawnBy().getCostCenter().getFullDescription()
         : null,
       note.getCreatedAt(),
-      note.getCreatedBy().getName(),
+      note.getCreatedBy() != null ? note.getCreatedBy().getName() : null,
       note.getNotes(),
       note.getItems().stream()
         .map(item -> new DispatchItemResponse(

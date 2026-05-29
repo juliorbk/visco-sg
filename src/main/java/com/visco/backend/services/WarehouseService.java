@@ -758,6 +758,12 @@ public class WarehouseService {
         )
       );
 
+    if (!employee.isActive()) {
+      throw new IllegalArgumentException(
+        "Employee is inactive: " + request.employeeId()
+      );
+    }
+
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));

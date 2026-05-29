@@ -30,10 +30,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@SQLDelete(
-  sql = "UPDATE employees SET is_active = false WHERE id = ?"
-)
-@SQLRestriction("is_active = true")
 public class Employee {
 
   @Id
