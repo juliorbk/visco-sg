@@ -22,12 +22,12 @@ import lombok.Setter;
 
 @Entity
 @Table(
-    name = "products",
-    indexes = {
-        @Index(name = "idx_product_supplier", columnList = "supplier_id"),
-        @Index(name = "idx_product_category", columnList = "category_id"),
-        @Index(name = "idx_product_active", columnList = "is_active")
-    }
+  name = "products",
+  indexes = {
+    @Index(name = "idx_product_supplier", columnList = "supplier_id"),
+    @Index(name = "idx_product_category", columnList = "category_id"),
+    @Index(name = "idx_product_active", columnList = "is_active"),
+  }
 )
 @Getter
 @Setter
@@ -36,45 +36,52 @@ import lombok.Setter;
 @Builder
 public class Product {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_seq")
-    @SequenceGenerator(name = "product_seq", sequenceName = "product_code_seq", allocationSize = 1)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_seq")
+  @SequenceGenerator(
+    name = "product_seq",
+    sequenceName = "product_code_seq",
+    allocationSize = 1
+  )
+  private Long id;
 
-    @Column(name = "internal_code", unique = true, nullable = false)
-    private String internalCode;
+  @Column(name = "internal_code", unique = true, nullable = false)
+  private String internalCode;
 
-    @Column(unique = true, nullable = false)
-    private String sku;
+  @Column(unique = true, nullable = false)
+  private String sku;
 
-    @Column(nullable = false, length = 500)
-    private String name;
+  @Column(nullable = false, length = 500)
+  private String name;
 
-    @Column(length = 1000)
-    private String description;
+  @Column(length = 1000)
+  private String description;
 
-    @Column(name = "sap_code", nullable = false)
-    private String sapCode;
+  @Column(name = "sap_code", nullable = false)
+  private String sapCode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Uom uom;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Uom uom;
 
-    // Punto de reorden global (cuándo hay que comprar más)
-    @Column(name = "reorder_point", nullable = false)
-    private BigDecimal reorderPoint;
+  // Punto de reorden global (cuándo hay que comprar más)
+  @Column(name = "reorder_point", nullable = false)
+  private BigDecimal reorderPoint;
 
-    @Builder.Default
-    @Column(name = "is_active", nullable = false)
-    private Boolean active = true;
+  @Column(name = "max_stock", nullable = false)
+  private BigDecimal maxStock;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "supplier_id", referencedColumnName = "id")
-    private Supplier supplier;
+  @Builder.Default
+  @Column(name = "is_active", nullable = false)
+  private Boolean active = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", referencedColumnName = "id")
-    private Category category;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "supplier_id", referencedColumnName = "id")
+  private Supplier supplier;
 
-    // ELIMINADOS: currentStock, warehouses, location y getCalculatedStatus()
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "category_id", referencedColumnName = "id")
+  private Category category;
+
+  // ELIMINADOS: currentStock, warehouses, location y getCalculatedStatus()
 }

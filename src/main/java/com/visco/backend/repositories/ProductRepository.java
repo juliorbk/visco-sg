@@ -52,13 +52,26 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query(
     "SELECT p.id as productId, p.name as productName, p.sku as sku, " +
       "COALESCE(SUM(s.currentStock), 0) as currentStock, " +
-      "p.reorderPoint as reorderPoint " +
+      "p.reorderPoint as reorderPoint, " +
+      "p.maxStock as maxStock " +
       "FROM Product p JOIN StockLevel s ON s.product.id = p.id " +
       "WHERE s.currentStock <= p.reorderPoint AND p.active = true " +
-      "GROUP BY p.id, p.name, p.sku, p.reorderPoint " +
+      "GROUP BY p.id, p.name, p.sku, p.reorderPoint, p.maxStock " +
       "ORDER BY currentStock ASC"
   )
   List<CriticalProductProjection> findCriticalInventory();
+
+  @Query(
+    "SELECT p.id as productId, p.name as productName, p.sku as sku, " +
+      "COALESCE(SUM(s.currentStock), 0) as currentStock, " +
+      "p.reorderPoint as reorderPoint, " +
+      "p.maxStock as maxStock " +
+      "FROM Product p JOIN StockLevel s ON s.product.id = p.id " +
+      "WHERE s.currentStock >= p.maxStock AND p.active = true " +
+      "GROUP BY p.id, p.name, p.sku, p.reorderPoint, p.maxStock " +
+      "ORDER BY currentStock DESC"
+  )
+  List<CriticalProductProjection> findOverstockInventory();
 
   @Query(
     value = "SELECT nextval('product_internal_code_seq')",
@@ -166,6 +179,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     String getSku();
     BigDecimal getCurrentStock();
     BigDecimal getReorderPoint();
+    BigDecimal getMaxStock();
   }
 
   @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true")

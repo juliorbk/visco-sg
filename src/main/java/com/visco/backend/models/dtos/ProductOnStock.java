@@ -10,5 +10,7 @@ public record ProductOnStock(
   String sapCode,
   String uom,
   BigDecimal currentStock,
-  BigDecimal pendingStock
+  BigDecimal pendingStock,
+  BigDecimal reorderPoint,
+  BigDecimal maxStock
 ) {}

@@ -128,6 +128,7 @@ public class ProductService {
       .sapCode(dto.sapCode() != null ? dto.sapCode() : "")
       .uom(dto.uom())
       .reorderPoint(dto.reorderPoint())
+      .maxStock(dto.maxStock())
       .supplier(supplier)
       .category(category)
       .build();
@@ -183,6 +184,7 @@ public class ProductService {
     existing.setSapCode(dto.getSapCode());
     existing.setUom(Uom.valueOf(dto.getUom()));
     existing.setReorderPoint(dto.getReorderPoint());
+    if (dto.getMaxStock() != null) existing.setMaxStock(dto.getMaxStock());
     existing.setSupplier(supplier);
     existing.setCategory(category);
 

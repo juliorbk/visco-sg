@@ -21,6 +21,10 @@ public record CreateProductRequest(
   @PositiveOrZero(message = "El punto de reorden no puede ser negativo")
   BigDecimal reorderPoint,
 
+  @NotNull
+  @PositiveOrZero(message = "El stock máximo no puede ser negativo")
+  BigDecimal maxStock,
+
   Long supplierId,
 
   Long categoryId

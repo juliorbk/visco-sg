@@ -74,6 +74,8 @@ public class WeeklyReportService {
       );
       List<CriticalInventoryItemDTO> critical =
         statsService.getCriticalInventory();
+      List<CriticalInventoryItemDTO> overstock =
+        statsService.getOverstockInventory();
 
       // Truncate critical items if needed
       if (critical.size() > maxCriticalItems) {
@@ -85,7 +87,7 @@ public class WeeklyReportService {
         critical = critical.subList(0, maxCriticalItems);
       }
 
-      byte[] excelBytes = buildExcelFile(kpis, recentOrders, critical);
+      byte[] excelBytes = buildExcelFile(kpis, recentOrders, critical, overstock);
       LocalDateTime now = LocalDateTime.now();
       String weekStart = now
         .minusDays(now.getDayOfWeek().getValue() - 1)
@@ -132,7 +134,8 @@ public class WeeklyReportService {
   private byte[] buildExcelFile(
     KpiStatsDTO kpis,
     List<RecentOrderDTO> orders,
-    List<CriticalInventoryItemDTO> critical
+    List<CriticalInventoryItemDTO> critical,
+    List<CriticalInventoryItemDTO> overstock
   ) throws IOException {
     try (
       XSSFWorkbook wb = new XSSFWorkbook();
@@ -153,6 +156,10 @@ public class WeeklyReportService {
           rowNum,
           "✅ All products above reorder point"
         );
+      }
+
+      if (!overstock.isEmpty()) {
+        rowNum = buildOverstockSection(sheet, rowNum, overstock);
       }
 
       if (!orders.isEmpty()) {
@@ -337,6 +344,68 @@ public class WeeklyReportService {
 
       for (int i = 0; i < 5; i++) {
         row.getCell(i).setCellStyle(rowStyle);
+      }
+    }
+
+    rowNum++; // Blank row
+    return rowNum;
+  }
+
+  private int buildOverstockSection(
+    Sheet sheet,
+    int rowNum,
+    List<CriticalInventoryItemDTO> items
+  ) {
+    CellStyle sectionTitleStyle = sheet.getWorkbook().createCellStyle();
+    sectionTitleStyle.setFont(
+      createFont(sheet.getWorkbook(), 12, true, "A52A2A")
+    );
+
+    Row titleRow = sheet.createRow(rowNum++);
+    Cell titleCell = titleRow.createCell(0);
+    titleCell.setCellValue(
+      "⬆️ STOCK EXCEDIDO (" + items.size() + " productos)"
+    );
+    titleCell.setCellStyle(sectionTitleStyle);
+
+    CellStyle headerStyle = createHeaderStyle(
+      sheet.getWorkbook(),
+      new Color(229, 229, 229)
+    );
+    CellStyle overstockStyle = createAlertStyle(
+      sheet.getWorkbook(),
+      new Color(255, 235, 240)
+    );
+
+    Row headerRow = sheet.createRow(rowNum++);
+    String[] headers = {
+      "Producto",
+      "SKU",
+      "Stock Actual",
+      "Stock Máximo",
+      "Severidad",
+    };
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
+    }
+
+    for (CriticalInventoryItemDTO item : items) {
+      Row row = sheet.createRow(rowNum++);
+
+      row.createCell(0).setCellValue(item.getProductName());
+      row.createCell(1).setCellValue(item.getSku());
+      row.createCell(2).setCellValue(item.getCurrentStock().intValue());
+      if (item.getMaxStock() != null) {
+        row.createCell(3).setCellValue(item.getMaxStock().intValue());
+      } else {
+        row.createCell(3).setCellValue("—");
+      }
+      row.createCell(4).setCellValue("⬆️ EXCEDIDO");
+
+      for (int i = 0; i < 5; i++) {
+        row.getCell(i).setCellStyle(overstockStyle);
       }
     }
 

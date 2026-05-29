@@ -21,6 +21,7 @@ public class ProductDTO {
   private String sapCode;
   private String uom;
   private BigDecimal reorderPoint;
+  private BigDecimal maxStock;
 
   private BigDecimal totalStock; // currentStock total del producto
   private BigDecimal totalPendingStock; // pendingStock total
@@ -45,6 +46,7 @@ public class ProductDTO {
       .sapCode(product.getSapCode())
       .uom(product.getUom().name())
       .reorderPoint(product.getReorderPoint())
+      .maxStock(product.getMaxStock())
       .totalStock(totalStock)
       .totalPendingStock(totalPendingStock)
       .active(product.getActive())

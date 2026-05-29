@@ -134,9 +134,7 @@ public class StatsService {
         )
       );
 
-    BigDecimal grandTotal = orderRepository.getTotalSpendingSince(
-      sixMonthsAgo
-    );
+    BigDecimal grandTotal = orderRepository.getTotalSpendingSince(sixMonthsAgo);
 
     Map<String, Double> byCategoryPercent = byCategory
       .entrySet()
@@ -180,9 +178,30 @@ public class StatsService {
           .sku(p.getSku())
           .currentStock(p.getCurrentStock())
           .reorderPoint(p.getReorderPoint())
+          .maxStock(p.getMaxStock())
           .severity(severity)
           .build();
       })
+      .toList();
+  }
+
+  @Cacheable(value = "dashboard", key = "'overstock'")
+  @Transactional(readOnly = true)
+  public List<CriticalInventoryItemDTO> getOverstockInventory() {
+    return productRepository
+      .findOverstockInventory()
+      .stream()
+      .map(p ->
+        CriticalInventoryItemDTO.builder()
+          .productId(p.getProductId())
+          .productName(p.getProductName())
+          .sku(p.getSku())
+          .currentStock(p.getCurrentStock())
+          .reorderPoint(p.getReorderPoint())
+          .maxStock(p.getMaxStock())
+          .severity("OVERSTOCK")
+          .build()
+      )
       .toList();
   }
 }

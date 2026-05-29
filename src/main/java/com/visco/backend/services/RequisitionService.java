@@ -14,6 +14,7 @@ import com.visco.backend.models.entities.User;
 import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.RequisitionRepository;
+import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class RequisitionService {
   private final UserRepository userRepository;
   private final CostCenterRepository costCenterRepository;
   private final ProductRepository productRepository;
+  private final StockLevelRepository stockLevelRepository;
 
   @Transactional
   public RequisitionResponse createRequisition(

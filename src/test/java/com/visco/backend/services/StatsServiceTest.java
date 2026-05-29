@@ -34,7 +34,8 @@ class StatsServiceTest {
     String name,
     String sku,
     BigDecimal currentStock,
-    BigDecimal reorderPoint
+    BigDecimal reorderPoint,
+    BigDecimal maxStock
   ) {
     return new ProductRepository.CriticalProductProjection() {
       @Override
@@ -60,6 +61,11 @@ class StatsServiceTest {
       @Override
       public BigDecimal getReorderPoint() {
         return reorderPoint;
+      }
+
+      @Override
+      public BigDecimal getMaxStock() {
+        return maxStock;
       }
     };
   }
@@ -147,7 +153,8 @@ class StatsServiceTest {
           "Product A",
           "SKU-A",
           BigDecimal.valueOf(3),
-          BigDecimal.valueOf(5)
+          BigDecimal.valueOf(5),
+          BigDecimal.valueOf(20)
         )
       )
     );
@@ -173,7 +180,8 @@ class StatsServiceTest {
           "Product B",
           "SKU-B",
           BigDecimal.ZERO,
-          BigDecimal.valueOf(10)
+          BigDecimal.valueOf(10),
+          BigDecimal.valueOf(50)
         )
       )
     );
@@ -203,21 +211,24 @@ class StatsServiceTest {
           "Product A",
           "SKU-A",
           BigDecimal.ZERO,
-          BigDecimal.valueOf(10)
+          BigDecimal.valueOf(10),
+          BigDecimal.valueOf(30)
         ),
         buildProjection(
           2L,
           "Product B",
           "SKU-B",
           BigDecimal.valueOf(3),
-          BigDecimal.valueOf(5)
+          BigDecimal.valueOf(5),
+          BigDecimal.valueOf(20)
         ),
         buildProjection(
           3L,
           "Product C",
           "SKU-C",
           BigDecimal.valueOf(0),
-          BigDecimal.valueOf(1)
+          BigDecimal.valueOf(1),
+          BigDecimal.valueOf(10)
         )
       )
     );
@@ -228,5 +239,42 @@ class StatsServiceTest {
     assertThat(items.get(0).getSeverity()).isEqualTo("CRITICAL");
     assertThat(items.get(1).getSeverity()).isEqualTo("WARNING");
     assertThat(items.get(2).getSeverity()).isEqualTo("CRITICAL");
+  }
+
+  // ── getOverstockInventory ──────────────────────────────────────
+
+  @Test
+  void shouldReturnOverstockItems_whenStockExceedsMax() {
+    when(productRepository.findOverstockInventory()).thenReturn(
+      List.of(
+        buildProjection(
+          4L,
+          "Product D",
+          "SKU-D",
+          BigDecimal.valueOf(50),
+          BigDecimal.valueOf(5),
+          BigDecimal.valueOf(40)
+        )
+      )
+    );
+
+    List<CriticalInventoryItemDTO> items = statsService.getOverstockInventory();
+
+    assertThat(items).hasSize(1);
+    CriticalInventoryItemDTO item = items.get(0);
+    assertThat(item.getProductId()).isEqualTo(4L);
+    assertThat(item.getProductName()).isEqualTo("Product D");
+    assertThat(item.getCurrentStock()).isEqualByComparingTo("50");
+    assertThat(item.getMaxStock()).isEqualByComparingTo("40");
+    assertThat(item.getSeverity()).isEqualTo("OVERSTOCK");
+  }
+
+  @Test
+  void shouldReturnEmptyList_whenNoOverstock() {
+    when(productRepository.findOverstockInventory()).thenReturn(List.of());
+
+    List<CriticalInventoryItemDTO> items = statsService.getOverstockInventory();
+
+    assertThat(items).isEmpty();
   }
 }

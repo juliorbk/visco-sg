@@ -13,5 +13,6 @@ public class CriticalInventoryItemDTO {
 	private String sku;
 	private BigDecimal currentStock;
 	private BigDecimal reorderPoint;
-	private String severity; // "CRITICAL" si stock=0, "WARNING" si stock <= reorderPoint
+	private BigDecimal maxStock;
+	private String severity; // "CRITICAL" si stock=0, "WARNING" si stock <= reorderPoint, "OVERSTOCK" si stock >= maxStock
 }
