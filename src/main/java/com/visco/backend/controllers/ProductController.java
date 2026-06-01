@@ -43,6 +43,11 @@ public class ProductController {
     @RequestParam(required = false) String sortBy,
     @RequestParam(defaultValue = "asc") String sortDir
   ) {
+    // LIMPIEZA DE PARÁMETROS: Convertir strings vacíos a null para no romper el @Query
+    if (search != null && search.trim().isEmpty()) search = null;
+    if (category != null && category.trim().isEmpty()) category = null;
+    if (sortBy != null && sortBy.trim().isEmpty()) sortBy = null;
+
     Pageable pageable = PageRequest.of(page, size);
     Page<ProductDTO> products = productService.getProducts(
       pageable,
