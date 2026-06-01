@@ -212,7 +212,7 @@ public class SupplierService {
     Pageable pageable
   ) {
     return supplierRepository
-      .findByCurrency(currency, pageable)
+      .findByCurrencyWithFetch(currency, pageable)
       .map(SupplierDTO::fromSupplier);
   }
 

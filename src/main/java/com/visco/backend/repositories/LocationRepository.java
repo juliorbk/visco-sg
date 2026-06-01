@@ -12,15 +12,20 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface LocationRepository extends JpaRepository<Location, Long> {
-  Page<Location> findByWarehouseId(Long warehouseId, Pageable pageable);
-  List<Location> findByWarehouseIdAndActiveTrue(Long warehouseId);
+  @Query(value = "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId",
+         countQuery = "SELECT COUNT(l) FROM Location l WHERE l.warehouse.id = :warehouseId")
+  Page<Location> findByWarehouseId(@Param("warehouseId") Long warehouseId, Pageable pageable);
+
+  @Query("SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId AND l.active = true")
+  List<Location> findByWarehouseIdAndActiveTrue(@Param("warehouseId") Long warehouseId);
+
   Optional<Location> findByWarehouseIdAndCode(Long warehouseId, String code);
   boolean existsByWarehouseIdAndCode(Long warehouseId, String code);
 
-  @Query("""
-    SELECT l FROM Location l WHERE l.warehouse.id = :warehouseId
-    AND (:search IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', :search, '%')))
-  """)
+  @Query(value = "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId"
+      + " AND (:search IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', :search, '%')))",
+         countQuery = "SELECT COUNT(l) FROM Location l WHERE l.warehouse.id = :warehouseId"
+      + " AND (:search IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', :search, '%')))")
   Page<Location> findByWarehouseIdWithSearch(
     @Param("warehouseId") Long warehouseId,
     @Param("search") String search,

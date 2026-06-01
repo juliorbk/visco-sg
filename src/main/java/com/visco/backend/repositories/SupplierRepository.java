@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.Supplier;
+import org.springframework.data.repository.query.Param;
 
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
@@ -25,7 +26,11 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = false")
 	Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
-	Page<Supplier> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->
+	Page<Supplier> findByCurrency(Currency currency, Pageable pageable);
+
+	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.currency = :currency",
+		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.currency = :currency")
+	Page<Supplier> findByCurrencyWithFetch(@Param("currency") Currency currency, Pageable pageable);
 
 	@Query("SELECT s.id as supplierId, s.name as supplierName, COUNT(o) as orderCount " +
 			"FROM PurchaseOrder o JOIN o.supplier s " +

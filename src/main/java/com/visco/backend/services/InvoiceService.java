@@ -171,7 +171,7 @@ public class InvoiceService {
   @Transactional(readOnly = true)
   public List<InvoiceResponse> getInvoicesByOrderId(Long orderId) {
     return invoiceRepository
-      .findByPurchaseOrderId(orderId)
+      .findByPurchaseOrderIdWithFetch(orderId)
       .stream()
       .map(this::toResponse)
       .toList();
