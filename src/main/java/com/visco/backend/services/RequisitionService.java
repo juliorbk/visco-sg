@@ -207,12 +207,20 @@ public class RequisitionService {
 
   @Transactional(readOnly = true)
   public RequisitionResponse getRequisitionById(Long id) {
-    return toResponse(findById(id));
+    return toResponse(getRequisitionByIdDetailed(id));
   }
 
   private Requisition findById(Long id) {
     return requisitionRepository
       .findById(id)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Requisition not found: " + id)
+      );
+  }
+
+  private Requisition getRequisitionByIdDetailed(Long id) {
+    return requisitionRepository
+      .findByIdDetailed(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Requisition not found: " + id)
       );
@@ -260,6 +268,10 @@ public class RequisitionService {
       req.setCostCenter(costCenter);
     }
 
+    // OPTIMIZACIÓN: req.getItems().clear() carga toda la colección en memoria
+    // antes de borrarla. Si hay muchos ítems, mejor usar:
+    //   requisitionRepository.deleteItemsByRequisitionId(id);
+    // y luego agregar los nuevos items.
     req.getItems().clear();
 
     Map<Long, Product> productMap = productRepository

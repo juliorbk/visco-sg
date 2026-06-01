@@ -4,8 +4,6 @@ import com.visco.backend.models.dtos.CreateInvoiceRequest;
 import com.visco.backend.models.dtos.InvoiceItemRequest;
 import com.visco.backend.models.dtos.InvoiceItemResponse;
 import com.visco.backend.models.dtos.InvoiceResponse;
-import com.visco.backend.models.entities.GoodReceipt;
-import com.visco.backend.models.entities.GoodReceiptItem;
 import com.visco.backend.models.entities.Invoice;
 import com.visco.backend.models.entities.InvoiceItem;
 import com.visco.backend.models.entities.InvoiceStatus;
@@ -21,7 +19,6 @@ import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -210,20 +207,10 @@ public class InvoiceService {
   }
 
   private Map<Long, BigDecimal> getTotalReceivedByProduct(Long orderId) {
-    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
-      orderId
-    );
-    Map<Long, BigDecimal> received = new HashMap<>();
-    for (GoodReceipt receipt : receipts) {
-      for (GoodReceiptItem item : receipt.getItems()) {
-        received.merge(
-          item.getProduct().getId(),
-          item.getReceivedQuantity(),
-          BigDecimal::add
-        );
-      }
-    }
-    return received;
+    return goodReceiptRepository.getTotalReceivedByOrder(orderId).stream()
+        .collect(Collectors.toMap(
+            GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
+            GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived));
   }
 
   private Invoice findById(Long id) {

@@ -271,20 +271,10 @@ public class ProcurementService {
   }
 
   private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
-    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
-      orderId
-    );
-    Map<Long, BigDecimal> received = new HashMap<>();
-    for (GoodReceipt receipt : receipts) {
-      for (GoodReceiptItem item : receipt.getItems()) {
-        received.merge(
-          item.getProduct().getId(),
-          item.getReceivedQuantity(),
-          BigDecimal::add
-        );
-      }
-    }
-    return received;
+    return goodReceiptRepository.getTotalReceivedByOrder(orderId).stream()
+        .collect(Collectors.toMap(
+            GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
+            GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived));
   }
 
   // ─────────────────────────────────────────────────────────────

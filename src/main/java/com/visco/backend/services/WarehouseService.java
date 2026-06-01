@@ -2,7 +2,6 @@ package com.visco.backend.services;
 
 import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
-import com.visco.backend.models.dtos.DispatchItemResponse;
 import com.visco.backend.models.dtos.DispatchRequest;
 import com.visco.backend.models.dtos.DispatchResponse;
 import com.visco.backend.models.dtos.GoodReceiptItemResponse;
@@ -48,6 +47,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
@@ -171,18 +171,16 @@ public class WarehouseService {
       currentYear
     );
     receipt.setReceiptNumber(receiptNumber);
-    Map<Long, BigDecimal> previousReceived = new HashMap<>();
-    for (GoodReceipt prev : goodReceiptRepository.findByPurchaseOrderId(
-      orderId
-    )) {
-      for (GoodReceiptItem prevItem : prev.getItems()) {
-        previousReceived.merge(
-          prevItem.getProduct().getId(),
-          prevItem.getReceivedQuantity(),
+    Map<Long, BigDecimal> previousReceived = goodReceiptRepository
+      .getTotalReceivedByOrder(orderId)
+      .stream()
+      .collect(
+        Collectors.toMap(
+          GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
+          GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived,
           BigDecimal::add
-        );
-      }
-    }
+        )
+      );
 
     User receivedByUser;
     if (request.receivedById() != null) {
@@ -790,14 +788,23 @@ public class WarehouseService {
     );
     note.setDispatchNumber(dispatchNumber);
 
+    List<Long> productIds = request
+      .items()
+      .stream()
+      .map(DispatchRequest.DispatchItem::productId)
+      .toList();
+    Map<Long, Product> productMap = productRepository
+      .findAllById(productIds)
+      .stream()
+      .collect(Collectors.toMap(Product::getId, p -> p));
+
     for (DispatchRequest.DispatchItem itemReq : request.items()) {
-      Product product = productRepository
-        .findById(itemReq.productId())
-        .orElseThrow(() ->
-          new EntityNotFoundException(
-            "Product not found: " + itemReq.productId()
-          )
+      Product product = productMap.get(itemReq.productId());
+      if (product == null) {
+        throw new EntityNotFoundException(
+          "Product not found: " + itemReq.productId()
         );
+      }
 
       DispatchNoteItem item = DispatchNoteItem.builder()
         .dispatchNote(note)

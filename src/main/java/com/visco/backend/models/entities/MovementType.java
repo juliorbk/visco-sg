@@ -5,4 +5,5 @@ public enum MovementType {
   OUTPUT,
   TRANSFER,
   ADJUSTMENT,
+  DISPATCH,
 }

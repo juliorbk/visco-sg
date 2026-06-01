@@ -16,6 +16,15 @@ import org.springframework.stereotype.Repository;
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   List<StockLevel> findByProductId(Long productId);
 
+  @Query("""
+      SELECT sl FROM StockLevel sl
+      JOIN FETCH sl.product p
+      LEFT JOIN FETCH p.category
+      JOIN FETCH sl.warehouse
+      WHERE sl.product.id IN :productIds
+      """)
+  List<StockLevel> findByProductIdIn(@Param("productIds") List<Long> productIds);
+
   Optional<StockLevel> findByProductIdAndWarehouseId(
     Long productId,
     Long warehouseId
@@ -105,7 +114,10 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
 
   @Query(
     value = """
-    SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
+    SELECT sl FROM StockLevel sl
+    JOIN FETCH sl.product p
+    LEFT JOIN FETCH p.category
+    JOIN FETCH sl.warehouse
     WHERE sl.warehouse.id = :warehouseId
     AND (CAST(:search AS string) IS NULL
       OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
