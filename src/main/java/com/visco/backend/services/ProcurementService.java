@@ -372,7 +372,7 @@ public class ProcurementService {
 
   private PurchaseOrder findOrderById(Long id) {
     return purchaseOrderRepository
-      .findById(id)
+      .findByIdDetailed(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Purchase order not found: " + id)
       );

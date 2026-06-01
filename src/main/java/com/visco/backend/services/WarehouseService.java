@@ -116,7 +116,7 @@ public class WarehouseService {
     ReceiveGoodsRequest request
   ) {
     PurchaseOrder order = purchaseOrderRepository
-      .findById(orderId)
+      .findByIdDetailed(orderId)
       .orElseThrow(() ->
         new EntityNotFoundException("Purchase order not found: " + orderId)
       );
@@ -273,12 +273,12 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public PurchaseOrderReceiptSummary getReceiptSummaryByOrder(Long orderId) {
     PurchaseOrder order = purchaseOrderRepository
-      .findById(orderId)
+      .findByIdDetailed(orderId)
       .orElseThrow(() ->
         new EntityNotFoundException("Purchase order not found: " + orderId)
       );
 
-    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderId(
+    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderIdWithFetch(
       orderId
     );
 
@@ -482,7 +482,7 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public List<GoodReceiptResponse> getReceiptsByOrderId(Long orderId) {
     return goodReceiptRepository
-      .findByPurchaseOrderId(orderId)
+      .findByPurchaseOrderIdWithFetch(orderId)
       .stream()
       .map(this::toResponse)
       .toList();
@@ -498,7 +498,7 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public GoodReceiptResponse getReceiptById(Long id) {
     GoodReceipt receipt = goodReceiptRepository
-      .findById(id)
+      .findByIdDetailed(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Receipt not found: " + id)
       );
@@ -849,7 +849,7 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public DispatchResponse getDispatchById(Long id) {
     DispatchNote note = dispatchNoteRepository
-      .findById(id)
+      .findByIdDetailed(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Dispatch not found: " + id)
       );

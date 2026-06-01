@@ -14,7 +14,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
-  List<StockLevel> findByProductId(Long productId);
+  List<StockLevel> findByProductId(Long productId, Pageable pageable);
 
   @Query("""
       SELECT sl FROM StockLevel sl

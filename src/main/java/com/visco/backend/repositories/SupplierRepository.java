@@ -13,13 +13,16 @@ import com.visco.backend.models.entities.Supplier;
 
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
-	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives")
+	@Query(value = "SELECT s FROM Supplier s",
+		   countQuery = "SELECT COUNT(s) FROM Supplier s")
 	Page<Supplier> findAllWithFetch(Pageable pageable);
 
-	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.active = true")
+	@Query(value = "SELECT s FROM Supplier s WHERE s.active = true",
+		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = true")
 	Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);
 
-	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.active = false")
+	@Query(value = "SELECT s FROM Supplier s WHERE s.active = false",
+		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = false")
 	Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
 	Page<Supplier> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->

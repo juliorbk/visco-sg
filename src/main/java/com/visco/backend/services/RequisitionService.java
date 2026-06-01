@@ -18,6 +18,7 @@ import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -268,11 +269,8 @@ public class RequisitionService {
       req.setCostCenter(costCenter);
     }
 
-    // OPTIMIZACIÓN: req.getItems().clear() carga toda la colección en memoria
-    // antes de borrarla. Si hay muchos ítems, mejor usar:
-    //   requisitionRepository.deleteItemsByRequisitionId(id);
-    // y luego agregar los nuevos items.
-    req.getItems().clear();
+    // Bulk DELETE en BD en lugar de clear() que carga toda la colección en memoria
+    requisitionRepository.deleteItemsByRequisitionId(id);
 
     Map<Long, Product> productMap = productRepository
       .findAllById(
@@ -281,6 +279,7 @@ public class RequisitionService {
       .stream()
       .collect(Collectors.toMap(Product::getId, p -> p));
 
+    List<RequisitionItem> newItems = new ArrayList<>();
     for (RequisitionItemRequest itemReq : request.items()) {
       Product product = productMap.get(itemReq.productId());
       if (product == null) {
@@ -294,8 +293,9 @@ public class RequisitionService {
         .quantity(itemReq.quantity())
         .notes(itemReq.notes())
         .build();
-      req.getItems().add(item);
+      newItems.add(item);
     }
+    req.setItems(newItems);
 
     req.setUpdatedAt(LocalDateTime.now());
     Requisition saved = requisitionRepository.save(req);

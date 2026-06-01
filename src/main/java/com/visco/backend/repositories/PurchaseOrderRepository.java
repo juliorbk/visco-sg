@@ -14,6 +14,17 @@ import org.springframework.data.repository.query.Param;
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
     @Query("SELECT o FROM PurchaseOrder o JOIN FETCH o.supplier JOIN FETCH o.createdBy LEFT JOIN FETCH o.approvedBy LEFT JOIN FETCH o.destinationWarehouse LEFT JOIN FETCH o.requisition")
     Page<PurchaseOrder> findAllWithFetch(Pageable pageable);
+    @Query("SELECT o FROM PurchaseOrder o "
+        + "JOIN FETCH o.supplier "
+        + "JOIN FETCH o.createdBy "
+        + "LEFT JOIN FETCH o.approvedBy "
+        + "LEFT JOIN FETCH o.destinationWarehouse "
+        + "LEFT JOIN FETCH o.requisition "
+        + "LEFT JOIN FETCH o.items i "
+        + "LEFT JOIN FETCH i.product "
+        + "WHERE o.id = :id")
+    java.util.Optional<PurchaseOrder> findByIdDetailed(@Param("id") Long id);
+
     @Query("SELECT o.status as status, COUNT(o) as count FROM PurchaseOrder o GROUP BY o.status")
     List<OrderStatusCountProjection> countByStatus();
 

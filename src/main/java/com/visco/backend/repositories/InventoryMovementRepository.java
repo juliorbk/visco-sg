@@ -16,17 +16,19 @@ import org.springframework.stereotype.Repository;
 public interface InventoryMovementRepository
   extends JpaRepository<InventoryMovement, Long>
 {
-  List<InventoryMovement> findByProductIdOrderByCreatedAtAsc(Long productId);
+  List<InventoryMovement> findByProductIdOrderByCreatedAtAsc(Long productId, Pageable pageable);
 
   List<InventoryMovement> findByProductIdAndCreatedAtBetweenOrderByCreatedAtAsc(
     Long productId,
     LocalDateTime startDate,
-    LocalDateTime endDate
+    LocalDateTime endDate,
+    Pageable pageable
   );
 
   List<InventoryMovement> findByProductIdAndTypeOrderByCreatedAtAsc(
     Long productId,
-    MovementType type
+    MovementType type,
+    Pageable pageable
   );
 
   @Query(

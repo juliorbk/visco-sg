@@ -215,7 +215,7 @@ public class InvoiceService {
 
   private Invoice findById(Long id) {
     return invoiceRepository
-      .findById(id)
+      .findByIdDetailed(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Invoice not found: " + id)
       );

@@ -46,13 +46,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   )
   Long countProductsBelowReorderPoint();
 
-  @Query(
-    "SELECT p FROM Product p " +
-      "JOIN StockLevel s ON s.product.id = p.id " +
-      "WHERE s.currentStock <= p.reorderPoint AND p.active = true " +
-      "ORDER BY s.currentStock ASC"
-  )
-  List<Product> findProductsBelowReorderPoint();
+  @Query("SELECT p FROM Product p "
+      + "JOIN StockLevel s ON s.product.id = p.id "
+      + "WHERE s.currentStock <= p.reorderPoint AND p.active = true "
+      + "ORDER BY s.currentStock ASC")
+  List<Product> findProductsBelowReorderPoint(Pageable pageable);
 
   @Query("SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s")
   BigDecimal getTotalInventoryUnits();
@@ -67,7 +65,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       "GROUP BY p.id, p.name, p.sku, p.reorderPoint, p.maxStock " +
       "ORDER BY currentStock ASC"
   )
-  List<CriticalProductProjection> findCriticalInventory();
+  List<CriticalProductProjection> findCriticalInventory(Pageable pageable);
 
   @Query(
     "SELECT p.id as productId, p.name as productName, p.sku as sku, " +
@@ -79,7 +77,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       "GROUP BY p.id, p.name, p.sku, p.reorderPoint, p.maxStock " +
       "ORDER BY currentStock DESC"
   )
-  List<CriticalProductProjection> findOverstockInventory();
+  List<CriticalProductProjection> findOverstockInventory(Pageable pageable);
 
   @Query(
     value = "SELECT nextval('product_internal_code_seq')",
@@ -175,17 +173,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Param("category") Long category
   );
 
-  @Query(
-    """
-        SELECT COUNT(p.id)
-        FROM Product p
-        WHERE (
-            SELECT COALESCE(SUM(s.currentStock), 0)
-            FROM StockLevel s
-            WHERE s.product = p
-        ) <= 0
-    """
-  )
+  @Query("SELECT COUNT(DISTINCT p.id) FROM Product p "
+      + "LEFT JOIN StockLevel s ON s.product = p "
+      + "GROUP BY p.id HAVING COALESCE(SUM(s.currentStock), 0) <= 0")
   long countProductsOutOfStock();
 
   interface CriticalProductProjection {

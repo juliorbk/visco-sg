@@ -73,19 +73,9 @@ public class WeeklyReportService {
         maxRecentOrders
       );
       List<CriticalInventoryItemDTO> critical =
-        statsService.getCriticalInventory();
+        statsService.getCriticalInventory(maxCriticalItems);
       List<CriticalInventoryItemDTO> overstock =
-        statsService.getOverstockInventory();
-
-      // Truncate critical items if needed
-      if (critical.size() > maxCriticalItems) {
-        log.warn(
-          "Critical inventory items {} exceed max {}. Truncating.",
-          critical.size(),
-          maxCriticalItems
-        );
-        critical = critical.subList(0, maxCriticalItems);
-      }
+        statsService.getOverstockInventory(maxCriticalItems);
 
       byte[] excelBytes = buildExcelFile(
         kpis,

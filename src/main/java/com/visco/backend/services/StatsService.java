@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +30,9 @@ public class StatsService {
 
   private final ProductRepository productRepository;
   private final PurchaseOrderRepository orderRepository;
+
+  @Value("${app.reports.max-records-per-export:2000}")
+  private int maxRecords;
 
   private static final DateTimeFormatter MONTH_FMT =
     DateTimeFormatter.ofPattern("yyyy-MM");
@@ -164,8 +168,13 @@ public class StatsService {
   @Cacheable(value = "dashboard", key = "'critical'")
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getCriticalInventory() {
+    return getCriticalInventory(maxRecords);
+  }
+
+  @Transactional(readOnly = true)
+  public List<CriticalInventoryItemDTO> getCriticalInventory(int limit) {
     return productRepository
-      .findCriticalInventory()
+      .findCriticalInventory(PageRequest.of(0, limit))
       .stream()
       .map(p -> {
         String severity =
@@ -188,8 +197,13 @@ public class StatsService {
   @Cacheable(value = "dashboard", key = "'overstock'")
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getOverstockInventory() {
+    return getOverstockInventory(maxRecords);
+  }
+
+  @Transactional(readOnly = true)
+  public List<CriticalInventoryItemDTO> getOverstockInventory(int limit) {
     return productRepository
-      .findOverstockInventory()
+      .findOverstockInventory(PageRequest.of(0, limit))
       .stream()
       .map(p ->
         CriticalInventoryItemDTO.builder()

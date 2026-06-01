@@ -4,6 +4,7 @@ import com.visco.backend.models.entities.Invoice;
 import com.visco.backend.models.entities.InvoiceStatus;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,4 +23,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier WHERE i.status = :status")
     Page<Invoice> findByStatusWithFetch(@Param("status") InvoiceStatus status, Pageable pageable);
+
+    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.id = :id")
+    java.util.Optional<Invoice> findByIdDetailed(@Param("id") Long id);
 }

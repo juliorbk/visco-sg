@@ -224,9 +224,10 @@ public class ReportGeneratorService {
     Long warehouseId
   ) {
     List<AlertReportDTO> alerts = new ArrayList<>();
+    int maxAlerts = Math.min(maxRecords, 2000);
 
-    var belowReorder = productRepository.findCriticalInventory();
-    var overstock = productRepository.findOverstockInventory();
+    var belowReorder = productRepository.findCriticalInventory(PageRequest.of(0, maxAlerts));
+    var overstock = productRepository.findOverstockInventory(PageRequest.of(0, maxAlerts));
 
     List<Long> allProductIds = new ArrayList<>();
     for (var p : belowReorder) allProductIds.add(p.getProductId());
@@ -239,15 +240,24 @@ public class ReportGeneratorService {
           .stream()
           .collect(Collectors.groupingBy(s -> s.getProduct().getId()));
 
+    // Pre-cargar stock por warehouse si es necesario
+    Map<Long, BigDecimal> stockByProductAndWarehouse;
+    if (warehouseId != null) {
+      stockByProductAndWarehouse = allProductIds.stream()
+        .collect(Collectors.toMap(
+          pid -> pid,
+          pid -> stockLevelRepository.getStockByProductAndWarehouse(pid, warehouseId),
+          (a, b) -> a
+        ));
+    } else {
+      stockByProductAndWarehouse = Map.of();
+    }
+
     for (var p : belowReorder) {
       if (warehouseId != null) {
-        BigDecimal whStock = stockLevelRepository.getStockByProductAndWarehouse(
-          p.getProductId(),
-          warehouseId
-        );
-        if (
-          whStock == null || whStock.compareTo(BigDecimal.ZERO) <= 0
-        ) continue;
+        BigDecimal whStock = stockByProductAndWarehouse.getOrDefault(
+          p.getProductId(), BigDecimal.ZERO);
+        if (whStock.compareTo(BigDecimal.ZERO) <= 0) continue;
       }
 
       BigDecimal currentStock =
@@ -308,13 +318,9 @@ public class ReportGeneratorService {
       if (already) continue;
 
       if (warehouseId != null) {
-        BigDecimal whStock = stockLevelRepository.getStockByProductAndWarehouse(
-          p.getProductId(),
-          warehouseId
-        );
-        if (
-          whStock == null || whStock.compareTo(BigDecimal.ZERO) <= 0
-        ) continue;
+        BigDecimal whStock = stockByProductAndWarehouse.getOrDefault(
+          p.getProductId(), BigDecimal.ZERO);
+        if (whStock.compareTo(BigDecimal.ZERO) <= 0) continue;
       }
 
       BigDecimal currentStock =
@@ -359,7 +365,7 @@ public class ReportGeneratorService {
     if (warehouseId != null) {
       warehouses = warehouseRepository.findAllById(List.of(warehouseId));
     } else {
-      warehouses = warehouseRepository.findAll();
+      warehouses = warehouseRepository.findAll(Pageable.ofSize(maxRecords)).getContent();
     }
 
     for (Warehouse w : warehouses) {

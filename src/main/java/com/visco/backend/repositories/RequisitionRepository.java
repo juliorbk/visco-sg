@@ -39,7 +39,7 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
             """)
     Optional<Requisition> findByIdDetailed(@Param("id") Long id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM RequisitionItem ri WHERE ri.requisition.id = :requisitionId")
     void deleteItemsByRequisitionId(@Param("requisitionId") Long requisitionId);
 }

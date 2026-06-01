@@ -12,5 +12,6 @@ public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
     Page<CostCenter> findAllWithFetch(Pageable pageable);
 
     // Sin paginar — para dropdowns
+    @Query("SELECT cc FROM CostCenter cc LEFT JOIN FETCH cc.management mgmt LEFT JOIN FETCH mgmt.generalManagement ORDER BY cc.fullDescription ASC")
     List<CostCenter> findAllByOrderByFullDescriptionAsc();
 }
