@@ -190,7 +190,9 @@ public class RequisitionService {
 
   @Transactional(readOnly = true)
   public Page<RequisitionResponse> getAllRequisitions(Pageable pageable) {
-    return requisitionRepository.findAllWithFetch(pageable).map(this::toResponse);
+    return requisitionRepository
+      .findAllWithFetch(pageable)
+      .map(this::toResponse);
   }
 
   @Transactional(readOnly = true)
