@@ -20,23 +20,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CostCenterController {
 
-    private final CostCenterService costCenterService;
+  private final CostCenterService costCenterService;
 
-    @GetMapping
-    @Operation(summary = "List all cost centers", description = "Returns a paginated list of all cost centers")
-    public ResponseEntity<Page<CostCenterResponseDto>> getAllCostCenters(Pageable pageable) {
-        return ResponseEntity.ok(costCenterService.getCostCenters(pageable));
-    }
+  @GetMapping
+  @Operation(
+    summary = "List all cost centers",
+    description = "Returns a paginated list of all cost centers"
+  )
+  public ResponseEntity<Page<CostCenterResponseDto>> getAllCostCenters(
+    Pageable pageable
+  ) {
+    return ResponseEntity.ok(costCenterService.getCostCenters(pageable));
+  }
 
-    @GetMapping("/all")
-    @Operation(summary = "List all cost centers (unpaged)", description = "Returns all cost centers without pagination, useful for dropdowns")
-    public ResponseEntity<List<CostCenterResponseDto>> getAllUnpaged() {
-        return ResponseEntity.ok(costCenterService.getAllCostCenters());
-    }
+  @GetMapping("/all")
+  @Operation(
+    summary = "List all cost centers (unpaged)",
+    description = "Returns all cost centers without pagination, useful for dropdowns"
+  )
+  public ResponseEntity<List<CostCenterResponseDto>> getAllUnpaged() {
+    return ResponseEntity.ok(costCenterService.getAllCostCenters());
+  }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get cost center by ID", description = "Returns a specific cost center")
-    public ResponseEntity<CostCenterResponseDto> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(costCenterService.getCostCenterById(id));
-    }
+  @GetMapping("/{id}")
+  @Operation(
+    summary = "Get cost center by ID",
+    description = "Returns a specific cost center"
+  )
+  public ResponseEntity<CostCenterResponseDto> getById(@PathVariable Long id) {
+    return ResponseEntity.ok(costCenterService.getCostCenterById(id));
+  }
 }

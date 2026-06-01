@@ -113,6 +113,8 @@ public class SecurityConfig {
           // Roles específicos
           .requestMatchers("/api/inventory/**", "/api/warehouse/dispatches/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN")
+          .requestMatchers("/api/reports/**")
+          .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           .requestMatchers("/api/dashboard/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
           // Cualquier otra petición debe estar autenticada
