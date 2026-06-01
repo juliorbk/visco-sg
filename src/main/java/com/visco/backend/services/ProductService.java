@@ -286,7 +286,7 @@ public class ProductService {
   ) {
     // Fixed: was doing one getTotalStock() + getTotalPendingStock() query per
     // product (N+1). Now uses a single batch query via toProductDTOPage().
-    Page<Product> products = productRepository.findByCategoryId(
+    Page<Product> products = productRepository.findByCategoryIdWithFetch(
       categoryId,
       pageable
     );

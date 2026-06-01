@@ -163,7 +163,7 @@ public class InvoiceService {
 
   @Transactional(readOnly = true)
   public Page<InvoiceResponse> getAllInvoices(Pageable pageable) {
-    return invoiceRepository.findAll(pageable).map(this::toResponse);
+    return invoiceRepository.findAllWithFetch(pageable).map(this::toResponse);
   }
 
   @Transactional(readOnly = true)

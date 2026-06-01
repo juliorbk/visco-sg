@@ -94,7 +94,7 @@ public class WarehouseService {
 
   @Transactional(readOnly = true)
   public Page<WarehouseDTO> getAllWarehouses(Pageable pageable) {
-    return warehouseRepository.findAll(pageable).map(WarehouseDTO::fromEntity);
+    return warehouseRepository.findAllWithFetch(pageable).map(WarehouseDTO::fromEntity);
   }
 
   @Transactional(readOnly = true)
@@ -490,7 +490,7 @@ public class WarehouseService {
 
   @Transactional(readOnly = true)
   public Page<GoodReceiptResponse> getAllOrders(Pageable pageable) {
-    return goodReceiptRepository.findAll(pageable).map(this::toResponse);
+    return goodReceiptRepository.findAllWithFetch(pageable).map(this::toResponse);
   }
 
   @Transactional(readOnly = true)
@@ -831,7 +831,7 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public Page<DispatchResponse> getAllDispatches(Pageable pageable) {
     return dispatchNoteRepository
-      .findAllByOrderByCreatedAtDesc(pageable)
+      .findAllWithFetch(pageable)
       .map(DispatchResponse::fromEntity);
   }
 

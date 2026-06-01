@@ -32,6 +32,10 @@ public interface InventoryMovementRepository
   @Query(
     """
     SELECT m FROM InventoryMovement m
+    JOIN FETCH m.product
+    LEFT JOIN FETCH m.fromWarehouse
+    LEFT JOIN FETCH m.toWarehouse
+    LEFT JOIN FETCH m.createdBy
     WHERE (:productId IS NULL OR m.product.id = :productId)
       AND (:warehouseId IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
       AND (:type IS NULL OR m.type = :type)

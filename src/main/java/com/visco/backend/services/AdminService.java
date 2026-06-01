@@ -23,7 +23,7 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public Page<UserDTO> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable).map(UserDTO::fromUser);
+        return userRepository.findAllWithFetch(pageable).map(UserDTO::fromUser);
     }
 
     @Transactional(readOnly = true)

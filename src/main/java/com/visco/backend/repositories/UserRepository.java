@@ -5,6 +5,8 @@ import com.visco.backend.models.entities.UserRole;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +18,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.costCenter WHERE u.email = :email")
     Optional<User> findByEmailWithCostCenter(@Param("email") String email);
+
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.costCenter")
+    Page<User> findAllWithFetch(Pageable pageable);
 
     @Query("SELECT u.role as role, COUNT(u) as count FROM User u GROUP BY u.role")
     List<UserRoleCountProjection> countByRole();

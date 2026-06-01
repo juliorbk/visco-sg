@@ -23,7 +23,7 @@ public class EmployeeService {
   @Transactional(readOnly = true)
   public Page<EmployeeResponseDto> getAllEmployees(Pageable pageable) {
     return employeeRepository
-      .findAllByOrderByFullNameAsc(pageable)
+      .findAllWithFetch(pageable)
       .map(EmployeeResponseDto::fromEntity);
   }
 
@@ -33,7 +33,7 @@ public class EmployeeService {
     Long costCenterId
   ) {
     return employeeRepository
-      .findByCostCenterId(costCenterId, pageable)
+      .findByCostCenterIdWithFetch(costCenterId, pageable)
       .map(EmployeeResponseDto::fromEntity);
   }
 

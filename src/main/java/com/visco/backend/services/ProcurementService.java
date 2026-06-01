@@ -293,7 +293,7 @@ public class ProcurementService {
 
   @Transactional(readOnly = true)
   public Page<PurchaseOrderResponse> getAllOrders(Pageable pageable) {
-    return purchaseOrderRepository.findAll(pageable).map(this::toResponse);
+    return purchaseOrderRepository.findAllWithFetch(pageable).map(this::toResponse);
   }
 
   @Transactional(readOnly = true)

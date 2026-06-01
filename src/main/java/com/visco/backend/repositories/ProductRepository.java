@@ -15,11 +15,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   Optional<Product> findBySku(String sku);
 
-  Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+  @Query("SELECT p FROM Product p LEFT JOIN FETCH p.supplier LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId")
+  Page<Product> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
 
   @Query(
     """
       SELECT p FROM Product p
+      LEFT JOIN FETCH p.supplier
+      LEFT JOIN FETCH p.category
       JOIN StockLevel s ON s.product.id = p.id
       WHERE s.warehouse.id = :warehouseId
     """
@@ -81,7 +84,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     """
-    SELECT p FROM Product p WHERE
+    SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
+    WHERE
       (CAST(:search AS String) IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
@@ -105,6 +111,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query(
     value = """
     SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS String) IS NULL
@@ -134,6 +142,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @Query(
     value = """
     SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS String) IS NULL

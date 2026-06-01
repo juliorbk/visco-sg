@@ -17,6 +17,9 @@ public interface GoodReceiptRepository
 
   Page<GoodReceipt> findAll(Pageable pageable);
 
+  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy")
+  Page<GoodReceipt> findAllWithFetch(Pageable pageable);
+
   @Query(value = "SELECT nextval('receipt_seq')", nativeQuery = true)
   Long getNextReceiptSequence();
 }

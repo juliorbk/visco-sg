@@ -84,7 +84,7 @@ public class SupplierService {
   // Read all Suppliers
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getAllSuppliers(Pageable pageable) {
-    return supplierRepository.findAll(pageable).map(SupplierDTO::fromSupplier);
+    return supplierRepository.findAllWithFetch(pageable).map(SupplierDTO::fromSupplier);
   }
 
   // Update Supplier
@@ -193,14 +193,14 @@ public class SupplierService {
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
     return supplierRepository
-      .findByActiveTrue(pageable)
+      .findByActiveTrueWithFetch(pageable)
       .map(SupplierDTO::fromSupplier);
   }
 
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
     return supplierRepository
-      .findByActiveFalse(pageable)
+      .findByActiveFalseWithFetch(pageable)
       .map(SupplierDTO::fromSupplier);
   }
 

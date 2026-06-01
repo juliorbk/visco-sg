@@ -19,7 +19,7 @@ public class CostCenterService {
   @Transactional(readOnly = true)
   public Page<CostCenterResponseDto> getCostCenters(Pageable pageable) {
     return costCenterRepository
-      .findAllByOrderByFullDescriptionAsc(pageable)
+      .findAllWithFetch(pageable)
       .map(CostCenterResponseDto::fromEntity);
   }
 

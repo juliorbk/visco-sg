@@ -13,11 +13,14 @@ import com.visco.backend.models.entities.Supplier;
 
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
-	Page<Supplier> findAll(Pageable pageable);
+	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives")
+	Page<Supplier> findAllWithFetch(Pageable pageable);
 
-	Page<Supplier> findByActiveTrue(Pageable pageable);
+	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.active = true")
+	Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);
 
-	Page<Supplier> findByActiveFalse(Pageable pageable);
+	@Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.active = false")
+	Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
 	Page<Supplier> findByCurrency(Currency currency, Pageable pageable); // <--- NEW <--->
 
