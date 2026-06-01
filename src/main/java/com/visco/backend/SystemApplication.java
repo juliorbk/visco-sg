@@ -2,9 +2,11 @@ package com.visco.backend;
 
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -16,5 +18,11 @@ public class SystemApplication {
 
   public static void main(String[] args) {
     SpringApplication.run(SystemApplication.class, args);
+  }
+
+  // Add this method to explicitly provide the ObjectMapper bean
+  @Bean
+  public ObjectMapper objectMapper() {
+    return new ObjectMapper();
   }
 }
