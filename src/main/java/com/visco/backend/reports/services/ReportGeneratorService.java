@@ -174,48 +174,46 @@ public class ReportGeneratorService {
     MovementType typeFilter =
       movementType != null ? MovementType.valueOf(movementType) : null;
 
-    var page = movementRepository.findMovementsWithFilters(
+    try (var stream = movementRepository.streamMovementsWithFilters(
       productId,
       warehouseId,
       typeFilter,
       startDate,
-      endDate,
-      PageRequest.ofSize(maxRecords)
-    );
+      endDate
+    )) {
+      return stream
+        .limit(maxRecords)
+        .map(m -> {
+          String wh =
+            m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : "";
+          String whDest =
+            m.getToWarehouse() != null ? m.getToWarehouse().getName() : "";
+          String ref = switch (m.getType()) {
+            case INPUT -> "Recepción";
+            case OUTPUT -> "Salida";
+            case TRANSFER -> "Transferencia";
+            case ADJUSTMENT -> "Ajuste";
+            case DISPATCH -> "Despacho";
+          };
 
-    return page
-      .getContent()
-      .stream()
-      .map(m -> {
-        String wh =
-          m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : "";
-        String whDest =
-          m.getToWarehouse() != null ? m.getToWarehouse().getName() : "";
-        String ref = switch (m.getType()) {
-          case INPUT -> "Recepción";
-          case OUTPUT -> "Salida";
-          case TRANSFER -> "Transferencia";
-          case ADJUSTMENT -> "Ajuste";
-          case DISPATCH -> "Despacho";
-        };
-
-        return MovementReportDTO.builder()
-          .id(m.getId())
-          .movementDate(m.getCreatedAt())
-          .movementType(m.getType().name())
-          .productId(m.getProduct().getId())
-          .productCode(m.getProduct().getInternalCode())
-          .sku(m.getProduct().getSku())
-          .productName(m.getProduct().getName())
-          .quantity(m.getQuantity())
-          .warehouseName(wh)
-          .warehouseDestination(whDest)
-          .userName(m.getCreatedBy() != null ? m.getCreatedBy().getName() : "")
-          .reference(ref)
-          .reason(m.getReason())
-          .build();
-      })
-      .collect(Collectors.toList());
+          return MovementReportDTO.builder()
+            .id(m.getId())
+            .movementDate(m.getCreatedAt())
+            .movementType(m.getType().name())
+            .productId(m.getProduct().getId())
+            .productCode(m.getProduct().getInternalCode())
+            .sku(m.getProduct().getSku())
+            .productName(m.getProduct().getName())
+            .quantity(m.getQuantity())
+            .warehouseName(wh)
+            .warehouseDestination(whDest)
+            .userName(m.getCreatedBy() != null ? m.getCreatedBy().getName() : "")
+            .reference(ref)
+            .reason(m.getReason())
+            .build();
+        })
+        .collect(Collectors.toList());
+    }
   }
 
   public List<AlertReportDTO> generateAlertReport(

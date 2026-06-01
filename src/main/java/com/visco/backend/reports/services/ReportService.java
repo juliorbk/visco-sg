@@ -17,7 +17,7 @@ import com.visco.backend.reports.repositories.ScheduledReportRepository;
 import com.visco.backend.reports.utils.DateUtils;
 import com.visco.backend.reports.utils.FileUtils;
 import jakarta.persistence.EntityNotFoundException;
-import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -119,8 +119,8 @@ public class ReportService {
             metadata.put("Período", DateUtils.formatDate(request.getStartDate()) + " - "
                     + DateUtils.formatDate(request.getEndDate()));
 
-            byte[] fileBytes;
-            String extension;
+            Path reportsDir = FileUtils.ensureReportsDir(storagePath);
+            Path filePath = null;
 
             switch (request.getType()) {
                 case STOCK_INVENTORY -> {
@@ -130,83 +130,76 @@ public class ReportService {
                     if (data.size() > maxRecords) {
                         data = data.subList(0, maxRecords);
                     }
-                    if (request.getFormat() == ReportFormat.PDF) {
-                        var baos = new ByteArrayOutputStream();
-                        pdfExportService.exportStockReportToPdf(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "pdf";
-                    } else {
-                        var baos = new ByteArrayOutputStream();
-                        excelExportService.exportStockReportToExcel(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "xlsx";
-                    }
                     report.setRecordCount(data.size());
+                    String ext = request.getFormat() == ReportFormat.PDF ? "pdf" : "xlsx";
+                    filePath = reportsDir.resolve(FileUtils.generateFileName(request.getName(), ext));
+                    try (var fos = new FileOutputStream(filePath.toFile())) {
+                        if (request.getFormat() == ReportFormat.PDF) {
+                            pdfExportService.exportStockReportToPdf(data, request.getName(), metadata, fos);
+                        } else {
+                            excelExportService.exportStockReportToExcel(data, request.getName(), metadata, fos);
+                        }
+                    }
+                    report.setFilePath(filePath.toString());
+                    report.setFileSize(Files.size(filePath));
                 }
                 case STOCK_MOVEMENTS -> {
                     var data = reportGeneratorService.generateMovementReport(
                             request.getStartDate(), request.getEndDate(),
                             null, request.getCategoryId(), request.getWarehouseId(), request.getSearch());
                     if (data.size() > maxRecords) data = data.subList(0, maxRecords);
-                    if (request.getFormat() == ReportFormat.PDF) {
-                        var baos = new ByteArrayOutputStream();
-                        pdfExportService.exportMovementReportToPdf(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "pdf";
-                    } else {
-                        var baos = new ByteArrayOutputStream();
-                        excelExportService.exportMovementReportToExcel(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "xlsx";
-                    }
                     report.setRecordCount(data.size());
+                    String ext = request.getFormat() == ReportFormat.PDF ? "pdf" : "xlsx";
+                    filePath = reportsDir.resolve(FileUtils.generateFileName(request.getName(), ext));
+                    try (var fos = new FileOutputStream(filePath.toFile())) {
+                        if (request.getFormat() == ReportFormat.PDF) {
+                            pdfExportService.exportMovementReportToPdf(data, request.getName(), metadata, fos);
+                        } else {
+                            excelExportService.exportMovementReportToExcel(data, request.getName(), metadata, fos);
+                        }
+                    }
+                    report.setFilePath(filePath.toString());
+                    report.setFileSize(Files.size(filePath));
                 }
                 case CRITICAL_ALERTS -> {
                     var data = reportGeneratorService.generateAlertReport(null, null, request.getWarehouseId());
-                    if (request.getFormat() == ReportFormat.PDF) {
-                        var baos = new ByteArrayOutputStream();
-                        pdfExportService.exportAlertReportToPdf(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "pdf";
-                    } else {
-                        var baos = new ByteArrayOutputStream();
-                        excelExportService.exportAlertReportToExcel(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "xlsx";
-                    }
                     report.setRecordCount(data.size());
+                    String ext = request.getFormat() == ReportFormat.PDF ? "pdf" : "xlsx";
+                    filePath = reportsDir.resolve(FileUtils.generateFileName(request.getName(), ext));
+                    try (var fos = new FileOutputStream(filePath.toFile())) {
+                        if (request.getFormat() == ReportFormat.PDF) {
+                            pdfExportService.exportAlertReportToPdf(data, request.getName(), metadata, fos);
+                        } else {
+                            excelExportService.exportAlertReportToExcel(data, request.getName(), metadata, fos);
+                        }
+                    }
+                    report.setFilePath(filePath.toString());
+                    report.setFileSize(Files.size(filePath));
                 }
                 case WAREHOUSE_ANALYSIS -> {
                     var data = reportGeneratorService.generateWarehouseAnalysis(request.getWarehouseId());
-                    if (request.getFormat() == ReportFormat.PDF) {
-                        var baos = new ByteArrayOutputStream();
-                        pdfExportService.exportWarehouseAnalysisToPdf(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "pdf";
-                    } else {
-                        var baos = new ByteArrayOutputStream();
-                        excelExportService.exportWarehouseAnalysisToExcel(data, request.getName(), metadata, baos);
-                        fileBytes = baos.toByteArray();
-                        extension = "xlsx";
-                    }
                     report.setRecordCount(data.size());
+                    String ext = request.getFormat() == ReportFormat.PDF ? "pdf" : "xlsx";
+                    filePath = reportsDir.resolve(FileUtils.generateFileName(request.getName(), ext));
+                    try (var fos = new FileOutputStream(filePath.toFile())) {
+                        if (request.getFormat() == ReportFormat.PDF) {
+                            pdfExportService.exportWarehouseAnalysisToPdf(data, request.getName(), metadata, fos);
+                        } else {
+                            excelExportService.exportWarehouseAnalysisToExcel(data, request.getName(), metadata, fos);
+                        }
+                    }
+                    report.setFilePath(filePath.toString());
+                    report.setFileSize(Files.size(filePath));
                 }
                 default -> throw new IllegalArgumentException("Tipo de reporte no soportado: " + request.getType());
             }
 
-            Path reportsDir = FileUtils.ensureReportsDir(storagePath);
-            String fileName = FileUtils.generateFileName(request.getName(), extension);
-            Path filePath = reportsDir.resolve(fileName);
-            Files.write(filePath, fileBytes);
-
-            report.setFilePath(filePath.toString());
-            report.setFileSize((long) fileBytes.length);
             report.setStatus(ReportStatus.COMPLETED);
             report.setGeneratedAt(LocalDateTime.now());
             report = reportRepository.save(report);
 
             log.info("Report generated successfully: {} ({} bytes, {} records)",
-                    fileName, fileBytes.length, report.getRecordCount());
+                    filePath.getFileName(), Files.size(filePath), report.getRecordCount());
 
         } catch (Exception e) {
             log.error("Error generating report: {}", e.getMessage(), e);
