@@ -39,13 +39,13 @@ public class ProductController {
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "20") int size,
     @RequestParam(required = false) String search,
-    @RequestParam(required = false) String category,
+    @RequestParam(required = false) Long category,
     @RequestParam(required = false) String sortBy,
     @RequestParam(defaultValue = "asc") String sortDir
   ) {
     // LIMPIEZA DE PARÁMETROS: Convertir strings vacíos a null para no romper el @Query
     if (search != null && search.trim().isEmpty()) search = null;
-    if (category != null && category.trim().isEmpty()) category = null;
+    if (category != null && category == 0) category = null;
     if (sortBy != null && sortBy.trim().isEmpty()) sortBy = null;
 
     Pageable pageable = PageRequest.of(page, size);

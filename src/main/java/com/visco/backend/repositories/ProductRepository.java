@@ -15,8 +15,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   Optional<Product> findBySku(String sku);
 
-  @Query("SELECT p FROM Product p LEFT JOIN FETCH p.supplier LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId")
-  Page<Product> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
+  @Query(
+    "SELECT p FROM Product p LEFT JOIN FETCH p.supplier LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId"
+  )
+  Page<Product> findByCategoryIdWithFetch(
+    @Param("categoryId") Long categoryId,
+    Pageable pageable
+  );
 
   @Query(
     """
@@ -98,7 +103,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   Page<Product> findBySearchAndCategory(
     Pageable pageable,
     @Param("search") String search,
-    @Param("category") String category
+    @Param("category") Long category
   );
 
   // ─────────────────────────────────────────────────────────────
@@ -119,7 +124,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
     """,
@@ -130,13 +135,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockAsc(
     Pageable pageable,
     @Param("search") String search,
-    @Param("category") String category
+    @Param("category") Long category
   );
 
   @Query(
@@ -150,7 +155,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
     """,
@@ -161,13 +166,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS String) IS NULL OR LOWER(p.category.name) = LOWER(CAST(:category AS String)))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockDesc(
     Pageable pageable,
     @Param("search") String search,
-    @Param("category") String category
+    @Param("category") Long category
   );
 
   @Query(

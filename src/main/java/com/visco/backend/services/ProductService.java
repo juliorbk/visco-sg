@@ -250,7 +250,7 @@ public class ProductService {
   public Page<ProductDTO> getProducts(
     Pageable pageable,
     String search,
-    String category,
+    Long category,
     String sortBy,
     String sortDir
   ) {
