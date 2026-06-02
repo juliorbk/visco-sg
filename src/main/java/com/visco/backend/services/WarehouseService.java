@@ -745,7 +745,7 @@ public class WarehouseService {
   @Transactional
   public DispatchResponse outputStock(
     DispatchRequest request,
-    User currentUser
+    String currentUserEmail
   ) {
     Warehouse warehouse = warehouseRepository
       .findById(request.warehouseId())
@@ -769,7 +769,11 @@ public class WarehouseService {
       );
     }
 
-    User createdBy = currentUser;
+    User createdBy = userRepository
+      .findByEmail(currentUserEmail)
+      .orElseThrow(() ->
+        new EntityNotFoundException("User not found: " + currentUserEmail)
+      );
 
     DispatchNote note = DispatchNote.builder()
       .dispatchNumber("PENDING")

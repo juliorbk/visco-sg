@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -223,10 +224,10 @@ public class WarehouseController {
   )
   public ResponseEntity<DispatchResponse> createDispatch(
     @Valid @RequestBody DispatchRequest request,
-    @AuthenticationPrincipal User currentUser
+    Authentication authentication
   ) {
     return ResponseEntity.status(HttpStatus.CREATED).body(
-      warehouseService.outputStock(request, currentUser)
+      warehouseService.outputStock(request, authentication.getName()) // name -> email
     );
   }
 
