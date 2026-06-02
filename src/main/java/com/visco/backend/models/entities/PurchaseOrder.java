@@ -94,6 +94,9 @@ public class PurchaseOrder {
   @Column(name = "approval_notes", length = 1000)
   private String approvalNotes;
 
+  @Column(name = "ship_conditions", length = 1000)
+  private String shipConditions;
+
   @Column(name = "rejection_reason", length = 1000)
   private String rejectionReason;
 
