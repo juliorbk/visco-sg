@@ -271,10 +271,15 @@ public class ProcurementService {
   }
 
   private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
-    return goodReceiptRepository.getTotalReceivedByOrder(orderId).stream()
-        .collect(Collectors.toMap(
-            GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
-            GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived));
+    return goodReceiptRepository
+      .getTotalReceivedByOrder(orderId)
+      .stream()
+      .collect(
+        Collectors.toMap(
+          GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
+          GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived
+        )
+      );
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -283,7 +288,9 @@ public class ProcurementService {
 
   @Transactional(readOnly = true)
   public Page<PurchaseOrderResponse> getAllOrders(Pageable pageable) {
-    return purchaseOrderRepository.findAllWithFetch(pageable).map(this::toResponse);
+    return purchaseOrderRepository
+      .findAllWithFetch(pageable)
+      .map(this::toResponse);
   }
 
   @Transactional(readOnly = true)

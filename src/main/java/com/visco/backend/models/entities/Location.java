@@ -41,7 +41,7 @@ public class Location {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false)
+  @Column(name = "location_code", nullable = false)
   private String code;
 
   @Column(name = "is_active", nullable = false)

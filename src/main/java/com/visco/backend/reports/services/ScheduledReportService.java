@@ -28,82 +28,119 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ScheduledReportService {
 
-    private final ScheduledReportRepository scheduledReportRepository;
-    private final ReportService reportService;
-    private final JavaMailSender mailSender;
+  private final ScheduledReportRepository scheduledReportRepository;
+  private final ReportService reportService;
+  private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String senderEmail;
+  @Value("${spring.mail.username}")
+  private String senderEmail;
 
-    @Scheduled(cron = "0 0 * * * *")
-    @Transactional
-    public void executeScheduledReports() {
-        log.info("Checking for scheduled reports to execute...");
-        List<ScheduledReport> due = scheduledReportRepository
-                .findByEnabledAndNextExecutionAtLessThanEqual(true, LocalDateTime.now());
+  @Scheduled(cron = "0 0 * * * *")
+  @Transactional
+  public void executeScheduledReports() {
+    log.info("Checking for scheduled reports to execute...");
+    List<ScheduledReport> due =
+      scheduledReportRepository.findByEnabledAndNextExecutionAtLessThanEqual(
+        true,
+        LocalDateTime.now()
+      );
 
-        for (ScheduledReport sr : due) {
-            try {
-                log.info("Executing scheduled report: {} (ID: {})", sr.getName(), sr.getId());
+    for (ScheduledReport sr : due) {
+      try {
+        log.info(
+          "Executing scheduled report: {} (ID: {})",
+          sr.getName(),
+          sr.getId()
+        );
 
-                var reportDTO = reportService.executeScheduledReport(sr.getId());
+        var reportDTO = reportService.executeScheduledReport(sr.getId());
 
-                if (reportDTO.getStatus() == ReportStatus.COMPLETED
-                        && sr.getRecipientEmails() != null && !sr.getRecipientEmails().isBlank()) {
-                    List<String> emails = Arrays.asList(sr.getRecipientEmails().split(","));
-                    sendReportByEmail(reportDTO, emails);
-                }
-
-                LocalDateTime nextExec = DateUtils.calculateNextExecution(
-                        sr.getScheduleTime(), sr.getScheduleDayOfWeek(), sr.getScheduleDay());
-                sr.setNextExecutionAt(nextExec);
-                sr.setLastExecutedAt(LocalDateTime.now());
-                scheduledReportRepository.save(sr);
-
-                log.info("Scheduled report {} executed successfully, next execution: {}",
-                        sr.getName(), nextExec);
-            } catch (Exception e) {
-                log.error("Error executing scheduled report {}: {}", sr.getName(), e.getMessage(), e);
-            }
+        if (
+          reportDTO.getStatus() == ReportStatus.COMPLETED &&
+          sr.getRecipientEmails() != null &&
+          !sr.getRecipientEmails().isBlank()
+        ) {
+          List<String> emails = Arrays.asList(
+            sr.getRecipientEmails().split(",")
+          );
+          sendReportByEmail(reportDTO, emails);
         }
+
+        LocalDateTime nextExec = DateUtils.calculateNextExecution(
+          sr.getScheduleTime(),
+          sr.getScheduleDayOfWeek(),
+          sr.getScheduleDay()
+        );
+        sr.setNextExecutionAt(nextExec);
+        sr.setLastExecutedAt(LocalDateTime.now());
+        scheduledReportRepository.save(sr);
+
+        log.info(
+          "Scheduled report {} executed successfully, next execution: {}",
+          sr.getName(),
+          nextExec
+        );
+      } catch (Exception e) {
+        log.error(
+          "Error executing scheduled report {}: {}",
+          sr.getName(),
+          e.getMessage(),
+          e
+        );
+      }
     }
+  }
 
-    private void sendReportByEmail(ReportDTO reportDTO, List<String> emails) {
-        for (String email : emails) {
-            email = email.trim();
-            if (email.isBlank()) continue;
-            try {
-                MimeMessage msg = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-                helper.setFrom(senderEmail);
-                helper.setTo(email);
-                helper.setSubject("Reporte: " + reportDTO.getName() + " - "
-                        + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                helper.setText(String.format(
-                        "Adjunto encontrará el reporte '%s' generado automáticamente.<br><br>" +
-                        "Tipo: %s<br>Registros: %s<br>Fecha: %s",
-                        reportDTO.getName(),
-                        reportDTO.getType().getDisplayName(),
-                        reportDTO.getRecordCount() != null ? reportDTO.getRecordCount() : "N/A",
-                        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                ), true);
+  private void sendReportByEmail(ReportDTO reportDTO, List<String> emails) {
+    for (String email : emails) {
+      email = email.trim();
+      if (email.isBlank()) continue;
+      try {
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+        helper.setFrom(senderEmail);
+        helper.setTo(email);
+        helper.setSubject(
+          "Reporte: " +
+            reportDTO.getName() +
+            " - " +
+            java.time.LocalDate.now().format(
+              java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            )
+        );
+        helper.setText(
+          String.format(
+            "Adjunto encontrará el reporte '%s' generado automáticamente.<br><br>" +
+              "Tipo: %s<br>Registros: %s<br>Fecha: %s",
+            reportDTO.getName(),
+            reportDTO.getType().getDisplayName(),
+            reportDTO.getRecordCount() != null
+              ? reportDTO.getRecordCount()
+              : "N/A",
+            java.time.LocalDate.now().format(
+              java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            )
+          ),
+          true
+        );
 
-                if (reportDTO.getFilePath() != null) {
-                    File file = Path.of(reportDTO.getFilePath()).toFile();
-                    if (file.exists()) {
-                        String ext = reportDTO.getFormat() == ReportFormat.PDF ? ".pdf" : ".xlsx";
-                        helper.addAttachment(
-                                reportDTO.getName().replaceAll("[^a-zA-Z0-9\\-_]", "_") + ext,
-                                new FileSystemResource(file));
-                    }
-                }
-
-                mailSender.send(msg);
-                log.info("Report sent to {}", email);
-            } catch (MessagingException e) {
-                log.error("Failed to send report to {}: {}", email, e.getMessage());
-            }
+        if (reportDTO.getFilePath() != null) {
+          File file = Path.of(reportDTO.getFilePath()).toFile();
+          if (file.exists()) {
+            String ext =
+              reportDTO.getFormat() == ReportFormat.PDF ? ".pdf" : ".xlsx";
+            helper.addAttachment(
+              reportDTO.getName().replaceAll("[^a-zA-Z0-9\\-_]", "_") + ext,
+              new FileSystemResource(file)
+            );
+          }
         }
-    }
 
+        mailSender.send(msg);
+        log.info("Report sent to {}", email);
+      } catch (MessagingException e) {
+        log.error("Failed to send report to {}: {}", email, e.getMessage());
+      }
+    }
+  }
 }

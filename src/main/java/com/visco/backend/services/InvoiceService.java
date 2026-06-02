@@ -207,10 +207,15 @@ public class InvoiceService {
   }
 
   private Map<Long, BigDecimal> getTotalReceivedByProduct(Long orderId) {
-    return goodReceiptRepository.getTotalReceivedByOrder(orderId).stream()
-        .collect(Collectors.toMap(
-            GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
-            GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived));
+    return goodReceiptRepository
+      .getTotalReceivedByOrder(orderId)
+      .stream()
+      .collect(
+        Collectors.toMap(
+          GoodReceiptRepository.ReceivedQuantityProjection::getProductId,
+          GoodReceiptRepository.ReceivedQuantityProjection::getTotalReceived
+        )
+      );
   }
 
   private Invoice findById(Long id) {

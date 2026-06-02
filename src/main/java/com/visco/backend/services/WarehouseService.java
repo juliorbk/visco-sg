@@ -278,9 +278,8 @@ public class WarehouseService {
         new EntityNotFoundException("Purchase order not found: " + orderId)
       );
 
-    List<GoodReceipt> receipts = goodReceiptRepository.findByPurchaseOrderIdWithFetch(
-      orderId
-    );
+    List<GoodReceipt> receipts =
+      goodReceiptRepository.findByPurchaseOrderIdWithFetch(orderId);
 
     Map<Long, BigDecimal> totalReceived = new HashMap<>();
     for (GoodReceipt receipt : receipts) {
