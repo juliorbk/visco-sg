@@ -38,12 +38,12 @@ public class EmployeeService {
   }
 
   @Transactional(readOnly = true)
-  public EmployeeResponseDto getEmployeeById(Long id) {
+  public EmployeeResponseDto getEmployeeByDocument(String document) {
     return employeeRepository
-      .findById(id)
+      .findByDocumentNumber(document)
       .map(EmployeeResponseDto::fromEntity)
       .orElseThrow(() ->
-        new EntityNotFoundException("Employee not found: " + id)
+        new EntityNotFoundException("Employee not found: " + document)
       );
   }
 
@@ -75,13 +75,13 @@ public class EmployeeService {
 
   @Transactional
   public EmployeeResponseDto updateEmployee(
-    Long id,
+    String document,
     EmployeeRequestDto request
   ) {
     Employee employee = employeeRepository
-      .findById(id)
+      .findByDocumentNumber(document)
       .orElseThrow(() ->
-        new EntityNotFoundException("Employee not found: " + id)
+        new EntityNotFoundException("Employee not found: " + document)
       );
 
     employee.setFullName(request.fullName());
@@ -108,22 +108,22 @@ public class EmployeeService {
   }
 
   @Transactional
-  public void deactivateEmployee(Long id) {
+  public void deactivateEmployee(String document) {
     Employee employee = employeeRepository
-      .findById(id)
+      .findByDocumentNumber(document)
       .orElseThrow(() ->
-        new EntityNotFoundException("Employee not found: " + id)
+        new EntityNotFoundException("Employee not found: " + document)
       );
     employee.setActive(false);
     employeeRepository.save(employee);
   }
 
   @Transactional
-  public void activateEmployee(Long id) {
+  public void activateEmployee(String document) {
     Employee employee = employeeRepository
-      .findById(id)
+      .findByDocumentNumber(document)
       .orElseThrow(() ->
-        new EntityNotFoundException("Employee not found: " + id)
+        new EntityNotFoundException("Employee not found: " + document)
       );
     employee.setActive(true);
     employeeRepository.save(employee);

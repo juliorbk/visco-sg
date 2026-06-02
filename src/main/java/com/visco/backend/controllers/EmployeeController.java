@@ -21,49 +21,62 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/employees")
-@Tag(name = "Employees", description = "Employee management endpoints (admin only)")
+@Tag(
+  name = "Employees",
+  description = "Employee management endpoints (admin only)"
+)
 @RequiredArgsConstructor
 public class EmployeeController {
 
   private final EmployeeService employeeService;
 
   @GetMapping
-  @Operation(summary = "List all employees", description = "Returns a paginated list of all employees")
-  public ResponseEntity<Page<EmployeeResponseDto>> getAllEmployees(Pageable pageable) {
+  @Operation(
+    summary = "List all employees",
+    description = "Returns a paginated list of all employees"
+  )
+  public ResponseEntity<Page<EmployeeResponseDto>> getAllEmployees(
+    Pageable pageable
+  ) {
     return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
   }
 
-  @GetMapping("/{id}")
-  @Operation(summary = "Get employee by ID")
-  public ResponseEntity<EmployeeResponseDto> getEmployeeById(@PathVariable Long id) {
-    return ResponseEntity.ok(employeeService.getEmployeeById(id));
+  @GetMapping("/{document}")
+  @Operation(summary = "Get employee by document")
+  public ResponseEntity<EmployeeResponseDto> getEmployeeByDocument(
+    @PathVariable String document
+  ) {
+    return ResponseEntity.ok(employeeService.getEmployeeByDocument(document));
   }
 
   @PostMapping
   @Operation(summary = "Create employee")
-  public ResponseEntity<EmployeeResponseDto> createEmployee(@Valid @RequestBody EmployeeRequestDto request) {
+  public ResponseEntity<EmployeeResponseDto> createEmployee(
+    @Valid @RequestBody EmployeeRequestDto request
+  ) {
     return ResponseEntity.ok(employeeService.createEmployee(request));
   }
 
-  @PutMapping("/{id}")
+  @PutMapping("/{document}")
   @Operation(summary = "Update employee")
   public ResponseEntity<EmployeeResponseDto> updateEmployee(
-      @PathVariable Long id,
-      @Valid @RequestBody EmployeeRequestDto request) {
-    return ResponseEntity.ok(employeeService.updateEmployee(id, request));
+    @PathVariable String document,
+    @Valid @RequestBody EmployeeRequestDto request
+  ) {
+    return ResponseEntity.ok(employeeService.updateEmployee(document, request));
   }
 
-  @PatchMapping("/{id}/deactivate")
+  @PatchMapping("/{document}/deactivate")
   @Operation(summary = "Deactivate employee")
-  public ResponseEntity<Void> deactivateEmployee(@PathVariable Long id) {
-    employeeService.deactivateEmployee(id);
+  public ResponseEntity<Void> deactivateEmployee(@PathVariable String document) {
+    employeeService.deactivateEmployee(document);
     return ResponseEntity.noContent().build();
   }
 
-  @PatchMapping("/{id}/activate")
+  @PatchMapping("/{document}/activate")
   @Operation(summary = "Activate employee")
-  public ResponseEntity<Void> activateEmployee(@PathVariable Long id) {
-    employeeService.activateEmployee(id);
+  public ResponseEntity<Void> activateEmployee(@PathVariable String document) {
+    employeeService.activateEmployee(document);
     return ResponseEntity.noContent().build();
   }
 }
