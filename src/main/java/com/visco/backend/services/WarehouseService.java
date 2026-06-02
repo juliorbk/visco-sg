@@ -46,6 +46,7 @@ import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -742,7 +743,10 @@ public class WarehouseService {
   }
 
   @Transactional
-  public DispatchResponse outputStock(DispatchRequest request) {
+  public DispatchResponse outputStock(
+    DispatchRequest request,
+    User currentUser
+  ) {
     Warehouse warehouse = warehouseRepository
       .findById(request.warehouseId())
       .orElseThrow(() ->
@@ -765,9 +769,7 @@ public class WarehouseService {
       );
     }
 
-    User createdBy = userRepository
-      .findById(request.createdById())
-      .orElseThrow(() -> new EntityNotFoundException("User not found"));
+    User createdBy = currentUser;
 
     DispatchNote note = DispatchNote.builder()
       .dispatchNumber("PENDING")

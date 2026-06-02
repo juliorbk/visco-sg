@@ -16,14 +16,18 @@ import org.springframework.stereotype.Repository;
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   List<StockLevel> findByProductId(Long productId, Pageable pageable);
 
-  @Query("""
-      SELECT sl FROM StockLevel sl
-      JOIN FETCH sl.product p
-      LEFT JOIN FETCH p.category
-      JOIN FETCH sl.warehouse
-      WHERE sl.product.id IN :productIds
-      """)
-  List<StockLevel> findByProductIdIn(@Param("productIds") List<Long> productIds);
+  @Query(
+    """
+    SELECT sl FROM StockLevel sl
+    JOIN FETCH sl.product p
+    LEFT JOIN FETCH p.category
+    JOIN FETCH sl.warehouse
+    WHERE sl.product.id IN :productIds
+    """
+  )
+  List<StockLevel> findByProductIdIn(
+    @Param("productIds") List<Long> productIds
+  );
 
   Optional<StockLevel> findByProductIdAndWarehouseId(
     Long productId,
@@ -96,6 +100,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
       OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+      OR LOWER(p.sapCode) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
@@ -144,12 +149,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // ─────────────────────────────────────────────────────────────
 
   @Modifying
-  @Query(value = """
+  @Query(
+    value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
     VALUES (:productId, :warehouseId, :quantity, 0)
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
     DO UPDATE SET current_stock = stock_levels.current_stock + :quantity
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true
+  )
   int addCurrentStockAtomic(
     @Param("productId") Long productId,
     @Param("warehouseId") Long warehouseId,
@@ -157,12 +165,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   @Modifying
-  @Query(value = """
+  @Query(
+    value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
     VALUES (:productId, :warehouseId, 0, :quantity)
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
     DO UPDATE SET pending_stock = stock_levels.pending_stock + :quantity
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true
+  )
   int addPendingStockAtomic(
     @Param("productId") Long productId,
     @Param("warehouseId") Long warehouseId,
@@ -170,12 +181,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   @Modifying
-  @Query(value = """
+  @Query(
+    value = """
     UPDATE stock_levels
     SET current_stock = GREATEST(current_stock - :quantity, 0)
     WHERE product_id = :productId AND warehouse_id = :warehouseId
       AND current_stock >= :quantity
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true
+  )
   int subtractCurrentStockAtomic(
     @Param("productId") Long productId,
     @Param("warehouseId") Long warehouseId,
@@ -183,11 +197,14 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   @Modifying
-  @Query(value = """
+  @Query(
+    value = """
     UPDATE stock_levels
     SET pending_stock = GREATEST(pending_stock - :quantity, 0)
     WHERE product_id = :productId AND warehouse_id = :warehouseId
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true
+  )
   int subtractPendingStockAtomic(
     @Param("productId") Long productId,
     @Param("warehouseId") Long warehouseId,
@@ -195,12 +212,15 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   @Modifying
-  @Query(value = """
+  @Query(
+    value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
     VALUES (:productId, :warehouseId, :newStock, 0)
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
     DO UPDATE SET current_stock = :newStock
-    """, nativeQuery = true)
+    """,
+    nativeQuery = true
+  )
   int setCurrentStockAtomic(
     @Param("productId") Long productId,
     @Param("warehouseId") Long warehouseId,
