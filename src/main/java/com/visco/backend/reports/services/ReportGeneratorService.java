@@ -174,13 +174,15 @@ public class ReportGeneratorService {
     MovementType typeFilter =
       movementType != null ? MovementType.valueOf(movementType) : null;
 
-    try (var stream = movementRepository.streamMovementsWithFilters(
-      productId,
-      warehouseId,
-      typeFilter,
-      startDate,
-      endDate
-    )) {
+    try (
+      var stream = movementRepository.streamMovementsWithFilters(
+        productId,
+        warehouseId,
+        typeFilter,
+        startDate,
+        endDate
+      )
+    ) {
       return stream
         .limit(maxRecords)
         .map(m -> {
@@ -189,11 +191,11 @@ public class ReportGeneratorService {
           String whDest =
             m.getToWarehouse() != null ? m.getToWarehouse().getName() : "";
           String ref = switch (m.getType()) {
-            case INPUT -> "Recepción";
-            case OUTPUT -> "Salida";
-            case TRANSFER -> "Transferencia";
-            case ADJUSTMENT -> "Ajuste";
-            case DISPATCH -> "Despacho";
+            case INPUT -> "Receipt";
+            case OUTPUT -> "Output";
+            case TRANSFER -> "Transfer";
+            case ADJUSTMENT -> "Adjustment";
+            case DISPATCH -> "Dispatch";
           };
 
           return MovementReportDTO.builder()
@@ -207,7 +209,9 @@ public class ReportGeneratorService {
             .quantity(m.getQuantity())
             .warehouseName(wh)
             .warehouseDestination(whDest)
-            .userName(m.getCreatedBy() != null ? m.getCreatedBy().getName() : "")
+            .userName(
+              m.getCreatedBy() != null ? m.getCreatedBy().getName() : ""
+            )
             .reference(ref)
             .reason(m.getReason())
             .build();
@@ -224,8 +228,12 @@ public class ReportGeneratorService {
     List<AlertReportDTO> alerts = new ArrayList<>();
     int maxAlerts = Math.min(maxRecords, 2000);
 
-    var belowReorder = productRepository.findCriticalInventory(PageRequest.of(0, maxAlerts));
-    var overstock = productRepository.findOverstockInventory(PageRequest.of(0, maxAlerts));
+    var belowReorder = productRepository.findCriticalInventory(
+      PageRequest.of(0, maxAlerts)
+    );
+    var overstock = productRepository.findOverstockInventory(
+      PageRequest.of(0, maxAlerts)
+    );
 
     List<Long> allProductIds = new ArrayList<>();
     for (var p : belowReorder) allProductIds.add(p.getProductId());
@@ -241,12 +249,19 @@ public class ReportGeneratorService {
     // Pre-cargar stock por warehouse si es necesario
     Map<Long, BigDecimal> stockByProductAndWarehouse;
     if (warehouseId != null) {
-      stockByProductAndWarehouse = allProductIds.stream()
-        .collect(Collectors.toMap(
-          pid -> pid,
-          pid -> stockLevelRepository.getStockByProductAndWarehouse(pid, warehouseId),
-          (a, b) -> a
-        ));
+      stockByProductAndWarehouse = allProductIds
+        .stream()
+        .collect(
+          Collectors.toMap(
+            pid -> pid,
+            pid ->
+              stockLevelRepository.getStockByProductAndWarehouse(
+                pid,
+                warehouseId
+              ),
+            (a, b) -> a
+          )
+        );
     } else {
       stockByProductAndWarehouse = Map.of();
     }
@@ -254,7 +269,9 @@ public class ReportGeneratorService {
     for (var p : belowReorder) {
       if (warehouseId != null) {
         BigDecimal whStock = stockByProductAndWarehouse.getOrDefault(
-          p.getProductId(), BigDecimal.ZERO);
+          p.getProductId(),
+          BigDecimal.ZERO
+        );
         if (whStock.compareTo(BigDecimal.ZERO) <= 0) continue;
       }
 
@@ -317,7 +334,9 @@ public class ReportGeneratorService {
 
       if (warehouseId != null) {
         BigDecimal whStock = stockByProductAndWarehouse.getOrDefault(
-          p.getProductId(), BigDecimal.ZERO);
+          p.getProductId(),
+          BigDecimal.ZERO
+        );
         if (whStock.compareTo(BigDecimal.ZERO) <= 0) continue;
       }
 
@@ -363,7 +382,9 @@ public class ReportGeneratorService {
     if (warehouseId != null) {
       warehouses = warehouseRepository.findAllById(List.of(warehouseId));
     } else {
-      warehouses = warehouseRepository.findAll(Pageable.ofSize(maxRecords)).getContent();
+      warehouses = warehouseRepository
+        .findAll(Pageable.ofSize(maxRecords))
+        .getContent();
     }
 
     for (Warehouse w : warehouses) {
