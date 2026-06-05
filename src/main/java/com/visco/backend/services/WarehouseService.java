@@ -125,7 +125,9 @@ public class WarehouseService {
     if (
       order.getStatus() == PurchaseOrderStatus.DELIVERED ||
       order.getStatus() == PurchaseOrderStatus.CANCELLED ||
-      order.getStatus() == PurchaseOrderStatus.REJECTED
+      order.getStatus() == PurchaseOrderStatus.REJECTED ||
+      order.getStatus() == PurchaseOrderStatus.PENDING ||
+      order.getStatus() == PurchaseOrderStatus.AWAITING_APPROVAL
     ) {
       throw new IllegalStateException(
         "Cannot receive goods for an order with status: " + order.getStatus()
