@@ -75,8 +75,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Query(
     "SELECT s.warehouse.id                 as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
-      "       SUM(CASE WHEN s.currentStock > 0 THEN 1 ELSE 0 END) as currentStock, " +
-      "       SUM(CASE WHEN s.pendingStock > 0 THEN 1 ELSE 0 END) as pendingStock " +
+      "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
+      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
       "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
   )
   List<GlobalStockProjection> getGlobalStockByWarehouse();
@@ -99,8 +99,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (CAST(:search AS string) IS NULL
       OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
-      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
-      OR LOWER(p.sapCode) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sapCode) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
@@ -108,7 +108,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (CAST(:search AS string) IS NULL
       OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
-      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+      OR LOWER(CAST(p.internalCode AS string)) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(p.sapCode) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """
   )
   Page<StockLevel> findStockWithProductByWarehouse(
@@ -237,7 +238,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   interface GlobalStockProjection {
     Long getWarehouseId();
     String getWarehouseName();
-    Long getCurrentStock();
-    Long getPendingStock();
+    BigDecimal getCurrentStock();
+    BigDecimal getPendingStock();
   }
 }
