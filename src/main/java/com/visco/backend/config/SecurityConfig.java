@@ -143,9 +143,7 @@ public class SecurityConfig {
     return email ->
       userRepository
         .findByEmail(email)
-        .orElseThrow(() ->
-          new UsernameNotFoundException("Usuario no encontrado: " + email)
-        );
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
   @Bean

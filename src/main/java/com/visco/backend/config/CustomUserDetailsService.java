@@ -25,11 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     // 1. Buscar el usuario en tu base de datos usando tu repositorio
     User user = userRepository
       .findByEmail(email) // Asegúrate de tener este método en tu UserRepository
-      .orElseThrow(() ->
-        new UsernameNotFoundException(
-          "Usuario no encontrado con el email: " + email
-        )
-      );
+      .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     // 2. Mapear el rol de tu entidad a las "Authorities" de Spring Security.
     // Basado en tu estructura, asumo que tienes un UserRole. Spring Security
