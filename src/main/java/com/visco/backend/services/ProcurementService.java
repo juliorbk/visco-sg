@@ -409,6 +409,11 @@ public class ProcurementService {
       )
       .toList();
 
+    BigDecimal subtotal = itemResponses
+      .stream()
+      .map(PurchaseOrderItemResponse::subtotal)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
+
     Warehouse wh = order.getDestinationWarehouse();
     return new PurchaseOrderResponse(
       order.getId(),
@@ -428,6 +433,9 @@ public class ProcurementService {
       wh != null ? wh.getId() : null,
       wh != null ? wh.getName() : null,
       order.getLeadTime() != null ? order.getLeadTime() : null,
+      subtotal,
+      PurchaseOrderResponse.SupplierInfo.fromEntity(order.getSupplier()),
+      PurchaseOrderResponse.WarehouseInfo.fromEntity(wh),
       itemResponses
     );
   }

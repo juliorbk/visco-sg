@@ -386,7 +386,8 @@ public class WarehouseService {
       receipt.getReceivedBy() != null
         ? receipt.getReceivedBy().getName()
         : null,
-      itemResponses
+      itemResponses,
+      GoodReceiptResponse.PurchaseOrderSummary.fromEntity(order)
     );
   }
 
@@ -659,7 +660,8 @@ public class WarehouseService {
       receipt.getReceivedBy() != null
         ? receipt.getReceivedBy().getName()
         : null,
-      itemResponses
+      itemResponses,
+      GoodReceiptResponse.PurchaseOrderSummary.fromEntity(receipt.getPurchaseOrder())
     );
   }
 

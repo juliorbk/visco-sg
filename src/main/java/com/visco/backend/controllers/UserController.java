@@ -96,7 +96,10 @@ public class UserController {
 		// Last-SUPERADMIN guard. We only need to enforce this when the
 		// target user IS a SUPERADMIN, so load the user first.
 		UserDTO target = adminService.getUserById(id);
-		if (target.role().name().equals("SUPERADMIN") && adminService.countSuperadmins() <= 1) {
+		if (
+			"Superadmin".equalsIgnoreCase(target.getRole().name()) &&
+			adminService.countSuperadmins() <= 1
+		) {
 			throw new IllegalStateException(
 				"Refusing to delete the last SUPERADMIN. Promote another user " +
 				"to SUPERADMIN before deleting this one."
