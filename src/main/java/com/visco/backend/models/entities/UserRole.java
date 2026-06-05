@@ -5,5 +5,6 @@ public enum UserRole {
     MANAGER,
     ADMIN,
     PROCUREMENT,
-    WAREHOUSEMAN
+    WAREHOUSEMAN,
+    SUPERADMIN
 }

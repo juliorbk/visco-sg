@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +38,7 @@ public class PurchaseOrderItem {
   @JoinColumn(name = "purchase_order_id", nullable = false)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonBackReference("purchase-order-items")
   private PurchaseOrder purchaseOrder;
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -45,9 +47,9 @@ public class PurchaseOrderItem {
   @ToString.Exclude
   private Product product;
 
-  @Column(nullable = false)
-  private Integer quantity; // Cantidad a comprar
+  @Column(nullable = false, precision = 18, scale = 4)
+  private BigDecimal quantity; // Cantidad a comprar (admite fracciones)
 
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal unitPrice; // Precio acordado con el proveedor
 }

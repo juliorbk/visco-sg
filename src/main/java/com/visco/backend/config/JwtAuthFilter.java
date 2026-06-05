@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,7 +26,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-  private static final String JWT_COOKIE_NAME = "visco_auth_token";
+  @Value("${jwt.cookie.name:visco_auth_token}")
+  private String jwtCookieName;
 
   private final JwtService jwtService;
   // 1. Inyectamos tu nuevo servicio
@@ -96,7 +98,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
     if (request.getCookies() != null) {
       for (Cookie cookie : request.getCookies()) {
-        if (JWT_COOKIE_NAME.equals(cookie.getName())) {
+        if (jwtCookieName.equals(cookie.getName())) {
           String value = cookie.getValue();
           if (value != null && !value.isBlank()) {
             return value;

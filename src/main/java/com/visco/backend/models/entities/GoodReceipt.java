@@ -17,6 +17,7 @@ import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -62,8 +63,11 @@ public class GoodReceipt {
   @Column(nullable = false)
   private boolean closed;
 
-  @Column(nullable = false)
-  private Long destinationWarehouseId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "destination_warehouse_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Warehouse destinationWarehouse;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "received_by_id")
@@ -83,6 +87,7 @@ public class GoodReceipt {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("good-receipt-items")
   private List<GoodReceiptItem> items = new ArrayList<>();
 
   @PrePersist

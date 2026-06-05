@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -19,6 +20,7 @@ import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +29,16 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "requisitions")
+@Table(
+  name = "requisitions",
+  indexes = {
+    @Index(name = "idx_req_requested_by", columnList = "requested_by_id"),
+    @Index(name = "idx_req_cost_center", columnList = "cost_center_id"),
+    @Index(name = "idx_req_approved_by", columnList = "approved_by_id"),
+    @Index(name = "idx_req_status", columnList = "status"),
+    @Index(name = "idx_req_created_at", columnList = "created_at"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -93,11 +104,14 @@ public class Requisition {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("requisition-items")
   private List<RequisitionItem> items = new ArrayList<>();
 
   @PrePersist
   protected void onCreate() {
-    createdAt = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now();
+    createdAt = now;
+    updatedAt = now;
     if (status == null) status = RequisitionStatus.DRAFT;
   }
 

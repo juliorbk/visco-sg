@@ -5,7 +5,9 @@ import com.visco.backend.models.dtos.LoginRequest;
 import com.visco.backend.models.dtos.UserDTO;
 import com.visco.backend.models.dtos.UserRegisterRequest;
 import com.visco.backend.models.entities.CostCenter;
+import com.visco.backend.models.entities.InviteToken;
 import com.visco.backend.models.entities.User;
+import com.visco.backend.models.entities.UserRole;
 import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,21 +32,27 @@ public class AuthService {
   private final JwtService jwtService;
   private final EmailService emailService;
   private final AuthenticationManager authenticationManager;
+  private final InviteTokenService inviteTokenService;
 
   @Transactional
   public AuthResponse register(UserRegisterRequest request) {
     if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-      log.warn(
-        "Registro fallido: Email ya registrado ({})",
-        request.getEmail()
-      );
+      log.warn("Registro fallido: Email ya registrado");
       throw new IllegalArgumentException("Email address is already in use");
     }
 
+    InviteToken invite = inviteTokenService.findByToken(request.getInviteToken());
+    UserRole intendedRole;
+    try {
+      intendedRole = UserRole.valueOf(invite.getIntendedRole());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException("Invite token has an invalid role configured");
+    }
+
     CostCenter costCenter = null;
-    if (request.getCostCenterId() != null) {
+    if (invite.getCostCenterId() != null) {
       costCenter = costCenterRepository
-        .findById(request.getCostCenterId())
+        .findById(invite.getCostCenterId())
         .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
     }
 
@@ -52,13 +60,14 @@ public class AuthService {
       .name(request.getName())
       .email(request.getEmail())
       .password(passwordEncoder.encode(request.getPassword()))
-      .role(request.getRole())
+      .role(intendedRole)
       .costCenter(costCenter)
       .active(true)
       .build();
 
     userRepository.save(newUser);
-    log.info("Registro exitoso para usuario ID: {}", newUser.getId());
+    inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
+    log.info("Registro exitoso: userId={}", newUser.getId());
     /* 
         try {
             emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
@@ -74,7 +83,7 @@ public class AuthService {
   }
 
   public AuthResponse login(LoginRequest request) {
-    log.info("Intento de login para el usuario: {}", request.getEmail());
+    log.info("Intento de login");
 
     try {
       authenticationManager.authenticate(
@@ -83,9 +92,8 @@ public class AuthService {
           request.getPassword()
         )
       );
-      log.info("Autenticacion exitosa para: {}", request.getEmail());
     } catch (BadCredentialsException e) {
-      log.warn("Credenciales invalidas para: {}", request.getEmail());
+      log.warn("Credenciales invalidas");
       throw e;
     }
 
@@ -93,13 +101,13 @@ public class AuthService {
       .findByEmail(request.getEmail())
       .orElseThrow(() -> {
         log.error(
-          "Inconsistencia: Usuario autenticado pero no encontrado en DB ({})",
-          request.getEmail()
+          "Inconsistencia: Usuario autenticado pero no encontrado en DB"
         );
         return new BadCredentialsException("Invalid credentials");
       });
 
-    log.debug("Generando JWT para usuario: {}", request.getEmail());
+    log.info("Autenticacion exitosa: userId={}", user.getId());
+    log.debug("Generando JWT para usuario");
 
     // Retornamos la info completa para que el controlador decida qué hacer con ella
     return AuthResponse.builder()
@@ -122,9 +130,7 @@ public class AuthService {
   public UserDTO getCurrentUser(String email) {
     User user = userRepository
       .findByEmailWithCostCenter(email)
-      .orElseThrow(() ->
-        new UsernameNotFoundException("User not found: " + email)
-      );
+      .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     return UserDTO.fromUser(user);
   }
 }

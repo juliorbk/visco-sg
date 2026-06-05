@@ -107,7 +107,7 @@ public class InvoiceService {
           )
         );
 
-      BigDecimal poQty = BigDecimal.valueOf(poItem.getQuantity());
+      BigDecimal poQty = poItem.getQuantity();
       BigDecimal receivedQty = receivedQtys.getOrDefault(
         itemReq.productId(),
         BigDecimal.ZERO
@@ -178,6 +178,7 @@ public class InvoiceService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse markAsPaid(Long id, LocalDate paymentDate) {
     Invoice invoice = findById(id);
     if (invoice.getStatus() == InvoiceStatus.PAID) {
@@ -196,6 +197,7 @@ public class InvoiceService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse cancelInvoice(Long id) {
     Invoice invoice = findById(id);
     if (invoice.getStatus() == InvoiceStatus.PAID) {

@@ -124,7 +124,9 @@ public class WarehouseService {
     if (
       order.getStatus() == PurchaseOrderStatus.DELIVERED ||
       order.getStatus() == PurchaseOrderStatus.CANCELLED ||
-      order.getStatus() == PurchaseOrderStatus.REJECTED
+      order.getStatus() == PurchaseOrderStatus.REJECTED ||
+      order.getStatus() == PurchaseOrderStatus.PENDING ||
+      order.getStatus() == PurchaseOrderStatus.AWAITING_APPROVAL
     ) {
       throw new IllegalStateException(
         "Cannot receive goods for an order with status: " + order.getStatus()
@@ -158,7 +160,7 @@ public class WarehouseService {
     GoodReceipt receipt = GoodReceipt.builder()
       .receiptNumber("PENDING")
       .purchaseOrder(order)
-      .destinationWarehouseId(destWarehouse.getId())
+      .destinationWarehouse(destWarehouse)
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
@@ -214,7 +216,7 @@ public class WarehouseService {
           )
         );
 
-      BigDecimal expected = BigDecimal.valueOf(poItem.getQuantity());
+      BigDecimal expected = poItem.getQuantity();
       BigDecimal received = itemReq.receivedQuantity();
 
       GoodReceiptItem item = GoodReceiptItem.builder()
@@ -296,7 +298,7 @@ public class WarehouseService {
       .getItems()
       .stream()
       .map(poItem -> {
-        BigDecimal ordered = BigDecimal.valueOf(poItem.getQuantity());
+        BigDecimal ordered = poItem.getQuantity();
         BigDecimal received = totalReceived.getOrDefault(
           poItem.getProduct().getId(),
           BigDecimal.ZERO
@@ -343,9 +345,7 @@ public class WarehouseService {
       if (current != null) {
         totalReceived = totalReceived.add(current.receivedQuantity());
       }
-      if (
-        totalReceived.compareTo(BigDecimal.valueOf(poItem.getQuantity())) < 0
-      ) {
+      if (totalReceived.compareTo(poItem.getQuantity()) < 0) {
         return false;
       }
     }
@@ -385,7 +385,8 @@ public class WarehouseService {
       receipt.getReceivedBy() != null
         ? receipt.getReceivedBy().getName()
         : null,
-      itemResponses
+      itemResponses,
+      GoodReceiptResponse.PurchaseOrderSummary.fromEntity(order)
     );
   }
 
@@ -553,14 +554,10 @@ public class WarehouseService {
           .warehouseId(p.getWarehouseId())
           .warehouseName(p.getWarehouseName())
           .totalStock(
-            p.getCurrentStock() != null
-              ? BigDecimal.valueOf(p.getCurrentStock())
-              : BigDecimal.ZERO
+            p.getCurrentStock() != null ? p.getCurrentStock() : BigDecimal.ZERO
           )
           .totalPendingStock(
-            p.getPendingStock() != null
-              ? BigDecimal.valueOf(p.getPendingStock())
-              : BigDecimal.ZERO
+            p.getPendingStock() != null ? p.getPendingStock() : BigDecimal.ZERO
           )
           .build()
       )
@@ -662,7 +659,8 @@ public class WarehouseService {
       receipt.getReceivedBy() != null
         ? receipt.getReceivedBy().getName()
         : null,
-      itemResponses
+      itemResponses,
+      GoodReceiptResponse.PurchaseOrderSummary.fromEntity(receipt.getPurchaseOrder())
     );
   }
 
@@ -938,12 +936,10 @@ public class WarehouseService {
     AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
 
     return movementsPage.map(m -> {
-      BigDecimal qty = (m.getType() == MovementType.OUTPUT)
-        ? m.getQuantity().negate()
-        : m.getQuantity();
+      BigDecimal signedQty = signedQuantityForRunningBalance(m);
 
       BigDecimal runningBalance = running.updateAndGet(current ->
-        current.add(qty)
+        current.add(signedQty)
       );
 
       return new InventoryMovementResponse(
@@ -963,5 +959,22 @@ public class WarehouseService {
         runningBalance
       );
     });
+  }
+
+  /**
+   * The running balance in the kardex is the cumulative quantity of a
+   * product. INPUT, OUTPUT, and ADJUSTMENT all change that total.
+   * INPUT adds, OUTPUT subtracts, and ADJUSTMENT stores an already-signed
+   * quantity (newStock - currentStock), so we add it as-is. TRANSFER
+   * moves stock between warehouses without changing the per-product
+   * total, so it contributes zero to the running balance.
+   */
+  private BigDecimal signedQuantityForRunningBalance(InventoryMovement m) {
+    return switch (m.getType()) {
+      case INPUT -> m.getQuantity();
+      case OUTPUT, DISPATCH -> m.getQuantity().negate();
+      case TRANSFER -> BigDecimal.ZERO;
+      case ADJUSTMENT -> m.getQuantity();
+    };
   }
 }

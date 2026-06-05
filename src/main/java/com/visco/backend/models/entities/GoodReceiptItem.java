@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -43,6 +44,7 @@ public class GoodReceiptItem {
   @JoinColumn(name = "good_receipt_id", nullable = false)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonBackReference("good-receipt-items")
   private GoodReceipt goodReceipt;
 
   @ManyToOne(fetch = FetchType.LAZY)
@@ -51,10 +53,10 @@ public class GoodReceiptItem {
   @ToString.Exclude
   private Product product;
 
-  @Column(name = "expected_quantity", nullable = false)
+  @Column(name = "expected_quantity", nullable = false, precision = 18, scale = 4)
   private BigDecimal expectedQuantity; // Lo que decía la orden de compra
 
-  @Column(name = "received_quantity", nullable = false)
+  @Column(name = "received_quantity", nullable = false, precision = 18, scale = 4)
   private BigDecimal receivedQuantity; // Lo que realmente llegó
 
   // Ubicación dentro del almacén donde se colocó la mercancía

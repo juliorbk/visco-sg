@@ -1,5 +1,6 @@
 package com.visco.backend.models.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,14 +30,14 @@ import lombok.ToString;
 
 @Entity
 @Table(
-  name = "purchase_orders",
-  indexes = {
-    @Index(name = "idx_po_supplier", columnList = "supplier_id"),
-    @Index(name = "idx_po_created_by", columnList = "created_by_id"),
-    @Index(name = "idx_po_warehouse", columnList = "destination_warehouse_id"),
-    @Index(name = "idx_po_status", columnList = "status"),
-    @Index(name = "idx_po_created_at", columnList = "created_at"),
-  }
+    name = "purchase_orders",
+    indexes = {
+        @Index(name = "idx_po_supplier", columnList = "supplier_id"),
+        @Index(name = "idx_po_created_by", columnList = "created_by_id"),
+        @Index(name = "idx_po_warehouse", columnList = "destination_warehouse_id"),
+        @Index(name = "idx_po_status", columnList = "status"),
+        @Index(name = "idx_po_created_at", columnList = "created_at")
+    }
 )
 @Data
 @AllArgsConstructor
@@ -44,111 +45,110 @@ import lombok.ToString;
 @Builder
 public class PurchaseOrder {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Auto-increment
+    private Long id;
 
-  @Column(unique = true, nullable = false)
-  private String orderNumber;
+    @Column(unique = true, nullable = false)
+    private String orderNumber;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "created_by_id", nullable = false)
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private User createdBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private User createdBy;
 
-  @Column(nullable = false)
-  private String description;
+    @Column(nullable = false)
+    private String description;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private PaymentMethod paymentMethod;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod paymentMethod;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private PurchaseOrderType type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PurchaseOrderType type;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private PurchaseOrderStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PurchaseOrderStatus status;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "supplier_id", nullable = false)
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private Supplier supplier;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Supplier supplier;
 
-  // Auditoría básica
-  @Column(name = "created_at", updatable = false)
-  private LocalDateTime createdAt;
+    // Auditoría básica
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-  @Column(name = "updated_at", updatable = true)
-  private LocalDateTime updatedAt;
+    @Column(name = "updated_at", updatable = true)
+    private LocalDateTime updatedAt;
 
-  @Column(name = "lead_time")
-  private Integer leadTime = 0;
+    @Column(name = "lead_time")
+    private Integer leadTime = 0;
 
-  @Column(name = "deleted_at")
-  private LocalDateTime deletedAt;
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
-  @Column(name = "approval_notes", length = 1000)
-  private String approvalNotes;
+    @Column(name = "approval_notes", length = 1000)
+    private String approvalNotes;
 
-  @Column(name = "ship_conditions", length = 1000)
-  private String shipConditions;
+    @Column(name = "ship_conditions", length = 1000)
+    private String shipConditions;
 
-  @Column(name = "rejection_reason", length = 1000)
-  private String rejectionReason;
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "approved_by_id")
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private User approvedBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private User approvedBy;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "rejected_by_id")
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private User rejectedBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rejected_by_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private User rejectedBy;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "requisition_id")
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private Requisition requisition;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requisition_id")
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Requisition requisition;
 
-  @Column(name = "approved_at")
-  private LocalDateTime approvedAt;
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
 
-  @PrePersist
-  protected void onCreate() {
-    createdAt = LocalDateTime.now();
-  }
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+    }
 
-  @PreUpdate
-  protected void onUpdate() {
-    updatedAt = LocalDateTime.now();
-  }
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "destination_warehouse_id", nullable = false)
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private Warehouse destinationWarehouse;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_warehouse_id", nullable = false)
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    private Warehouse destinationWarehouse;
 
-  @Version
-  @Column(nullable = false)
-  private Long version;
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
-  // Relación bidireccional con los items de la orden
-  @OneToMany(
-    mappedBy = "purchaseOrder",
-    cascade = CascadeType.ALL,
-    orphanRemoval = true
-  )
-  @Builder.Default
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private List<PurchaseOrderItem> items = new ArrayList<>();
+    // Relación bidireccional con los items de la orden
+    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
+    @JsonManagedReference("purchase-order-items")
+    private List<PurchaseOrderItem> items = new ArrayList<>();
 }

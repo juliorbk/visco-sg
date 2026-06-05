@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -69,10 +70,10 @@ public class Invoice {
   @Column(name = "due_date")
   private LocalDate dueDate;
 
-  @Column(name = "total_amount", nullable = false)
+  @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
   private BigDecimal totalAmount;
 
-  @Column(name = "tax_amount")
+  @Column(name = "tax_amount", precision = 18, scale = 2)
   private BigDecimal taxAmount;
 
   @Enumerated(EnumType.STRING)
@@ -102,6 +103,7 @@ public class Invoice {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("invoice-items")
   private List<InvoiceItem> items = new ArrayList<>();
 
   @Version
@@ -110,7 +112,9 @@ public class Invoice {
 
   @PrePersist
   protected void onCreate() {
-    createdAt = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now();
+    createdAt = now;
+    updatedAt = now;
     if (status == null) status = InvoiceStatus.PENDING;
   }
 

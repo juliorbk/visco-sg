@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -78,9 +79,6 @@ public class SecurityConfig {
           .requestMatchers(
             "/api/auth/register",
             "/api/auth/login",
-            "/api/cost-centers/all",
-            "/api/management/**",
-            "/api/general-management/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/health"
@@ -90,7 +88,9 @@ public class SecurityConfig {
           .requestMatchers(
             "/api/users/**",
             "/api/employees/**",
-            "/api/cost-centers/**"
+            "/api/cost-centers/**",
+            "/api/management/**",
+            "/api/general-management/**"
           )
           .hasRole("ADMIN")
           // ADMIN, MANAGER y PROCUREMENT
@@ -109,6 +109,14 @@ public class SecurityConfig {
           //Admin
           .requestMatchers("/api/migration/**")
           .hasRole("ADMIN")
+          .requestMatchers("/api/admin/**")
+          .hasRole("ADMIN")
+          .requestMatchers("/api/invites/**")
+          .hasRole("ADMIN")
+          .requestMatchers(HttpMethod.DELETE, "/api/users/**")
+          .hasRole("SUPERADMIN")
+          .requestMatchers(HttpMethod.GET, "/api/users/*/references")
+          .hasRole("SUPERADMIN")
           .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos
@@ -143,9 +151,7 @@ public class SecurityConfig {
     return email ->
       userRepository
         .findByEmail(email)
-        .orElseThrow(() ->
-          new UsernameNotFoundException("Usuario no encontrado: " + email)
-        );
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
   @Bean

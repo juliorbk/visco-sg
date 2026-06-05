@@ -14,17 +14,22 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "warehouses")
+@SQLDelete(sql = "UPDATE warehouses SET is_active = false WHERE id = ?")
+@SQLRestriction("is_active = true")
 @Getter
 @Setter
 @Builder
@@ -58,6 +63,7 @@ public class Warehouse {
 
   @OneToMany(mappedBy = "warehouse", fetch = FetchType.LAZY)
   @Builder.Default
+  @JsonIgnore
   private List<Location> locations = new ArrayList<>();
 
   @CreatedDate
