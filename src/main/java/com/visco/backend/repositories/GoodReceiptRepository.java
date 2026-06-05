@@ -30,17 +30,17 @@ public interface GoodReceiptRepository
     LEFT JOIN FETCH po.destinationWarehouse
     LEFT JOIN FETCH gr.receivedBy
     WHERE (:search IS NULL
-      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
+      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """,
     countQuery = """
     SELECT COUNT(gr) FROM GoodReceipt gr
     JOIN gr.purchaseOrder po
     WHERE (:search IS NULL
-      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
+      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """
   )
   Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);

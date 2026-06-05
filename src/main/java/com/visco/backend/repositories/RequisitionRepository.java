@@ -32,14 +32,14 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         JOIN FETCH r.costCenter
         LEFT JOIN FETCH r.approvedBy
         WHERE (:search IS NULL
-            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
-            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """,
         countQuery = """
         SELECT COUNT(r) FROM Requisition r
         WHERE (:search IS NULL
-            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
-            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """
     )
     Page<Requisition> findAllWithSearch(@Param("search") String search, Pageable pageable);
@@ -52,15 +52,15 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         LEFT JOIN FETCH r.approvedBy
         WHERE r.status = :status
           AND (:search IS NULL
-            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
-            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """,
         countQuery = """
         SELECT COUNT(r) FROM Requisition r
         WHERE r.status = :status
           AND (:search IS NULL
-            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
-            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """
     )
     Page<Requisition> findByStatusWithSearch(
