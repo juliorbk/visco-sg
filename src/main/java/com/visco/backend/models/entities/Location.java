@@ -22,11 +22,11 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(
+  @Table(
   name = "locations",
   indexes = {
     @Index(name = "idx_location_warehouse", columnList = "warehouse_id"),
-    @Index(name = "idx_location_code", columnList = "code"),
+    @Index(name = "idx_location_code", columnList = "location_code"),
   }
 )
 @Getter
