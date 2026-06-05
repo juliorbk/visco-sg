@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -55,6 +57,31 @@ public class SecurityConfig {
       new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
+  }
+
+  /**
+   * Role hierarchy. A key {@code "SUPERADMIN"} with value
+   * {@code Set(ADMIN, MANAGER, ...)} means that a user holding the
+   * {@code SUPERADMIN} role is considered to also hold every role in the
+   * set, so {@code hasRole("ADMIN")} (and {@code hasRole("MANAGER")} etc.)
+   * returns true for them.
+   *
+   * <p>This lets a {@code SUPERADMIN} pass every {@code hasRole("ADMIN")}
+   * check across the app without having to rewrite every matchers list.
+   */
+  @Bean
+  public RoleHierarchy roleHierarchy() {
+    return RoleHierarchyImpl.fromHierarchy(
+      """
+      SUPERADMIN > ADMIN
+      ADMIN > MANAGER
+      ADMIN > PROCUREMENT
+      ADMIN > WAREHOUSEMAN
+      MANAGER > USER
+      PROCUREMENT > USER
+      WAREHOUSEMAN > USER
+      """
+    );
   }
 
   @Bean
