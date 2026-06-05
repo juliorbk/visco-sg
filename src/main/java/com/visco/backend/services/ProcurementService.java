@@ -368,6 +368,7 @@ public class ProcurementService {
   }
 
   @Transactional
+  @CacheEvict(value = "dashboard", allEntries = true)
   public PurchaseOrderResponse markAsSentToSupplier(Long id) {
     sendToSupplier(id);
     return getOrderById(id);
