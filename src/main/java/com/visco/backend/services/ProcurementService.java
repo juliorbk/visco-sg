@@ -264,6 +264,13 @@ public class ProcurementService {
             pendingQty
           );
         }
+        if (receivedQty.compareTo(BigDecimal.ZERO) > 0) {
+          warehouseService.substractCurrentStock(
+            item.getProduct().getId(),
+            orderWarehouse.getId(),
+            receivedQty
+          );
+        }
       }
     }
 
