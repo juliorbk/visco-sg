@@ -78,8 +78,6 @@ public class SecurityConfig {
             "/api/auth/register",
             "/api/auth/login",
             "/api/cost-centers/all",
-            "/api/management/**",
-            "/api/general-management/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/health"
@@ -89,7 +87,9 @@ public class SecurityConfig {
           .requestMatchers(
             "/api/users/**",
             "/api/employees/**",
-            "/api/cost-centers/**"
+            "/api/cost-centers/**",
+            "/api/management/**",
+            "/api/general-management/**"
           )
           .hasRole("ADMIN")
           // ADMIN, MANAGER y PROCUREMENT
