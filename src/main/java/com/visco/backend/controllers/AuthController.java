@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Authentication endpoints")
@@ -31,12 +33,12 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(
         @Valid @RequestBody UserRegisterRequest request,
-        HttpServletResponse response // agregar esto
+        HttpServletResponse response
     ) {
         AuthResponse registeredUser = authService.register(request);
         var jwtCookie = cookieService.createJwtCookie(registeredUser.getToken());
         response.addCookie(jwtCookie);
-        registeredUser.setToken(null); // nunca exponer el token en body
+        registeredUser.setToken(null);
         return ResponseEntity.ok(registeredUser);
     }
 
@@ -49,15 +51,9 @@ public class AuthController {
         @Valid @RequestBody LoginRequest request,
         HttpServletResponse response
     ) {
-        // We create de login request
         AuthResponse authData = authService.login(request);
-        // if validates ok we extract the JWT and create the cookie
         var jwtCookie = cookieService.createJwtCookie(authData.getToken());
-
-        // add the cookie to the http response
         response.addCookie(jwtCookie);
-
-        // We delete the token, for security
         authData.setToken(null);
         return ResponseEntity.ok(authData);
     }
@@ -76,6 +72,15 @@ public class AuthController {
         description = "Returns the authenticated user information from the JWT cookie or bearer token"
     )
     public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
-        return ResponseEntity.ok(authService.getCurrentUser(authentication.getName()));
+        log.debug("getCurrentUser called, authentication: {}", authentication);
+        if (authentication == null || authentication.getName() == null) {
+            log.warn("No authentication found in /me request");
+            return ResponseEntity.status(401).build();
+        }
+        String email = authentication.getName();
+        log.debug("Fetching user for email: {}", email);
+        UserDTO user = authService.getCurrentUser(email);
+        log.debug("User fetched: {}", user);
+        return ResponseEntity.ok(user);
     }
 }
