@@ -108,6 +108,8 @@ public class SecurityConfig {
           //Admin
           .requestMatchers("/api/migration/**")
           .hasRole("ADMIN")
+          .requestMatchers("/api/admin/**")
+          .hasRole("ADMIN")
           .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos
