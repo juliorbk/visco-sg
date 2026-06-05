@@ -109,6 +109,8 @@ public class SecurityConfig {
           .hasRole("ADMIN")
           .requestMatchers("/api/admin/**")
           .hasRole("ADMIN")
+          .requestMatchers("/api/invites/**")
+          .hasRole("ADMIN")
           .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos

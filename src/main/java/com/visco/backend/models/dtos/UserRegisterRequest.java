@@ -21,8 +21,6 @@ public class UserRegisterRequest {
     @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
     private String password;
 
-    @NotNull(message = "El rol es obligatorio")
-    private UserRole role;
-
-    private Long costCenterId;
+    @NotBlank(message = "El token de invitación es obligatorio")
+    private String inviteToken;
 }

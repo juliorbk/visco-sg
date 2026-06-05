@@ -5,7 +5,9 @@ import com.visco.backend.models.dtos.LoginRequest;
 import com.visco.backend.models.dtos.UserDTO;
 import com.visco.backend.models.dtos.UserRegisterRequest;
 import com.visco.backend.models.entities.CostCenter;
+import com.visco.backend.models.entities.InviteToken;
 import com.visco.backend.models.entities.User;
+import com.visco.backend.models.entities.UserRole;
 import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class AuthService {
   private final JwtService jwtService;
   private final EmailService emailService;
   private final AuthenticationManager authenticationManager;
+  private final InviteTokenService inviteTokenService;
 
   @Transactional
   public AuthResponse register(UserRegisterRequest request) {
@@ -38,10 +41,18 @@ public class AuthService {
       throw new IllegalArgumentException("Email address is already in use");
     }
 
+    InviteToken invite = inviteTokenService.findByToken(request.getInviteToken());
+    UserRole intendedRole;
+    try {
+      intendedRole = UserRole.valueOf(invite.getIntendedRole());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException("Invite token has an invalid role configured");
+    }
+
     CostCenter costCenter = null;
-    if (request.getCostCenterId() != null) {
+    if (invite.getCostCenterId() != null) {
       costCenter = costCenterRepository
-        .findById(request.getCostCenterId())
+        .findById(invite.getCostCenterId())
         .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
     }
 
@@ -49,12 +60,13 @@ public class AuthService {
       .name(request.getName())
       .email(request.getEmail())
       .password(passwordEncoder.encode(request.getPassword()))
-      .role(request.getRole())
+      .role(intendedRole)
       .costCenter(costCenter)
       .active(true)
       .build();
 
     userRepository.save(newUser);
+    inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
     log.info("Registro exitoso: userId={}", newUser.getId());
     /* 
         try {
