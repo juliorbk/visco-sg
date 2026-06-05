@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -16,6 +17,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
@@ -24,6 +27,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
+@SQLDelete(sql = "UPDATE cost_centers SET is_active = false WHERE id = ?")
+@SQLRestriction("is_active = true")
 @Table(
   name = "cost_centers",
   indexes = {

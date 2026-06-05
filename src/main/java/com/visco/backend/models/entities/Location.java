@@ -17,18 +17,22 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-  @Table(
+@Table(
   name = "locations",
   indexes = {
     @Index(name = "idx_location_warehouse", columnList = "warehouse_id"),
     @Index(name = "idx_location_code", columnList = "location_code"),
   }
 )
+@SQLDelete(sql = "UPDATE locations SET is_active = false WHERE id = ?")
+@SQLRestriction("is_active = true")
 @Getter
 @Setter
 @Builder

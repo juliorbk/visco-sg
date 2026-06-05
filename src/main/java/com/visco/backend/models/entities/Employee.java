@@ -7,6 +7,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -29,6 +30,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_employee_cost_center", columnList = "cost_center_id"),
   }
 )
+@SQLDelete(sql = "UPDATE employees SET is_active = false WHERE id = ?")
+@SQLRestriction("is_active = true")
 @Getter
 @Setter
 @Builder
