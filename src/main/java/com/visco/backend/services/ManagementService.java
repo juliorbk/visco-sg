@@ -26,7 +26,7 @@ public class ManagementService {
   @Transactional(readOnly = true)
   public ManagementDTO getById(Long id) {
     return managementRepository
-      .findById(id)
+      .findByIdWithGeneralManagement(id)
       .map(m -> new ManagementDTO(m.getId(), m.getCode(), m.getDescription(), m.getGeneralManagement().getId()))
       .orElseThrow(() -> new EntityNotFoundException("Management not found: " + id));
   }
