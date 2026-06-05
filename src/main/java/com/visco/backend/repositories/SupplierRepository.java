@@ -32,6 +32,10 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.currency = :currency")
 	Page<Supplier> findByCurrencyWithFetch(@Param("currency") Currency currency, Pageable pageable);
 
+	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.category.id = :categoryId",
+		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.category.id = :categoryId")
+	Page<Supplier> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
+
 	@Query("SELECT s.id as supplierId, s.name as supplierName, COUNT(o) as orderCount " +
 			"FROM PurchaseOrder o JOIN o.supplier s " +
 			"GROUP BY s.id, s.name ORDER BY orderCount DESC")

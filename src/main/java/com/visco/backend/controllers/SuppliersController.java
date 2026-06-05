@@ -61,6 +61,14 @@ public class SuppliersController {
 		return ResponseEntity.ok(supplierService.getInactiveSuppliers(pageable));
 	}
 
+	@GetMapping("/category/{categoryId}")
+	@Operation(summary = "List suppliers by category", description = "Returns a paginated list of suppliers in the given category")
+	public ResponseEntity<Page<SupplierDTO>> getSuppliersByCategory(
+			@PathVariable Long categoryId,
+			Pageable pageable) {
+		return ResponseEntity.ok(supplierService.getSuppliersByCategory(categoryId, pageable));
+	}
+
 	@GetMapping("/{id}")
 	@Operation(summary = "Get supplier by ID", description = "Returns a specific supplier")
 	public ResponseEntity<SupplierDTO> getSupplierById(@PathVariable Long id) {

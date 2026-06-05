@@ -23,5 +23,7 @@ public record UpdateSupplierRequest(
 
   @NotNull(message = "La moneda es obligatoria") Currency currency,
 
-  Set<Long> representativeIds
+  Set<Long> representativeIds,
+
+  Long categoryId
 ) {}

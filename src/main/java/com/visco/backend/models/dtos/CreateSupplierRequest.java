@@ -14,5 +14,6 @@ public record CreateSupplierRequest(
   @Size(min = 1) Set<String> phoneNumbers,
   @NotBlank String description,
   @NotNull Currency currency,
-  Set<String> representativeIds
+  Set<String> representativeIds,
+  Long categoryId
 ) {}

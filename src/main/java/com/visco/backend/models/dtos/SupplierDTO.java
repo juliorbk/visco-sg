@@ -23,6 +23,8 @@ public class SupplierDTO {
   private List<String> phoneNumbers;
   private boolean active;
   private List<RepresentativeInfo> representatives;
+  private Long categoryId;
+  private String categoryName;
 
   @Getter
   @Setter
@@ -55,6 +57,13 @@ public class SupplierDTO {
             .collect(Collectors.toList())
         : Collections.emptyList();
 
+    Long categoryId = supplier.getCategory() != null
+      ? supplier.getCategory().getId()
+      : null;
+    String categoryName = supplier.getCategory() != null
+      ? supplier.getCategory().getName()
+      : null;
+
     return SupplierDTO.builder()
       .id(id)
       .name(supplier.getName())
@@ -67,6 +76,8 @@ public class SupplierDTO {
       .phoneNumbers(phones)
       .active(Boolean.TRUE.equals(supplier.getActive()))
       .representatives(reps)
+      .categoryId(categoryId)
+      .categoryName(categoryName)
       .build();
   }
 }

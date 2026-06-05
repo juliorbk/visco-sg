@@ -8,7 +8,9 @@ import com.visco.backend.models.dtos.UpdateSupplierRequest;
 import com.visco.backend.models.entities.Currency;
 import com.visco.backend.models.entities.LegalRepresentative;
 import com.visco.backend.models.entities.Supplier;
+import com.visco.backend.models.entities.SupplierCategory;
 import com.visco.backend.repositories.PurchaseOrderRepository;
+import com.visco.backend.repositories.SupplierCategoryRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
@@ -34,6 +36,18 @@ public class SupplierService {
 
   private final SupplierRepository supplierRepository;
   private final PurchaseOrderRepository orderRepository;
+  private final SupplierCategoryRepository categoryRepository;
+
+  private SupplierCategory resolveCategory(Long categoryId) {
+    if (categoryId == null) return null;
+    return categoryRepository
+      .findById(categoryId)
+      .orElseThrow(() ->
+        new EntityNotFoundException(
+          "Supplier category not found: " + categoryId
+        )
+      );
+  }
 
   // ------ CRUD ------
 
@@ -57,6 +71,7 @@ public class SupplierService {
       .currency(request.currency())
       .active(true)
       .representatives(new HashSet<>())
+      .category(resolveCategory(request.categoryId()))
       .build();
 
     // 2. Representantes — se crean como entidades independientes
@@ -104,6 +119,7 @@ public class SupplierService {
     existing.setDescription(request.description());
     existing.setAddress(request.address());
     existing.setCurrency(request.currency());
+    existing.setCategory(resolveCategory(request.categoryId()));
     existing.setUpdatedAt(LocalDateTime.now());
 
     if (request.representativeIds() != null) {
@@ -213,6 +229,16 @@ public class SupplierService {
   ) {
     return supplierRepository
       .findByCurrencyWithFetch(currency, pageable)
+      .map(SupplierDTO::fromSupplier);
+  }
+
+  @Transactional(readOnly = true)
+  public Page<SupplierDTO> getSuppliersByCategory(Long categoryId, Pageable pageable) {
+    if (!categoryRepository.existsById(categoryId)) {
+      throw new EntityNotFoundException("Supplier category not found: " + categoryId);
+    }
+    return supplierRepository
+      .findByCategoryIdWithFetch(categoryId, pageable)
       .map(SupplierDTO::fromSupplier);
   }
 
