@@ -97,7 +97,9 @@ public class Requisition {
 
   @PrePersist
   protected void onCreate() {
-    createdAt = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now();
+    createdAt = now;
+    updatedAt = now;
     if (status == null) status = RequisitionStatus.DRAFT;
   }
 

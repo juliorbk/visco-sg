@@ -110,7 +110,9 @@ public class Invoice {
 
   @PrePersist
   protected void onCreate() {
-    createdAt = LocalDateTime.now();
+    LocalDateTime now = LocalDateTime.now();
+    createdAt = now;
+    updatedAt = now;
     if (status == null) status = InvoiceStatus.PENDING;
   }
 
