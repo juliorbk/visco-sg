@@ -190,19 +190,22 @@ public class RequisitionService {
   }
 
   @Transactional(readOnly = true)
-  public Page<RequisitionResponse> getAllRequisitions(Pageable pageable) {
+  public Page<RequisitionResponse> getAllRequisitions(String search, Pageable pageable) {
+    if (search != null && search.trim().isEmpty()) search = null;
     return requisitionRepository
-      .findAllWithFetch(pageable)
+      .findAllWithSearch(search, pageable)
       .map(this::toResponse);
   }
 
   @Transactional(readOnly = true)
   public Page<RequisitionResponse> getRequisitionsByStatus(
     RequisitionStatus status,
+    String search,
     Pageable pageable
   ) {
+    if (search != null && search.trim().isEmpty()) search = null;
     return requisitionRepository
-      .findByStatusWithFetch(status, pageable)
+      .findByStatusWithSearch(status, search, pageable)
       .map(this::toResponse);
   }
 

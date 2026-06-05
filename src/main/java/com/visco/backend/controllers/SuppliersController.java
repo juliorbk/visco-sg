@@ -44,9 +44,11 @@ public class SuppliersController {
 	}
 
 	@GetMapping
-	@Operation(summary = "List all suppliers", description = "Returns a paginated list of all suppliers")
-	public ResponseEntity<Page<SupplierDTO>> getAllSuppliers(Pageable pageable) {
-		return ResponseEntity.ok(supplierService.getAllSuppliers(pageable));
+	@Operation(summary = "List all suppliers", description = "Returns a paginated list of all suppliers with optional search by name or email")
+	public ResponseEntity<Page<SupplierDTO>> getAllSuppliers(
+			@RequestParam(required = false) String search,
+			Pageable pageable) {
+		return ResponseEntity.ok(supplierService.getAllSuppliers(search, pageable));
 	}
 
 	@GetMapping("/active")

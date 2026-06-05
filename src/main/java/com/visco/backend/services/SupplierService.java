@@ -98,9 +98,10 @@ public class SupplierService {
 
   // Read all Suppliers
   @Transactional(readOnly = true)
-  public Page<SupplierDTO> getAllSuppliers(Pageable pageable) {
+  public Page<SupplierDTO> getAllSuppliers(String search, Pageable pageable) {
+    if (search != null && search.trim().isEmpty()) search = null;
     return supplierRepository
-      .findAllWithFetch(pageable)
+      .findAllWithSearch(search, pageable)
       .map(SupplierDTO::fromSupplier);
   }
 

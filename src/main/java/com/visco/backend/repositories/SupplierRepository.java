@@ -18,6 +18,24 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 		   countQuery = "SELECT COUNT(s) FROM Supplier s")
 	Page<Supplier> findAllWithFetch(Pageable pageable);
 
+	@Query(
+		value = """
+		SELECT s FROM Supplier s
+		WHERE (:search IS NULL
+			OR LOWER(s.name) LIKE CONCAT('%', LOWER(:search), '%')
+			OR LOWER(s.email) LIKE CONCAT('%', LOWER(:search), '%')
+			OR LOWER(CAST(s.id AS String)) LIKE CONCAT('%', LOWER(:search), '%'))
+		""",
+		countQuery = """
+		SELECT COUNT(s) FROM Supplier s
+		WHERE (:search IS NULL
+			OR LOWER(s.name) LIKE CONCAT('%', LOWER(:search), '%')
+			OR LOWER(s.email) LIKE CONCAT('%', LOWER(:search), '%')
+			OR LOWER(CAST(s.id AS String)) LIKE CONCAT('%', LOWER(:search), '%'))
+		"""
+	)
+	Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
+
 	@Query(value = "SELECT s FROM Supplier s WHERE s.active = true",
 		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = true")
 	Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);

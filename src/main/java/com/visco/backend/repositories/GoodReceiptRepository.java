@@ -23,6 +23,28 @@ public interface GoodReceiptRepository
   @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy")
   Page<GoodReceipt> findAllWithFetch(Pageable pageable);
 
+  @Query(
+    value = """
+    SELECT gr FROM GoodReceipt gr
+    JOIN FETCH gr.purchaseOrder po
+    LEFT JOIN FETCH po.destinationWarehouse
+    LEFT JOIN FETCH gr.receivedBy
+    WHERE (:search IS NULL
+      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
+    """,
+    countQuery = """
+    SELECT COUNT(gr) FROM GoodReceipt gr
+    JOIN gr.purchaseOrder po
+    WHERE (:search IS NULL
+      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
+    """
+  )
+  Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);
+
   @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.purchaseOrder.id = :orderId")
   List<GoodReceipt> findByPurchaseOrderIdWithFetch(@Param("orderId") Long orderId);
 

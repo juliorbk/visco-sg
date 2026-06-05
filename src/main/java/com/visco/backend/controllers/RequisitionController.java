@@ -46,18 +46,19 @@ public class RequisitionController {
   @GetMapping
   @Operation(
     summary = "List all requisitions",
-    description = "Returns a paginated list of requisitions with optional status filter"
+    description = "Returns a paginated list of requisitions with optional status filter and search"
   )
   public ResponseEntity<Page<RequisitionResponse>> getAllRequisitions(
     @RequestParam(required = false) RequisitionStatus status,
+    @RequestParam(required = false) String search,
     Pageable pageable
   ) {
     if (status != null) {
       return ResponseEntity.ok(
-        requisitionService.getRequisitionsByStatus(status, pageable)
+        requisitionService.getRequisitionsByStatus(status, search, pageable)
       );
     }
-    return ResponseEntity.ok(requisitionService.getAllRequisitions(pageable));
+    return ResponseEntity.ok(requisitionService.getAllRequisitions(search, pageable));
   }
 
   @GetMapping("/{id}")

@@ -14,6 +14,26 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy")
   Page<DispatchNote> findAllWithFetch(Pageable pageable);
 
+  @Query(
+    value = """
+    SELECT dn FROM DispatchNote dn
+    JOIN FETCH dn.warehouse
+    JOIN FETCH dn.withdrawnBy e
+    LEFT JOIN FETCH e.costCenter
+    JOIN FETCH dn.createdBy
+    WHERE (:search IS NULL
+      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
+    """,
+    countQuery = """
+    SELECT COUNT(dn) FROM DispatchNote dn
+    WHERE (:search IS NULL
+      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
+    """
+  )
+  Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
+
   @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
   Optional<DispatchNote> findByIdDetailed(@Param("id") Long id);
 }

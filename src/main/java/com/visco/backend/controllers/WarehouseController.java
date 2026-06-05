@@ -144,10 +144,13 @@ public class WarehouseController {
     @GetMapping("/receipts")
     @Operation(
         summary = "List all receipts",
-        description = "Returns a paginated list of all goods receipts"
+        description = "Returns a paginated list of all goods receipts with optional search"
     )
-    public ResponseEntity<Page<GoodReceiptResponse>> getAllReceipts(Pageable pageable) {
-        return ResponseEntity.ok(warehouseService.getAllOrders(pageable));
+    public ResponseEntity<Page<GoodReceiptResponse>> getAllReceipts(
+        @RequestParam(required = false) String search,
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(warehouseService.getAllOrders(search, pageable));
     }
 
     @GetMapping("/orders/{orderId}/receipts")
@@ -195,10 +198,13 @@ public class WarehouseController {
     @GetMapping("/dispatches")
     @Operation(
         summary = "List all dispatches",
-        description = "Returns a paginated list of all dispatch notes"
+        description = "Returns a paginated list of all dispatch notes with optional search"
     )
-    public ResponseEntity<Page<DispatchResponse>> getAllDispatches(Pageable pageable) {
-        return ResponseEntity.ok(warehouseService.getAllDispatches(pageable));
+    public ResponseEntity<Page<DispatchResponse>> getAllDispatches(
+        @RequestParam(required = false) String search,
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(warehouseService.getAllDispatches(search, pageable));
     }
 
     @GetMapping("/dispatches/{id}")

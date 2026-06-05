@@ -25,6 +25,50 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     @Query("SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.status = :status")
     Page<Requisition> findByStatusWithFetch(@Param("status") RequisitionStatus status, Pageable pageable);
 
+    @Query(
+        value = """
+        SELECT DISTINCT r FROM Requisition r
+        JOIN FETCH r.requestedBy
+        JOIN FETCH r.costCenter
+        LEFT JOIN FETCH r.approvedBy
+        WHERE (:search IS NULL
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+        """,
+        countQuery = """
+        SELECT COUNT(r) FROM Requisition r
+        WHERE (:search IS NULL
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+        """
+    )
+    Page<Requisition> findAllWithSearch(@Param("search") String search, Pageable pageable);
+
+    @Query(
+        value = """
+        SELECT DISTINCT r FROM Requisition r
+        JOIN FETCH r.requestedBy
+        JOIN FETCH r.costCenter
+        LEFT JOIN FETCH r.approvedBy
+        WHERE r.status = :status
+          AND (:search IS NULL
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+        """,
+        countQuery = """
+        SELECT COUNT(r) FROM Requisition r
+        WHERE r.status = :status
+          AND (:search IS NULL
+            OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(:search), '%')
+            OR LOWER(r.description) LIKE CONCAT('%', LOWER(:search), '%'))
+        """
+    )
+    Page<Requisition> findByStatusWithSearch(
+        @Param("status") RequisitionStatus status,
+        @Param("search") String search,
+        Pageable pageable
+    );
+
     @Query("SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.requestedBy.id = :requestedById")
     Page<Requisition> findByRequestedByIdWithFetch(@Param("requestedById") java.util.UUID requestedById, Pageable pageable);
 

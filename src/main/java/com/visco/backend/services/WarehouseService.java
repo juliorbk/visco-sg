@@ -490,9 +490,10 @@ public class WarehouseService {
   }
 
   @Transactional(readOnly = true)
-  public Page<GoodReceiptResponse> getAllOrders(Pageable pageable) {
+  public Page<GoodReceiptResponse> getAllOrders(String search, Pageable pageable) {
+    if (search != null && search.trim().isEmpty()) search = null;
     return goodReceiptRepository
-      .findAllWithFetch(pageable)
+      .findAllWithSearch(search, pageable)
       .map(this::toResponse);
   }
 
@@ -843,9 +844,10 @@ public class WarehouseService {
   }
 
   @Transactional(readOnly = true)
-  public Page<DispatchResponse> getAllDispatches(Pageable pageable) {
+  public Page<DispatchResponse> getAllDispatches(String search, Pageable pageable) {
+    if (search != null && search.trim().isEmpty()) search = null;
     return dispatchNoteRepository
-      .findAllWithFetch(pageable)
+      .findAllWithSearch(search, pageable)
       .map(DispatchResponse::fromEntity);
   }
 
