@@ -1,7 +1,6 @@
 package com.visco.backend.models.dtos;
 
 import com.visco.backend.models.entities.PaymentMethod;
-import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
 import com.visco.backend.models.entities.PurchaseOrderType;
 import com.visco.backend.models.entities.Supplier;
@@ -18,6 +17,8 @@ public record PurchaseOrderResponse(
     String supplierName,
     PaymentMethod paymentMethod,
     PurchaseOrderType type,
+    String requisitionNumber,
+    String paymentTerms,
     String createdBy,
     LocalDateTime createdAt,
     String approvalNotes,
@@ -45,9 +46,7 @@ public record PurchaseOrderResponse(
                 s.getName(),
                 s.getAddress(),
                 s.getEmail(),
-                s.getPhoneNumbers() == null
-                    ? List.of()
-                    : List.copyOf(s.getPhoneNumbers())
+                s.getPhoneNumbers() == null ? List.of() : List.copyOf(s.getPhoneNumbers())
             );
         }
     }
