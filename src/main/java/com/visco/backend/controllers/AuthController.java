@@ -1,15 +1,19 @@
 package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.AuthResponse;
+import com.visco.backend.models.dtos.ForgotPasswordRequest;
 import com.visco.backend.models.dtos.LoginRequest;
+import com.visco.backend.models.dtos.ResetPasswordRequest;
 import com.visco.backend.models.dtos.UserDTO;
 import com.visco.backend.models.dtos.UserRegisterRequest;
 import com.visco.backend.services.AuthService;
 import com.visco.backend.services.CookieService;
+import com.visco.backend.services.PasswordResetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +33,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final CookieService cookieService;
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(
@@ -64,6 +69,38 @@ public class AuthController {
         var logoutCookie = cookieService.createLogoutCookie();
         response.addCookie(logoutCookie);
         return ResponseEntity.ok().body("Logout successful");
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(
+        summary = "Request password reset",
+        description = "Generates a single-use reset token and emails it. Always returns 200 to prevent user enumeration."
+    )
+    public ResponseEntity<?> forgotPassword(
+        @Valid @RequestBody ForgotPasswordRequest request
+    ) {
+        passwordResetService.requestReset(request.email());
+        // Identical response regardless of whether the email exists.
+        return ResponseEntity.ok(
+          Map.of(
+            "message",
+            "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña."
+          )
+        );
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(
+        summary = "Reset password",
+        description = "Validates a reset token and updates the user's password."
+    )
+    public ResponseEntity<?> resetPassword(
+        @Valid @RequestBody ResetPasswordRequest request
+    ) {
+        passwordResetService.consumeToken(request.token(), request.newPassword());
+        return ResponseEntity.ok(
+          Map.of("message", "Contraseña actualizada exitosamente.")
+        );
     }
 
     @GetMapping("/me")

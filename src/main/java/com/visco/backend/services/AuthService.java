@@ -72,17 +72,10 @@ public class AuthService {
     userRepository.save(newUser);
     inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
     log.info("Registro exitoso: userId={}", newUser.getId());
-    /* 
-        try {
-            emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
-        } catch (Exception e) {
-            log.error(
-                "Failed to send welcome email to {}. Error: {}",
-                newUser.getEmail(),
-                e.getMessage()
-            );
-        }
-*/
+
+    // Fire-and-forget welcome email (sends async on the emailExecutor pool).
+    emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
+
     return buildResponse(newUser);
   }
 

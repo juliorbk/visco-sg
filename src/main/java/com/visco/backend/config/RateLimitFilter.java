@@ -32,6 +32,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private enum RateLimitedRoute {
         LOGIN("/api/auth/login", "rate-limit.login"),
         REGISTER("/api/auth/register", "rate-limit.register"),
+        PASSWORD_RESET("/api/auth/forgot-password", "rate-limit.password-reset"),
         ADMIN_OPERATIONS("/api/admin/**", "rate-limit.admin"),
         INVENTORY("/api/inventory/**", "rate-limit.inventory"),
         PROCUREMENT("/api/procurement/**", "rate-limit.procurement"),
@@ -62,6 +63,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private int registerCapacity;
     @Value("${rate-limit.register.minutes:5}")
     private int registerMinutes;
+    @Value("${rate-limit.password-reset.capacity:3}")
+    private int passwordResetCapacity;
+    @Value("${rate-limit.password-reset.minutes:5}")
+    private int passwordResetMinutes;
     @Value("${rate-limit.admin.capacity:30}")
     private int adminCapacity;
     @Value("${rate-limit.admin.minutes:1}")
@@ -115,6 +120,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return switch (route) {
             case LOGIN -> loginCapacity;
             case REGISTER -> registerCapacity;
+            case PASSWORD_RESET -> passwordResetCapacity;
             case ADMIN_OPERATIONS -> adminCapacity;
             case INVENTORY -> inventoryCapacity;
             case PROCUREMENT -> procurementCapacity;
@@ -134,6 +140,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return switch (route) {
             case LOGIN -> loginMinutes;
             case REGISTER -> registerMinutes;
+            case PASSWORD_RESET -> passwordResetMinutes;
             case ADMIN_OPERATIONS -> adminMinutes;
             case INVENTORY -> inventoryMinutes;
             case PROCUREMENT -> procurementMinutes;

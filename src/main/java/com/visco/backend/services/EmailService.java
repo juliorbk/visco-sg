@@ -1,78 +1,118 @@
 package com.visco.backend.services;
 
-import com.resend.Resend;
-import com.resend.core.exception.ResendException;
-import com.resend.services.emails.model.CreateEmailOptions;
-import com.resend.services.emails.model.CreateEmailResponse;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+/**
+ * Async email service backed by Spring's {@link JavaMailSender} (SMTP).
+ *
+ * <p>All send methods are {@code @Async} and run on the dedicated
+ * {@code emailExecutor} thread pool so HTTP requests never block on
+ * outbound SMTP.
+ *
+ * <p>The sender is read from {@code app.mail.from} (e.g. {@code "Visco
+ * Orinoco <noreply@viscorinoco.com>"}). The transport is configured via
+ * standard {@code spring.mail.*} properties (host, port, username,
+ * password, ssl / starttls). For Render we default to port 465 with SSL
+ * because port 25 is blocked and port 587 is often restricted.
+ */
 @Service
 @Slf4j
 public class EmailService {
 
-  private final Resend resend;
+  private final JavaMailSender mailSender;
 
-  // Asumo que aquí guardas el remitente, por ejemplo: "Visco Orinoco <onboarding@resend.dev>"
-  @Value("${spring.mail.username}")
-  private String senderEmail;
+  @Value("${app.mail.from}")
+  private String fromAddress;
 
-  public EmailService(@Value("${resend.api.key}") String apiKey) {
-    this.resend = new Resend(apiKey);
+  @Value("${app.password-reset.base-url:https://viscoorinocosia.vercel.app}")
+  private String passwordResetBaseUrl;
+
+  public EmailService(JavaMailSender mailSender) {
+    this.mailSender = mailSender;
   }
 
+  // ── Public API ─────────────────────────────────────────────────────────
+
+  @Async
   public void sendWelcomeEmail(String toEmail, String userName) {
-    String htmlBody = String.format(
+    String subject = "Tu acceso a Visco Orinoco está listo";
+    String html = buildWelcomeHtml(userName);
+    send(toEmail, subject, html);
+  }
+
+  @Async
+  public void sendPasswordResetEmail(String toEmail, String userName, String token) {
+    String subject = "Restablece tu contraseña — Visco Orinoco";
+    String resetUrl = passwordResetBaseUrl +
+      "/reset-password?token=" + java.net.URLEncoder.encode(token, StandardCharsets.UTF_8);
+    String html = buildPasswordResetHtml(userName, resetUrl);
+    send(toEmail, subject, html);
+  }
+
+  @Async
+  public void sendPasswordChangedEmail(String toEmail, String userName) {
+    String subject = "Tu contraseña fue actualizada";
+    String html = buildPasswordChangedHtml(userName);
+    send(toEmail, subject, html);
+  }
+
+  // ── Transport ──────────────────────────────────────────────────────────
+
+  private void send(String to, String subject, String htmlBody) {
+    try {
+      MimeMessage msg = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(
+        msg,
+        false,
+        StandardCharsets.UTF_8.name()
+      );
+      helper.setFrom(fromAddress);
+      helper.setTo(to);
+      helper.setSubject(subject);
+      helper.setText(htmlBody, true);
+      mailSender.send(msg);
+      log.info("📧 Email sent to {} | subject=\"{}\"", to, subject);
+    } catch (MessagingException e) {
+      log.error("❌ Failed to send email to {} | subject=\"{}\": {}", to, subject, e.getMessage(), e);
+    } catch (Exception e) {
+      log.error("❌ Unexpected error sending email to {}: {}", to, e.getMessage(), e);
+    }
+  }
+
+  // ── HTML templates ─────────────────────────────────────────────────────
+
+  private String buildWelcomeHtml(String userName) {
+    return String.format(
       """
       <!DOCTYPE html>
       <html lang="es">
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-              @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap');
-          </style>
       </head>
-      <body style="margin:0;padding:0;background-color:#F5F5F7;font-family:'DM Sans',Arial,sans-serif;">
+      <body style="margin:0;padding:0;background-color:#F5F5F7;font-family:'Segoe UI',Arial,sans-serif;">
           <table width="100%%" cellpadding="0" cellspacing="0" style="background-color:#F5F5F7;padding:40px 0;">
               <tr>
                   <td align="center">
                       <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
                           <tr>
-                              <td style="background:linear-gradient(135deg,#5C1212 0%%,#7B1A1A 50%%,#A0302A 100%%);padding:0;">
-                                  <table width="100%%" cellpadding="0" cellspacing="0" style="background-image:radial-gradient(circle,rgba(255,255,255,0.05) 1px,transparent 1px);background-size:24px 24px;">
-                                      <tr>
-                                          <td style="padding:36px 44px 32px 44px;">
-                                              <table width="100%%" cellpadding="0" cellspacing="0">
-                                                  <tr>
-                                                      <td style="vertical-align:middle;">
-                                                          <svg width="160" height="58" viewBox="0 0 160 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                              <text x="0" y="26" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="26" fill="#ffffff" letter-spacing="1">V</text>
-                                                              <rect x="22" y="2" width="2.5" height="24" fill="rgba(255,255,255,0.4)"/>
-                                                              <text x="28" y="26" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="26" fill="#ffffff" letter-spacing="1">SCO</text>
-                                                              <text x="0" y="54" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="26" fill="#ffffff" letter-spacing="1">OR</text>
-                                                              <rect x="42" y="30" width="2.5" height="24" fill="rgba(255,255,255,0.4)"/>
-                                                              <text x="48" y="54" font-family="Georgia,'Times New Roman',serif" font-weight="700" font-size="26" fill="#ffffff" letter-spacing="1">NOCO</text>
-                                                          </svg>
-                                                      </td>
-                                                      <td style="text-align:right;color:rgba(255,255,255,0.5);font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;vertical-align:middle;">
-                                                          NEXUS
-                                                      </td>
-                                                  </tr>
-                                              </table>
-                                              <p style="margin:28px 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:28px;font-weight:400;color:#ffffff;line-height:1.25;">
-                                                  Bienvenido al sistema de<br/>gestión empresarial.
-                                              </p>
-                                              <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;">
-                                                  Controla inventario, proveedores y órdenes de compra desde una sola plataforma.
-                                              </p>
-                                          </td>
-                                      </tr>
-                                  </table>
+                              <td style="background:linear-gradient(135deg,#5C1212 0%%,#7B1A1A 50%%,#A0302A 100%%);padding:36px 44px;">
+                                  <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:28px;font-weight:400;color:#ffffff;line-height:1.25;">
+                                      Bienvenido al sistema de<br/>gestión empresarial.
+                                  </p>
+                                  <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.55);line-height:1.6;">
+                                      Controla inventario, proveedores y órdenes de compra desde una sola plataforma.
+                                  </p>
                               </td>
                           </tr>
-
                           <tr>
                               <td style="padding:44px 44px 36px 44px;">
                                   <p style="margin:0 0 8px 0;font-size:13px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:1.5px;">
@@ -86,42 +126,22 @@ public class EmailService {
                                       Ya puedes acceder al sistema para gestionar órdenes de compra, controlar el inventario
                                       y supervisar el rendimiento de tus proveedores.
                                   </p>
-
                                   <table cellpadding="0" cellspacing="0" style="margin-bottom:36px;">
                                       <tr>
                                           <td style="border-radius:10px;background:#7B1A1A;">
-                                              <a href="https://viscoorinocosia.vercel.app/" target="_blank" style="display:inline-block;padding:14px 32px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
+                                              <a href="https://viscoorinocosia.vercel.app/" target="_blank" style="display:inline-block;padding:14px 32px;font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
                                                   Iniciar sesión →
                                               </a>
                                           </td>
                                       </tr>
                                   </table>
-
-                                  <table width="100%%" cellpadding="0" cellspacing="0" style="border:1px solid #F3F4F6;border-radius:12px;overflow:hidden;">
-                                      <tr>
-                                          <td style="padding:16px 20px;border-right:1px solid #F3F4F6;text-align:center;">
-                                              <div style="font-size:18px;font-weight:700;color:#111827;">1,284</div>
-                                              <div style="font-size:11px;color:#9CA3AF;margin-top:3px;text-transform:uppercase;letter-spacing:0.8px;">Pedidos totales</div>
-                                          </td>
-                                          <td style="padding:16px 20px;border-right:1px solid #F3F4F6;text-align:center;">
-                                              <div style="font-size:18px;font-weight:700;color:#111827;">45,910</div>
-                                              <div style="font-size:11px;color:#9CA3AF;margin-top:3px;text-transform:uppercase;letter-spacing:0.8px;">Unidades en stock</div>
-                                          </td>
-                                          <td style="padding:16px 20px;text-align:center;">
-                                              <div style="font-size:18px;font-weight:700;color:#7B1A1A;">98.2%%</div>
-                                              <div style="font-size:11px;color:#9CA3AF;margin-top:3px;text-transform:uppercase;letter-spacing:0.8px;">Tasa de cumplimiento</div>
-                                          </td>
-                                      </tr>
-                                  </table>
                               </td>
                           </tr>
-
                           <tr>
                               <td style="padding:0 44px;">
                                   <div style="border-top:1px solid #F3F4F6;"></div>
                               </td>
                           </tr>
-
                           <tr>
                               <td style="padding:24px 44px;text-align:center;">
                                   <p style="margin:0 0 6px 0;font-size:12px;font-weight:600;color:#374151;">
@@ -143,29 +163,137 @@ public class EmailService {
       userName,
       java.time.Year.now().getValue()
     );
+  }
 
-    // Construimos las opciones del correo con Resend
-    CreateEmailOptions params = CreateEmailOptions.builder()
-      .from("onboarding@resend.dev")
-      .to(toEmail)
-      .subject("Tu acceso a Visco Orinoco está listo") // Agregué un Asunto que faltaba
-      .html(htmlBody)
-      .build();
+  private String buildPasswordResetHtml(String userName, String resetUrl) {
+    return String.format(
+      """
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background-color:#F5F5F7;font-family:'Segoe UI',Arial,sans-serif;">
+          <table width="100%%" cellpadding="0" cellspacing="0" style="background-color:#F5F5F7;padding:40px 0;">
+              <tr>
+                  <td align="center">
+                      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+                          <tr>
+                              <td style="background:linear-gradient(135deg,#5C1212 0%%,#7B1A1A 100%%);padding:36px 44px;">
+                                  <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;color:#ffffff;line-height:1.25;">
+                                      Restablece tu contraseña
+                                  </p>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:44px 44px 36px 44px;">
+                                  <h1 style="margin:0 0 16px 0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">
+                                      Hola, <span style="color:#7B1A1A;">%s</span>
+                                  </h1>
+                                  <p style="margin:0 0 24px 0;font-size:15px;color:#6B7280;line-height:1.7;">
+                                      Recibimos una solicitud para restablecer la contraseña de tu cuenta en
+                                      <strong style="color:#374151;">Visco Orinoco</strong>.
+                                      Haz clic en el siguiente botón para crear una nueva contraseña.
+                                  </p>
+                                  <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                                      <tr>
+                                          <td style="border-radius:10px;background:#7B1A1A;">
+                                              <a href="%s" target="_blank" style="display:inline-block;padding:14px 32px;font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;letter-spacing:0.3px;">
+                                                  Restablecer contraseña →
+                                              </a>
+                                          </td>
+                                      </tr>
+                                  </table>
+                                  <p style="margin:0 0 8px 0;font-size:13px;color:#9CA3AF;line-height:1.6;">
+                                      Este enlace expira en <strong>2 horas</strong> y solo puede usarse una vez.
+                                  </p>
+                                  <p style="margin:0;font-size:13px;color:#9CA3AF;line-height:1.6;">
+                                      Si no solicitaste este cambio, puedes ignorar este correo de forma segura.
+                                  </p>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:0 44px;">
+                                  <div style="border-top:1px solid #F3F4F6;"></div>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:24px 44px;text-align:center;">
+                                  <p style="margin:0;font-size:11px;color:#9CA3AF;">
+                                      © %d Visco Orinoco. Todos los derechos reservados.
+                                  </p>
+                              </td>
+                          </tr>
+                      </table>
+                  </td>
+              </tr>
+          </table>
+      </body>
+      </html>
+      """,
+      userName,
+      resetUrl,
+      java.time.Year.now().getValue()
+    );
+  }
 
-    try {
-      CreateEmailResponse data = resend.emails().send(params);
-      log.info(
-        "📧 Correo de bienvenida enviado exitosamente a: {}. ID: {}",
-        toEmail,
-        data.getId()
-      );
-    } catch (ResendException e) {
-      log.error(
-        "❌ Error al enviar el correo de bienvenida a {}: {}",
-        toEmail,
-        e.getMessage(),
-        e
-      );
-    }
+  private String buildPasswordChangedHtml(String userName) {
+    return String.format(
+      """
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background-color:#F5F5F7;font-family:'Segoe UI',Arial,sans-serif;">
+          <table width="100%%" cellpadding="0" cellspacing="0" style="background-color:#F5F5F7;padding:40px 0;">
+              <tr>
+                  <td align="center">
+                      <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+                          <tr>
+                              <td style="background:linear-gradient(135deg,#15803D 0%%,#16A34A 100%%);padding:36px 44px;">
+                                  <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;color:#ffffff;line-height:1.25;">
+                                      Contraseña actualizada
+                                  </p>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:44px 44px 36px 44px;">
+                                  <h1 style="margin:0 0 16px 0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#111827;line-height:1.3;">
+                                      Hola, <span style="color:#7B1A1A;">%s</span>
+                                  </h1>
+                                  <p style="margin:0 0 8px 0;font-size:15px;color:#6B7280;line-height:1.7;">
+                                      Te confirmamos que la contraseña de tu cuenta en
+                                      <strong style="color:#374151;">Visco Orinoco</strong> fue actualizada exitosamente.
+                                  </p>
+                                  <p style="margin:0;font-size:13px;color:#9CA3AF;line-height:1.6;">
+                                      Si no realizaste este cambio, contacta a soporte de inmediato.
+                                  </p>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:0 44px;">
+                                  <div style="border-top:1px solid #F3F4F6;"></div>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding:24px 44px;text-align:center;">
+                                  <p style="margin:0;font-size:11px;color:#9CA3AF;">
+                                      © %d Visco Orinoco. Todos los derechos reservados.
+                                  </p>
+                              </td>
+                          </tr>
+                      </table>
+                  </td>
+              </tr>
+          </table>
+      </body>
+      </html>
+      """,
+      userName,
+      java.time.Year.now().getValue()
+    );
   }
 }

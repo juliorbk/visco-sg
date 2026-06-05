@@ -7,11 +7,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @EnableCaching
 @EnableScheduling
+@EnableAsync
 @SpringBootApplication
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class SystemApplication {
@@ -24,5 +28,22 @@ public class SystemApplication {
   @Bean
   public ObjectMapper objectMapper() {
     return new ObjectMapper();
+  }
+
+  /**
+   * Dedicated executor for outbound email tasks so SMTP latency never
+   * blocks request threads. Used implicitly by {@code @Async} on
+   * {@code EmailService}.
+   */
+  @Bean(name = "emailExecutor")
+  public TaskExecutor emailExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(4);
+    executor.setQueueCapacity(100);
+    executor.setThreadNamePrefix("email-");
+    executor.setKeepAliveSeconds(60);
+    executor.initialize();
+    return executor;
   }
 }
