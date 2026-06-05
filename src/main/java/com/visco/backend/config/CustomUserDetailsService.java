@@ -44,6 +44,7 @@ public class CustomUserDetailsService implements UserDetailsService {
       user.getId(),
       user.getEmail(),
       user.getPassword(),
+      Boolean.TRUE.equals(user.getActive()),
       authorities
     );
   }
