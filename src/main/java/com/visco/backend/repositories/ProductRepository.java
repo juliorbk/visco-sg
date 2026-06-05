@@ -189,4 +189,109 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true")
   long countTotalActiveProducts();
+
+  // ─────────────────────────────────────────────────────────────
+  // hasStock filter: productos con stock > 0 en algún almacén
+  // ─────────────────────────────────────────────────────────────
+
+  @Query(
+    value = """
+    SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    GROUP BY p.id
+    """,
+    countQuery = """
+    SELECT COUNT(DISTINCT p.id) FROM Product p
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    """
+  )
+  Page<Product> findBySearchAndCategoryWithStock(
+    Pageable pageable,
+    @Param("search") String search,
+    @Param("category") Long category
+  );
+
+  @Query(
+    value = """
+    SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    GROUP BY p.id
+    ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
+    """,
+    countQuery = """
+    SELECT COUNT(DISTINCT p.id) FROM Product p
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    """
+  )
+  Page<Product> findBySearchAndCategoryWithStockOrderByStockAsc(
+    Pageable pageable,
+    @Param("search") String search,
+    @Param("category") Long category
+  );
+
+  @Query(
+    value = """
+    SELECT p FROM Product p
+    LEFT JOIN FETCH p.supplier
+    LEFT JOIN FETCH p.category
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    GROUP BY p.id
+    ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
+    """,
+    countQuery = """
+    SELECT COUNT(DISTINCT p.id) FROM Product p
+    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    WHERE
+      (CAST(:search AS String) IS NULL
+        OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
+        OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
+      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+    """
+  )
+  Page<Product> findBySearchAndCategoryWithStockOrderByStockDesc(
+    Pageable pageable,
+    @Param("search") String search,
+    @Param("category") Long category
+  );
 }

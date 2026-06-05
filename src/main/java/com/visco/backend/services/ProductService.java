@@ -252,28 +252,51 @@ public class ProductService {
     String search,
     Long category,
     String sortBy,
-    String sortDir
+    String sortDir,
+    Boolean hasStock
   ) {
     Page<Product> products;
 
-    if ("stock".equals(sortBy)) {
-      products = "desc".equalsIgnoreCase(sortDir)
-        ? productRepository.findBySearchAndCategoryOrderByStockDesc(
-            pageable,
-            search,
-            category
-          )
-        : productRepository.findBySearchAndCategoryOrderByStockAsc(
-            pageable,
-            search,
-            category
-          );
+    if (Boolean.TRUE.equals(hasStock)) {
+      if ("stock".equals(sortBy)) {
+        products = "desc".equalsIgnoreCase(sortDir)
+          ? productRepository.findBySearchAndCategoryWithStockOrderByStockDesc(
+              pageable,
+              search,
+              category
+            )
+          : productRepository.findBySearchAndCategoryWithStockOrderByStockAsc(
+              pageable,
+              search,
+              category
+            );
+      } else {
+        products = productRepository.findBySearchAndCategoryWithStock(
+          pageable,
+          search,
+          category
+        );
+      }
     } else {
-      products = productRepository.findBySearchAndCategory(
-        pageable,
-        search,
-        category
-      );
+      if ("stock".equals(sortBy)) {
+        products = "desc".equalsIgnoreCase(sortDir)
+          ? productRepository.findBySearchAndCategoryOrderByStockDesc(
+              pageable,
+              search,
+              category
+            )
+          : productRepository.findBySearchAndCategoryOrderByStockAsc(
+              pageable,
+              search,
+              category
+            );
+      } else {
+        products = productRepository.findBySearchAndCategory(
+          pageable,
+          search,
+          category
+        );
+      }
     }
 
     return toProductDTOPage(products, pageable);

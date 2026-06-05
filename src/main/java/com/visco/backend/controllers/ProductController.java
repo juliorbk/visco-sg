@@ -41,9 +41,9 @@ public class ProductController {
     @RequestParam(required = false) String search,
     @RequestParam(required = false) Long category,
     @RequestParam(required = false) String sortBy,
-    @RequestParam(defaultValue = "asc") String sortDir
+    @RequestParam(defaultValue = "asc") String sortDir,
+    @RequestParam(required = false) Boolean hasStock
   ) {
-    // LIMPIEZA DE PARÁMETROS: Convertir strings vacíos a null para no romper el @Query
     if (search != null && search.trim().isEmpty()) search = null;
     if (category != null && category == 0) category = null;
     if (sortBy != null && sortBy.trim().isEmpty()) sortBy = null;
@@ -54,7 +54,8 @@ public class ProductController {
       search,
       category,
       sortBy,
-      sortDir
+      sortDir,
+      hasStock
     );
     return ResponseEntity.ok(products);
   }
