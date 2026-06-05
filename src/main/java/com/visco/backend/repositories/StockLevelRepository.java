@@ -197,6 +197,22 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("quantity") BigDecimal quantity
   );
 
+  @Query(
+    "SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s WHERE s.product.id = :productId AND s.warehouse.id = :warehouseId"
+  )
+  BigDecimal getCurrentStock(
+    @Param("productId") Long productId,
+    @Param("warehouseId") Long warehouseId
+  );
+
+  @Query(
+    "SELECT COALESCE(SUM(s.pendingStock), 0) FROM StockLevel s WHERE s.product.id = :productId AND s.warehouse.id = :warehouseId"
+  )
+  BigDecimal getPendingStock(
+    @Param("productId") Long productId,
+    @Param("warehouseId") Long warehouseId
+  );
+
   @Modifying
   @Query(
     value = """

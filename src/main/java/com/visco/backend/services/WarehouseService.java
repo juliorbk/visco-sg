@@ -453,29 +453,30 @@ public class WarehouseService {
       quantity
     );
     if (updated == 0) {
-      // Puede ser que no exista stock level o que no haya suficiente stock
-      stockLevelRepository
-        .findByProductIdAndWarehouseId(productId, warehouseId)
-        .ifPresentOrElse(
-          level -> {
-            if (level.getCurrentStock().compareTo(quantity) < 0) {
-              throw new IllegalArgumentException(
-                "Insufficient stock for product " +
-                  productId +
-                  " in warehouse " +
-                  warehouseId
-              );
-            }
-          },
-          () -> {
-            throw new EntityNotFoundException(
-              "Stock level not found for product " +
-                productId +
-                " in warehouse " +
-                warehouseId
-            );
-          }
+      BigDecimal currentStock = stockLevelRepository.getCurrentStock(
+        productId,
+        warehouseId
+      );
+      if (currentStock == null || currentStock.compareTo(BigDecimal.ZERO) == 0) {
+        throw new EntityNotFoundException(
+          "Stock level not found for product " +
+            productId +
+            " in warehouse " +
+            warehouseId
         );
+      }
+      if (currentStock.compareTo(quantity) < 0) {
+        throw new IllegalArgumentException(
+          "Insufficient stock for product " +
+            productId +
+            " in warehouse " +
+            warehouseId +
+            ". Available: " +
+            currentStock +
+            ", Requested: " +
+            quantity
+        );
+      }
     }
   }
 

@@ -41,12 +41,16 @@ public class AuthService {
       throw new IllegalArgumentException("Email address is already in use");
     }
 
-    InviteToken invite = inviteTokenService.findByToken(request.getInviteToken());
+    InviteToken invite = inviteTokenService.findByToken(
+      request.getInviteToken()
+    );
     UserRole intendedRole;
     try {
       intendedRole = UserRole.valueOf(invite.getIntendedRole());
     } catch (IllegalArgumentException e) {
-      throw new IllegalStateException("Invite token has an invalid role configured");
+      throw new IllegalStateException(
+        "Invite token has an invalid role configured"
+      );
     }
 
     CostCenter costCenter = null;

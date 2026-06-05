@@ -1,12 +1,12 @@
 package com.visco.backend.config;
 
-import com.visco.backend.repositories.UserRepository;
+import com.visco.backend.config.CustomUserDetailsService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -15,11 +15,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -33,7 +32,6 @@ public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
   private final CustomUserDetailsService customUserDetailsService;
-  private final UserRepository userRepository;
 
   @Value(
     "${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,https://viscoorinocosia.vercel.app}"
@@ -72,6 +70,7 @@ public class SecurityConfig {
           response.setContentType("application/json");
           response.getWriter().write("{\"error\": \"Unauthorized\"}");
         })
+        .accessDeniedHandler(accessDeniedHandler())
       )
       .authorizeHttpRequests(auth ->
         auth
@@ -134,10 +133,8 @@ public class SecurityConfig {
       .sessionManagement(session ->
         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
       )
-      // Aquí es donde tu código se cortó
       .authenticationProvider(authenticationProvider())
-      // Añadir el filtro JWT antes del filtro de autenticación por usuario/contraseña
-      // estándar
+      // Añadir el filtro JWT antes del filtro de autenticación por usuario/contraseña estándar
       .addFilterBefore(
         jwtAuthFilter,
         UsernamePasswordAuthenticationFilter.class
@@ -147,17 +144,19 @@ public class SecurityConfig {
   }
 
   @Bean
-  public UserDetailsService userDetailsService() {
-    return email ->
-      userRepository
-        .findByEmail(email)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+  public AccessDeniedHandler accessDeniedHandler() {
+    return (request, response, accessDeniedException) -> {
+      response.setStatus(403);
+      response.setContentType("application/json");
+      response.getWriter().write("{\"error\": \"Access denied\"}");
+    };
   }
 
   @Bean
   public AuthenticationProvider authenticationProvider() {
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-    provider.setUserDetailsService(customUserDetailsService);
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(
+      customUserDetailsService
+    );
     provider.setPasswordEncoder(passwordEncoder());
     return provider;
   }

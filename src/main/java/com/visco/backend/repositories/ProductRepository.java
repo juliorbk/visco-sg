@@ -91,11 +91,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.supplier
     LEFT JOIN FETCH p.category
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategory(
@@ -118,22 +118,22 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
     """,
     countQuery = """
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockAsc(
@@ -149,22 +149,22 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
     """,
     countQuery = """
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockDesc(
@@ -201,11 +201,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
     """,
@@ -213,11 +213,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )
@@ -234,11 +234,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
@@ -247,11 +247,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )
@@ -268,11 +268,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
@@ -281,11 +281,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
-      (CAST(:search AS String) IS NULL
+      (:search IS NULL
         OR LOWER(p.name) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(p.sku) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%')
         OR LOWER(CAST(p.internalCode AS String)) LIKE CONCAT('%', LOWER(CAST(:search AS String)), '%'))
-      AND (CAST(:category AS Long) IS NULL OR p.category.id = CAST(:category AS Long))
+      AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )

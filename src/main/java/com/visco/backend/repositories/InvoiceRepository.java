@@ -18,15 +18,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Page<Invoice> findByStatus(InvoiceStatus status, Pageable pageable);
     List<Invoice> findByDueDateBeforeAndStatus(LocalDate date, InvoiceStatus status);
 
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier")
+    @Query("SELECT DISTINCT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier")
     Page<Invoice> findAllWithFetch(Pageable pageable);
 
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier WHERE i.status = :status")
+    @Query("SELECT DISTINCT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier WHERE i.status = :status")
     Page<Invoice> findByStatusWithFetch(@Param("status") InvoiceStatus status, Pageable pageable);
 
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.id = :id")
+    @Query("SELECT DISTINCT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.id = :id")
     Optional<Invoice> findByIdDetailed(@Param("id") Long id);
 
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.purchaseOrder.id = :orderId")
+    @Query("SELECT DISTINCT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.purchaseOrder.id = :orderId")
     List<Invoice> findByPurchaseOrderIdWithFetch(@Param("orderId") Long orderId);
 }

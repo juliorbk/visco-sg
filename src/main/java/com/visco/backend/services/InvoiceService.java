@@ -45,7 +45,7 @@ public class InvoiceService {
   @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
     PurchaseOrder order = purchaseOrderRepository
-      .findById(request.purchaseOrderId())
+      .findByIdWithItems(request.purchaseOrderId())
       .orElseThrow(() ->
         new EntityNotFoundException(
           "Purchase order not found: " + request.purchaseOrderId()

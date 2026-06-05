@@ -17,6 +17,7 @@ import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.RequisitionRepository;
+import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import com.visco.backend.repositories.UserRepository;
 import com.visco.backend.repositories.WarehouseRepository;
@@ -49,6 +50,7 @@ public class ProcurementService {
     private final WarehouseService warehouseService;
     private final RequisitionRepository requisitionRepository;
     private final GoodReceiptRepository goodReceiptRepository;
+    private final StockLevelRepository stockLevelRepository;
 
     // ─────────────────────────────────────────────────────────────
     // Create purchase order
@@ -225,6 +227,50 @@ public class ProcurementService {
         Warehouse orderWarehouse = order.getDestinationWarehouse();
         if (orderWarehouse != null) {
             Map<Long, BigDecimal> receivedQtys = getTotalReceivedByOrder(orderId);
+
+            for (PurchaseOrderItem item : order.getItems()) {
+                BigDecimal orderedQty = item.getQuantity();
+                BigDecimal receivedQty = receivedQtys.getOrDefault(
+                    item.getProduct().getId(),
+                    BigDecimal.ZERO
+                );
+                BigDecimal pendingQty = orderedQty.subtract(receivedQty);
+
+                if (pendingQty.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal currentPending = stockLevelRepository.getPendingStock(
+                        item.getProduct().getId(),
+                        orderWarehouse.getId()
+                    );
+                    if (currentPending != null && currentPending.compareTo(pendingQty) < 0) {
+                        throw new IllegalStateException(
+                            "Insufficient pending stock for product " +
+                                item.getProduct().getId() +
+                                ". Available: " +
+                                currentPending +
+                                ", Required: " +
+                                pendingQty
+                        );
+                    }
+                }
+
+                if (receivedQty.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal currentStock = stockLevelRepository.getCurrentStock(
+                        item.getProduct().getId(),
+                        orderWarehouse.getId()
+                    );
+                    if (currentStock != null && currentStock.compareTo(receivedQty) < 0) {
+                        throw new IllegalStateException(
+                            "Insufficient current stock for product " +
+                                item.getProduct().getId() +
+                                ". Available: " +
+                                currentStock +
+                                ", Required: " +
+                                receivedQty
+                        );
+                    }
+                }
+            }
+
             for (PurchaseOrderItem item : order.getItems()) {
                 BigDecimal orderedQty = item.getQuantity();
                 BigDecimal receivedQty = receivedQtys.getOrDefault(
