@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -27,6 +28,74 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u.email FROM User u WHERE u.active = true AND u.role IN ('ADMIN', 'MANAGER')")
     List<String> findActiveAdminAndManagerEmails();
+
+    long countByRole(UserRole role);
+
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdRaw(@Param("id") UUID id);
+
+    // ── Hard-delete helpers: null out FK columns referencing a user
+    // before deleting the user itself. Each @Modifying clears one
+    // specific relationship. Kept here (rather than in a separate
+    // repository) so the hard-delete flow is self-contained.
+
+    @Modifying
+    @Query(
+      "UPDATE PurchaseOrder p SET p.createdBy = null WHERE p.createdBy.id = :userId"
+    )
+    int nullifyCreatedByInPurchaseOrders(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE PurchaseOrder p SET p.approvedBy = null WHERE p.approvedBy.id = :userId"
+    )
+    int nullifyApprovedByInPurchaseOrders(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE PurchaseOrder p SET p.rejectedBy = null WHERE p.rejectedBy.id = :userId"
+    )
+    int nullifyRejectedByInPurchaseOrders(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE Requisition r SET r.requestedBy = null WHERE r.requestedBy.id = :userId"
+    )
+    int nullifyRequestedByInRequisitions(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE Requisition r SET r.approvedBy = null WHERE r.approvedBy.id = :userId"
+    )
+    int nullifyApprovedByInRequisitions(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE GoodReceipt g SET g.receivedBy = null WHERE g.receivedBy.id = :userId"
+    )
+    int nullifyReceivedByInGoodReceipts(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE DispatchNote d SET d.createdBy = null WHERE d.createdBy.id = :userId"
+    )
+    int nullifyCreatedByInDispatchNotes(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE InventoryMovement i SET i.createdBy = null WHERE i.createdBy.id = :userId"
+    )
+    int nullifyCreatedByInInventoryMovements(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(
+      "UPDATE Warehouse w SET w.responsibleUser = null WHERE w.responsibleUser.id = :userId"
+    )
+    int nullifyResponsibleUserInWarehouses(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query("DELETE FROM InviteToken t WHERE t.createdById = :userId")
+    int deleteInviteTokensByCreator(@Param("userId") UUID userId);
 
     interface UserRoleCountProjection {
         UserRole getRole();
