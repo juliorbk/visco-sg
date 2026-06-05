@@ -34,10 +34,7 @@ public class AuthService {
   @Transactional
   public AuthResponse register(UserRegisterRequest request) {
     if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-      log.warn(
-        "Registro fallido: Email ya registrado ({})",
-        request.getEmail()
-      );
+      log.warn("Registro fallido: Email ya registrado");
       throw new IllegalArgumentException("Email address is already in use");
     }
 
@@ -58,7 +55,7 @@ public class AuthService {
       .build();
 
     userRepository.save(newUser);
-    log.info("Registro exitoso para usuario ID: {}", newUser.getId());
+    log.info("Registro exitoso: userId={}", newUser.getId());
     /* 
         try {
             emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
@@ -74,7 +71,7 @@ public class AuthService {
   }
 
   public AuthResponse login(LoginRequest request) {
-    log.info("Intento de login para el usuario: {}", request.getEmail());
+    log.info("Intento de login");
 
     try {
       authenticationManager.authenticate(
@@ -83,9 +80,8 @@ public class AuthService {
           request.getPassword()
         )
       );
-      log.info("Autenticacion exitosa para: {}", request.getEmail());
     } catch (BadCredentialsException e) {
-      log.warn("Credenciales invalidas para: {}", request.getEmail());
+      log.warn("Credenciales invalidas");
       throw e;
     }
 
@@ -93,13 +89,13 @@ public class AuthService {
       .findByEmail(request.getEmail())
       .orElseThrow(() -> {
         log.error(
-          "Inconsistencia: Usuario autenticado pero no encontrado en DB ({})",
-          request.getEmail()
+          "Inconsistencia: Usuario autenticado pero no encontrado en DB"
         );
         return new BadCredentialsException("Invalid credentials");
       });
 
-    log.debug("Generando JWT para usuario: {}", request.getEmail());
+    log.info("Autenticacion exitosa: userId={}", user.getId());
+    log.debug("Generando JWT para usuario");
 
     // Retornamos la info completa para que el controlador decida qué hacer con ella
     return AuthResponse.builder()
