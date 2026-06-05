@@ -6,10 +6,12 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,11 +37,12 @@ public class RequisitionItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "requisition_id", nullable = false)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Requisition requisition;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "requisition_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  @JsonBackReference("requisition-items")
+  private Requisition requisition;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

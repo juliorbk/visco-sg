@@ -13,6 +13,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -42,6 +43,7 @@ public class InvoiceItem {
   @JoinColumn(name = "invoice_id", nullable = false)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonBackReference("invoice-items")
   private Invoice invoice;
 
   @ManyToOne(fetch = FetchType.LAZY)

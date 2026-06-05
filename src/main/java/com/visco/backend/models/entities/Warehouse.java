@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -58,6 +59,7 @@ public class Warehouse {
 
   @OneToMany(mappedBy = "warehouse", fetch = FetchType.LAZY)
   @Builder.Default
+  @JsonIgnore
   private List<Location> locations = new ArrayList<>();
 
   @CreatedDate

@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,6 +41,7 @@ public class DispatchNoteItem {
   @JoinColumn(name = "dispatch_note_id", nullable = false)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonBackReference("dispatch-note-items")
   private DispatchNote dispatchNote;
 
   @ManyToOne(fetch = FetchType.LAZY)

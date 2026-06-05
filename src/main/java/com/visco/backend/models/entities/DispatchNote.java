@@ -17,6 +17,7 @@ import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -82,6 +83,7 @@ public class DispatchNote {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("dispatch-note-items")
   private List<DispatchNoteItem> items = new ArrayList<>();
 
   @PrePersist

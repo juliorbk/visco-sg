@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -102,6 +103,7 @@ public class Invoice {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("invoice-items")
   private List<InvoiceItem> items = new ArrayList<>();
 
   @Version

@@ -17,6 +17,7 @@ import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -86,6 +87,7 @@ public class GoodReceipt {
   @Builder.Default
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
+  @JsonManagedReference("good-receipt-items")
   private List<GoodReceiptItem> items = new ArrayList<>();
 
   @PrePersist
