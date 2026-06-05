@@ -217,7 +217,7 @@ public class WarehouseService {
           )
         );
 
-      BigDecimal expected = BigDecimal.valueOf(poItem.getQuantity());
+      BigDecimal expected = poItem.getQuantity();
       BigDecimal received = itemReq.receivedQuantity();
 
       GoodReceiptItem item = GoodReceiptItem.builder()
@@ -299,7 +299,7 @@ public class WarehouseService {
       .getItems()
       .stream()
       .map(poItem -> {
-        BigDecimal ordered = BigDecimal.valueOf(poItem.getQuantity());
+        BigDecimal ordered = poItem.getQuantity();
         BigDecimal received = totalReceived.getOrDefault(
           poItem.getProduct().getId(),
           BigDecimal.ZERO
@@ -346,9 +346,7 @@ public class WarehouseService {
       if (current != null) {
         totalReceived = totalReceived.add(current.receivedQuantity());
       }
-      if (
-        totalReceived.compareTo(BigDecimal.valueOf(poItem.getQuantity())) < 0
-      ) {
+      if (totalReceived.compareTo(poItem.getQuantity()) < 0) {
         return false;
       }
     }

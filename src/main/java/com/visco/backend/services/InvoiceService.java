@@ -107,7 +107,7 @@ public class InvoiceService {
           )
         );
 
-      BigDecimal poQty = BigDecimal.valueOf(poItem.getQuantity());
+      BigDecimal poQty = poItem.getQuantity();
       BigDecimal receivedQty = receivedQtys.getOrDefault(
         itemReq.productId(),
         BigDecimal.ZERO

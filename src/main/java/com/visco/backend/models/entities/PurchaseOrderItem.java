@@ -45,9 +45,9 @@ public class PurchaseOrderItem {
   @ToString.Exclude
   private Product product;
 
-  @Column(nullable = false)
-  private Integer quantity; // Cantidad a comprar
+  @Column(nullable = false, precision = 18, scale = 4)
+  private BigDecimal quantity; // Cantidad a comprar (admite fracciones)
 
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal unitPrice; // Precio acordado con el proveedor
 }

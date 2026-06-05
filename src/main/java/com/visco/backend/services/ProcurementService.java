@@ -146,7 +146,7 @@ public class ProcurementService {
       warehouseService.addPendingStockByWarehouse(
         product.getId(),
         request.destinationWarehouseId(),
-        BigDecimal.valueOf(itemReq.quantity())
+        itemReq.quantity()
       );
     }
 
@@ -251,7 +251,7 @@ public class ProcurementService {
     if (orderWarehouse != null) {
       Map<Long, BigDecimal> receivedQtys = getTotalReceivedByOrder(orderId);
       for (PurchaseOrderItem item : order.getItems()) {
-        BigDecimal orderedQty = BigDecimal.valueOf(item.getQuantity());
+        BigDecimal orderedQty = item.getQuantity();
         BigDecimal receivedQty = receivedQtys.getOrDefault(
           item.getProduct().getId(),
           BigDecimal.ZERO
@@ -403,7 +403,7 @@ public class ProcurementService {
           item.getProduct().getSku(),
           item.getQuantity(),
           item.getUnitPrice(),
-          item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+          item.getUnitPrice().multiply(item.getQuantity())
         )
       )
       .toList();

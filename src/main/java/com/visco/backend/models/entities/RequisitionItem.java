@@ -41,8 +41,8 @@ public class RequisitionItem {
     @ToString.Exclude
     private Product product;
 
-    @Column(nullable = false)
-    private Integer quantity;
+  @Column(nullable = false, precision = 18, scale = 4)
+  private BigDecimal quantity;
 
     @Column(length = 500)
     private String notes;
