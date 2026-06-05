@@ -5,6 +5,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -111,6 +112,10 @@ public class SecurityConfig {
           .hasRole("ADMIN")
           .requestMatchers("/api/invites/**")
           .hasRole("ADMIN")
+          .requestMatchers(HttpMethod.DELETE, "/api/users/**")
+          .hasRole("SUPERADMIN")
+          .requestMatchers(HttpMethod.GET, "/api/users/*/references")
+          .hasRole("SUPERADMIN")
           .requestMatchers("/actuator/**")
           .hasRole("ADMIN")
           // Roles específicos
