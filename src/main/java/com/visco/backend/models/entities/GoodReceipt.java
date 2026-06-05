@@ -62,8 +62,11 @@ public class GoodReceipt {
   @Column(nullable = false)
   private boolean closed;
 
-  @Column(nullable = false)
-  private Long destinationWarehouseId;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "destination_warehouse_id", nullable = false)
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private Warehouse destinationWarehouse;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "received_by_id")

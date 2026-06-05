@@ -161,7 +161,7 @@ public class WarehouseService {
     GoodReceipt receipt = GoodReceipt.builder()
       .receiptNumber("PENDING")
       .purchaseOrder(order)
-      .destinationWarehouseId(destWarehouse.getId())
+      .destinationWarehouse(destWarehouse)
       .receivedAt(LocalDateTime.now())
       .notes(request.notes())
       .build();
