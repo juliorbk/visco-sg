@@ -27,7 +27,16 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "requisitions")
+@Table(
+  name = "requisitions",
+  indexes = {
+    @Index(name = "idx_req_requested_by", columnList = "requested_by_id"),
+    @Index(name = "idx_req_cost_center", columnList = "cost_center_id"),
+    @Index(name = "idx_req_approved_by", columnList = "approved_by_id"),
+    @Index(name = "idx_req_status", columnList = "status"),
+    @Index(name = "idx_req_created_at", columnList = "created_at"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

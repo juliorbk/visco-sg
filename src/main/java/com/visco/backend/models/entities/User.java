@@ -25,7 +25,13 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
-@Table(name = "app_user")
+@Table(
+  name = "app_user",
+  indexes = {
+    @Index(name = "idx_user_cost_center", columnList = "cost_center_id"),
+    @Index(name = "idx_user_email", columnList = "email", unique = true),
+  }
+)
 @Getter
 @Setter
 @NoArgsConstructor

@@ -18,7 +18,13 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "requisition_items")
+@Table(
+  name = "requisition_items",
+  indexes = {
+    @Index(name = "idx_ri_requisition", columnList = "requisition_id"),
+    @Index(name = "idx_ri_product", columnList = "product_id"),
+  }
+)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

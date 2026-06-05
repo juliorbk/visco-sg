@@ -24,7 +24,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "cost_centers")
+@Table(
+  name = "cost_centers",
+  indexes = {
+    @Index(name = "idx_cost_center_management", columnList = "management_id"),
+  }
+)
 public class CostCenter {
 
   @Id

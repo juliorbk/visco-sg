@@ -23,7 +23,12 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name = "employees")
+@Table(
+  name = "employees",
+  indexes = {
+    @Index(name = "idx_employee_cost_center", columnList = "cost_center_id"),
+  }
+)
 @Getter
 @Setter
 @Builder

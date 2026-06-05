@@ -27,7 +27,15 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "management")
+@Table(
+  name = "management",
+  indexes = {
+    @Index(
+      name = "idx_management_general_management",
+      columnList = "general_management_id"
+    ),
+  }
+)
 public class Management {
 
   @Id

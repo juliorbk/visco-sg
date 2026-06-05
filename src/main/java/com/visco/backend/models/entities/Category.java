@@ -28,7 +28,10 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "categories")
+@Table(
+  name = "categories",
+  indexes = { @Index(name = "idx_category_parent", columnList = "parent_id") }
+)
 public class Category {
 
   @Id
