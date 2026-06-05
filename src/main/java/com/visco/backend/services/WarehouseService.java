@@ -935,12 +935,10 @@ public class WarehouseService {
     AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
 
     return movementsPage.map(m -> {
-      BigDecimal qty = (m.getType() == MovementType.OUTPUT)
-        ? m.getQuantity().negate()
-        : m.getQuantity();
+      BigDecimal signedQty = signedQuantityForRunningBalance(m);
 
       BigDecimal runningBalance = running.updateAndGet(current ->
-        current.add(qty)
+        current.add(signedQty)
       );
 
       return new InventoryMovementResponse(
@@ -960,5 +958,22 @@ public class WarehouseService {
         runningBalance
       );
     });
+  }
+
+  /**
+   * The running balance in the kardex is the cumulative quantity of a
+   * product. INPUT, OUTPUT, and ADJUSTMENT all change that total.
+   * INPUT adds, OUTPUT subtracts, and ADJUSTMENT stores an already-signed
+   * quantity (newStock - currentStock), so we add it as-is. TRANSFER
+   * moves stock between warehouses without changing the per-product
+   * total, so it contributes zero to the running balance.
+   */
+  private BigDecimal signedQuantityForRunningBalance(InventoryMovement m) {
+    return switch (m.getType()) {
+      case INPUT -> m.getQuantity();
+      case OUTPUT, DISPATCH -> m.getQuantity().negate();
+      case TRANSFER -> BigDecimal.ZERO;
+      case ADJUSTMENT -> m.getQuantity();
+    };
   }
 }
