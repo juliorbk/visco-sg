@@ -55,16 +55,16 @@ public class InvoiceItem {
   @Column(nullable = false)
   private BigDecimal quantity;
 
-  @Column(name = "unit_price", nullable = false)
+  @Column(name = "unit_price", nullable = false, precision = 18, scale = 4)
   private BigDecimal unitPrice;
 
-  @Column(name = "line_total", nullable = false)
+  @Column(name = "line_total", nullable = false, precision = 18, scale = 2)
   private BigDecimal lineTotal;
 
-  @Column(name = "po_quantity")
+  @Column(name = "po_quantity", precision = 18, scale = 4)
   private BigDecimal poQuantity;
 
-  @Column(name = "received_quantity")
+  @Column(name = "received_quantity", precision = 18, scale = 4)
   private BigDecimal receivedQuantity;
 
   @Column(name = "quantity_match")

@@ -60,7 +60,7 @@ public class InventoryMovement {
   @ToString.Exclude
   private Warehouse toWarehouse;
 
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal quantity;
 
   @Enumerated(EnumType.STRING)
@@ -70,10 +70,10 @@ public class InventoryMovement {
   @Column(length = 500)
   private String reason;
 
-  @Column(name = "entry_unit_price", precision = 38, scale = 2)
+  @Column(name = "entry_unit_price", precision = 18, scale = 4)
   private BigDecimal entryUnitPrice;
 
-  @Column(name = "exit_unit_price", precision = 38, scale = 2)
+  @Column(name = "exit_unit_price", precision = 18, scale = 4)
   private BigDecimal exitUnitPrice;
 
   @Column(nullable = false)

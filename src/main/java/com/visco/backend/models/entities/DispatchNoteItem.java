@@ -50,9 +50,9 @@ public class DispatchNoteItem {
   @ToString.Exclude
   private Product product;
 
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal quantity;
 
-  @Column(name = "exit_unit_price", precision = 38, scale = 2)
+  @Column(name = "exit_unit_price", precision = 18, scale = 4)
   private BigDecimal exitUnitPrice;
 }

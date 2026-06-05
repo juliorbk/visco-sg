@@ -53,10 +53,10 @@ public class GoodReceiptItem {
   @ToString.Exclude
   private Product product;
 
-  @Column(name = "expected_quantity", nullable = false)
+  @Column(name = "expected_quantity", nullable = false, precision = 18, scale = 4)
   private BigDecimal expectedQuantity; // Lo que decía la orden de compra
 
-  @Column(name = "received_quantity", nullable = false)
+  @Column(name = "received_quantity", nullable = false, precision = 18, scale = 4)
   private BigDecimal receivedQuantity; // Lo que realmente llegó
 
   // Ubicación dentro del almacén donde se colocó la mercancía

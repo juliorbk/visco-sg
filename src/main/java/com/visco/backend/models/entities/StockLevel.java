@@ -59,11 +59,11 @@ public class StockLevel {
   private Warehouse warehouse;
 
   @Builder.Default
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal currentStock = BigDecimal.ZERO;
 
   @Builder.Default
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal pendingStock = BigDecimal.ZERO;
 
   @Version

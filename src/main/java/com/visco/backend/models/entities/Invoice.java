@@ -70,10 +70,10 @@ public class Invoice {
   @Column(name = "due_date")
   private LocalDate dueDate;
 
-  @Column(name = "total_amount", nullable = false)
+  @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
   private BigDecimal totalAmount;
 
-  @Column(name = "tax_amount")
+  @Column(name = "tax_amount", precision = 18, scale = 2)
   private BigDecimal taxAmount;
 
   @Enumerated(EnumType.STRING)
