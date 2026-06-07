@@ -9,30 +9,21 @@ import java.util.List;
 import java.util.UUID;
 
 public record DispatchRequest(
-  @NotNull(message = "El almacén es obligatorio")
-  Long warehouseId,
+    @NotNull(message = "El almacén es obligatorio") Long warehouseId,
 
-  @NotNull(message = "El empleado que retira es obligatorio")
-  Long employeeId,
+    @NotNull(message = "El empleado que retira es obligatorio") Long employeeId,
 
-  String notes,
+    String notes,
 
-  UUID createdById,
+    UUID createdById,
 
-  @NotEmpty(message = "Debe haber al menos un producto")
-  @Valid
-  List<DispatchItem> items
+    @NotEmpty(message = "Debe haber al menos un producto") @Valid List<DispatchItem> items
 ) {
-  public record DispatchItem(
-    @NotNull(message = "El producto es obligatorio")
-    Long productId,
-
-    @NotNull(message = "La cantidad es obligatoria")
-    @Positive(message = "La cantidad debe ser positiva")
-    BigDecimal quantity,
-
-    @NotNull(message = "El precio de salida es obligatorio")
-    @Positive(message = "El precio de salida debe ser positivo")
-    BigDecimal exitUnitPrice
-  ) {}
+    public record DispatchItem(
+        @NotNull(message = "El producto es obligatorio") Long productId,
+        @NotNull(message = "La cantidad es obligatoria") @Positive(
+            message = "La cantidad debe ser positiva"
+        ) BigDecimal quantity,
+        @Positive(message = "El precio de salida debe ser positivo") BigDecimal exitUnitPrice
+    ) {}
 }
