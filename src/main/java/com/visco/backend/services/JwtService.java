@@ -25,6 +25,29 @@ public class JwtService {
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
+    @jakarta.annotation.PostConstruct
+    private void validateSecret() {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException(
+                "app.jwt.secret (JWT_SECRET env var) is not configured. " +
+                "Set it to a Base64-encoded value of at least 32 bytes (256 bits)."
+            );
+        }
+        try {
+            byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+            if (keyBytes.length < 32) {
+                throw new IllegalStateException(
+                    "app.jwt.secret decodes to " + keyBytes.length +
+                    " bytes; HS256 requires at least 32. Generate a stronger secret."
+                );
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                "app.jwt.secret is not valid Base64: " + e.getMessage()
+            );
+        }
+    }
+
     private SecretKey getSigningKey() {
         // This correctly decodes a Base64 string from your properties file
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);

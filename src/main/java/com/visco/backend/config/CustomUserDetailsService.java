@@ -26,7 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     throws UsernameNotFoundException {
     // 1. Buscar el usuario en tu base de datos usando tu repositorio
     User user = userRepository
-      .findByEmail(email) // Asegúrate de tener este método en tu UserRepository
+      .findByEmailIgnoreCase(email) // Asegúrate de tener este método en tu UserRepository
       .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
     log.info("loadUserByUsername: email={} active={}", user.getEmail(), user.getActive());
@@ -39,11 +39,15 @@ public class CustomUserDetailsService implements UserDetailsService {
       new SimpleGrantedAuthority(roleName)
     );
 
-    // 3. Construir y retornar el UserPrincipal con los datos de tu entidad
+    // 3. Construir y retornar el UserPrincipal con los datos de tu entidad.
+    // Se pasa un password vacío porque el principal se usa solo en el JWT
+    // filter, nunca para autenticar — Spring solo necesita el password en
+    // DaoAuthenticationProvider. Mantenerlo en memoria crea una vía de leak
+    // si alguna vez el principal se serializa.
     return new UserPrincipal(
       user.getId(),
       user.getEmail(),
-      user.getPassword(),
+      "",
       Boolean.TRUE.equals(user.getActive()),
       authorities
     );

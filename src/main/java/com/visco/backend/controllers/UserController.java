@@ -1,8 +1,10 @@
 package com.visco.backend.controllers;
 
+import com.visco.backend.config.UserPrincipal;
 import com.visco.backend.models.dtos.UpdateUserRequest;
 import com.visco.backend.models.dtos.UserDTO;
 import com.visco.backend.models.dtos.UserReferencesResponse;
+import com.visco.backend.models.entities.UserRole;
 import com.visco.backend.services.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -49,9 +52,11 @@ public class UserController {
     @Operation(summary = "Update user", description = "Updates user information")
     public ResponseEntity<UserDTO> updateUser(
         @PathVariable UUID id,
-        @Valid @RequestBody UpdateUserRequest request
+        @Valid @RequestBody UpdateUserRequest request,
+        @AuthenticationPrincipal UserPrincipal caller
     ) {
-        return ResponseEntity.ok(adminService.updateUser(id, request));
+        UserRole callerRole = UserPrincipal.resolveRole(caller);
+        return ResponseEntity.ok(adminService.updateUser(id, request, callerRole));
     }
 
     @PatchMapping("/{id}/deactivate")
@@ -63,10 +68,13 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/delete")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Delete user", description = "Delete a user account")
-    public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
-        adminService.deactivateUser(id);
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    @Operation(summary = "Delete user (alias)", description = "Alias for DELETE that delegates to hardDeleteUser")
+    public ResponseEntity<Void> deleteUser(
+        @PathVariable UUID id,
+        @RequestParam(name = "force", defaultValue = "false") boolean force
+    ) {
+        adminService.hardDeleteUser(id, force);
         return ResponseEntity.noContent().build();
     }
 
@@ -104,18 +112,8 @@ public class UserController {
         @PathVariable UUID id,
         @RequestParam(name = "force", defaultValue = "false") boolean force
     ) {
-        // Last-SUPERADMIN guard. We only need to enforce this when the
-        // target user IS a SUPERADMIN, so load the user first.
-        UserDTO target = adminService.getUserById(id);
-        if (
-            "Superadmin".equalsIgnoreCase(target.getRole().name()) &&
-            adminService.countSuperadmins() <= 1
-        ) {
-            throw new IllegalStateException(
-                "Refusing to delete the last SUPERADMIN. Promote another user " +
-                    "to SUPERADMIN before deleting this one."
-            );
-        }
+        // Last-SUPERADMIN guard lives inside AdminService.hardDeleteUser
+        // to avoid the TOCTOU race that a controller-level check would have.
         adminService.hardDeleteUser(id, force);
         return ResponseEntity.noContent().build();
     }

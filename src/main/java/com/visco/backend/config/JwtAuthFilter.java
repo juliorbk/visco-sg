@@ -56,9 +56,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (jwtService.isTokenValid(token, email)) {
           // 2. Cargamos el usuario desde la base de datos usando el email.
           // Esto devuelve tu 'UserPrincipal' completo (con el UUID)
-          UserDetails userDetails = userDetailsService.loadUserByUsername(
-            email
-          );
+          UserDetails userDetails;
+          try {
+            userDetails = userDetailsService.loadUserByUsername(email);
+          } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
+            // The JWT references a user that no longer exists (hard-deleted,
+            // account purged, etc.). Clean the SecurityContext and short-circuit
+            // with 401 instead of letting the exception bubble up as a 500.
+            SecurityContextHolder.clearContext();
+            log.warn("JWT references missing user: {}", email);
+            response.setStatus(401);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"User no longer exists\"}");
+            return;
+          } catch (Exception ex) {
+            // Any other failure (DB outage, query timeout, ...) should not
+            // produce a 500 stack trace. Treat as an auth failure and
+            // continue the chain so the entry point can issue 401.
+            SecurityContextHolder.clearContext();
+            log.error("Error loading user for JWT: {}", ex.getMessage(), ex);
+            response.setStatus(401);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Authentication failed\"}");
+            return;
+          }
 
           // 2b. Verificamos que el usuario esté activo. Un usuario desactivado
           // que aún conserve un JWT no expirado queda bloqueado aquí.

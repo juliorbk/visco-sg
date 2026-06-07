@@ -10,8 +10,10 @@ public class CookieService {
   @Value("${jwt.cookie.name:visco_auth_token}")
   private String cookieName;
 
-  @Value("${jwt.expiration.hours:24}")
-  private int cookieExpirationHours;
+  private final JwtService jwtService;
+
+  @Value("${app.jwt.expiration-ms:86400000}")
+  private long jwtExpirationMs;
 
   /**
    * Defaults to true — only set COOKIE_SECURE=false in local dev via .env.local. In any deployed
@@ -20,12 +22,19 @@ public class CookieService {
   @Value("${jwt.cookie.secure:true}")
   private boolean cookieSecure;
 
+  public CookieService(JwtService jwtService) {
+    this.jwtService = jwtService;
+  }
+
   public Cookie createJwtCookie(String jwtToken) {
     Cookie cookie = new Cookie(cookieName, jwtToken);
     cookie.setHttpOnly(true);
     cookie.setSecure(cookieSecure);
     cookie.setPath("/");
-    cookie.setMaxAge(cookieExpirationHours * 60 * 60);
+    // Sincronizado con la expiración real del JWT para evitar que la cookie
+    // sobreviva tokens ya rechazados por el servidor.
+    long maxAgeSeconds = Math.max(1, jwtExpirationMs / 1000);
+    cookie.setMaxAge((int) Math.min(maxAgeSeconds, Integer.MAX_VALUE));
     if (cookieSecure) {
       cookie.setAttribute("SameSite", "None");
     } else {

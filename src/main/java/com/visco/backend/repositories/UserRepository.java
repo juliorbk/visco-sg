@@ -17,7 +17,15 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
-    @Query("SELECT u FROM User u LEFT JOIN FETCH u.costCenter WHERE u.email = :email")
+    @Query(
+      "SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)"
+    )
+    Optional<User> findByEmailIgnoreCase(@Param("email") String email);
+
+    @Query(
+      "SELECT u FROM User u LEFT JOIN FETCH u.costCenter " +
+      "WHERE LOWER(u.email) = LOWER(:email)"
+    )
     Optional<User> findByEmailWithCostCenter(@Param("email") String email);
 
     @Query("SELECT u FROM User u LEFT JOIN FETCH u.costCenter")
@@ -30,6 +38,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<String> findActiveAdminAndManagerEmails();
 
     long countByRole(UserRole role);
+
+    long countByRoleAndActiveTrue(UserRole role);
 
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdRaw(@Param("id") UUID id);

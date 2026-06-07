@@ -40,6 +40,9 @@ public class SecurityConfig {
   )
   private String[] allowedOrigins;
 
+  @Value("${app.openapi.enabled:false}")
+  private boolean openapiEnabled;
+
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
@@ -125,11 +128,14 @@ public class SecurityConfig {
             "/api/auth/login",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
             "/health"
           )
           .permitAll()
+          // OpenAPI / Swagger: gated by app.openapi.enabled (default OFF in prod)
+          .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+          .access((authentication, context) ->
+            new org.springframework.security.authorization.AuthorizationDecision(openapiEnabled)
+          )
           // Solo ADMIN (y cost-centers requiere al menos autenticación)
           .requestMatchers(
             "/api/users/**",
@@ -165,7 +171,7 @@ public class SecurityConfig {
           .requestMatchers(HttpMethod.GET, "/api/users/*/references")
           .hasRole("SUPERADMIN")
           .requestMatchers("/actuator/**")
-          .hasRole("ADMIN")
+          .hasRole("SUPERADMIN")
           // Roles específicos
           .requestMatchers("/api/inventory/**", "/api/warehouse/dispatches/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN")

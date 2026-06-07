@@ -39,10 +39,24 @@ public class AdminService {
     }
 
     @Transactional
-    public UserDTO updateUser(UUID id, UpdateUserRequest request) {
+    public UserDTO updateUser(
+        UUID id,
+        UpdateUserRequest request,
+        UserRole callerRole
+    ) {
         User user = userRepository
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+
+        // Privilege escalation guard: only SUPERADMIN can grant SUPERADMIN.
+        if (
+            request.role() == UserRole.SUPERADMIN &&
+            callerRole != UserRole.SUPERADMIN
+        ) {
+            throw new IllegalStateException(
+                "Only a SUPERADMIN can assign the SUPERADMIN role"
+            );
+        }
 
         user.setRole(request.role());
 
@@ -75,7 +89,6 @@ public class AdminService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
         userRepository.delete(user);
-        userRepository.save(user);
     }
 
     @Transactional
@@ -124,6 +137,19 @@ public class AdminService {
             .findById(id)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
 
+        // Last-active-SUPERADMIN guard, enforced inside the same transaction
+        // as the delete to avoid the TOCTOU race that the controller-level
+        // check suffered from. Inactive SUPERADMINs are not counted.
+        if (user.getRole() == UserRole.SUPERADMIN && Boolean.TRUE.equals(user.getActive())) {
+            long activeSuperadmins = userRepository.countByRoleAndActiveTrue(UserRole.SUPERADMIN);
+            if (activeSuperadmins <= 1) {
+                throw new IllegalStateException(
+                    "Refusing to delete the last active SUPERADMIN. Promote another user " +
+                        "to SUPERADMIN before deleting this one."
+                );
+            }
+        }
+
         UserReferencesResponse refs = countUserReferences(id);
         if (refs.total() > 0 && !force) {
             throw new IllegalStateException(
@@ -134,10 +160,9 @@ public class AdminService {
             );
         }
 
-        // Force path: clear the FK columns referencing this user.
-        // We do this even when refs.total() == 0 because the user
-        // might be a SUPERADMIN being removed from a small system.
-        if (force) {
+        // Force path: only run the nullify updates if there is at least
+        // one dependent row, to avoid touching unrelated tables.
+        if (force && refs.total() > 0) {
             nullifyUserReferences(id);
         }
 
@@ -167,6 +192,6 @@ public class AdminService {
      */
     @Transactional(readOnly = true)
     public long countSuperadmins() {
-        return userRepository.countByRole(UserRole.SUPERADMIN);
+        return userRepository.countByRoleAndActiveTrue(UserRole.SUPERADMIN);
     }
 }

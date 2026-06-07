@@ -1,5 +1,6 @@
 package com.visco.backend.config; // Ajusta si lo pones en otro lado
 
+import com.visco.backend.models.entities.UserRole;
 import java.util.Collection;
 import java.util.UUID; // O Long, dependiendo del tipo de ID de tu User
 import org.springframework.security.core.GrantedAuthority;
@@ -25,6 +26,28 @@ public class UserPrincipal implements UserDetails {
     this.password = password;
     this.active = active;
     this.authorities = authorities;
+  }
+
+  /**
+   * Resolve the {@link UserRole} from the principal's authorities. Falls back
+   * to {@code USER} when the principal is null (anonymous request) so callers
+   * can use the result safely in role-comparison checks.
+   */
+  public static UserRole resolveRole(UserPrincipal principal) {
+    if (principal == null || principal.getAuthorities() == null) {
+      return UserRole.USER;
+    }
+    for (GrantedAuthority a : principal.getAuthorities()) {
+      String name = a.getAuthority();
+      if (name == null) continue;
+      if (name.startsWith("ROLE_")) {
+        name = name.substring("ROLE_".length());
+      }
+      try {
+        return UserRole.valueOf(name);
+      } catch (IllegalArgumentException ignored) {}
+    }
+    return UserRole.USER;
   }
 
   public UUID getId() {

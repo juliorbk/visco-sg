@@ -36,7 +36,8 @@ public class AuthService {
 
   @Transactional
   public AuthResponse register(UserRegisterRequest request) {
-    if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+    String normalizedEmail = request.getEmail().trim().toLowerCase();
+    if (userRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
       log.warn("Registro fallido: Email ya registrado");
       throw new IllegalArgumentException("Email address is already in use");
     }
@@ -45,6 +46,11 @@ public class AuthService {
       request.getInviteToken()
     );
     UserRole intendedRole;
+    if (invite.getIntendedRole() == null) {
+      throw new IllegalStateException(
+        "Invite token is missing the intended role"
+      );
+    }
     try {
       intendedRole = UserRole.valueOf(invite.getIntendedRole());
     } catch (IllegalArgumentException e) {
@@ -62,7 +68,7 @@ public class AuthService {
 
     User newUser = User.builder()
       .name(request.getName())
-      .email(request.getEmail())
+      .email(normalizedEmail)
       .password(passwordEncoder.encode(request.getPassword()))
       .role(intendedRole)
       .costCenter(costCenter)
@@ -81,11 +87,12 @@ public class AuthService {
 
   public AuthResponse login(LoginRequest request) {
     log.info("Intento de login");
+    String normalizedEmail = request.getEmail().trim().toLowerCase();
 
     try {
       authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(
-          request.getEmail(),
+          normalizedEmail,
           request.getPassword()
         )
       );
@@ -95,7 +102,7 @@ public class AuthService {
     }
 
     User user = userRepository
-      .findByEmail(request.getEmail())
+      .findByEmailIgnoreCase(normalizedEmail)
       .orElseThrow(() -> {
         log.error(
           "Inconsistencia: Usuario autenticado pero no encontrado en DB"
