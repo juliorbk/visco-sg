@@ -61,8 +61,7 @@ public class Supplier {
     @Column(name = "phone_number", nullable = false)
     private Set<String> phoneNumbers = new HashSet<>();
 
-    // En Supplier.java — cambia la relación si quieres cascade automático
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
     @Builder.Default
     private Set<LegalRepresentative> representatives = new HashSet<>();

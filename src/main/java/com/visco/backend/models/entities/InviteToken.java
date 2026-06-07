@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(
@@ -34,6 +35,7 @@ public class InviteToken {
   private UUID id;
 
   @Column(nullable = false, unique = true)
+  @JsonIgnore
   private String token;
 
   @Column(nullable = false)

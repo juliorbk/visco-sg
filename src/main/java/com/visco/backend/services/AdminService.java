@@ -70,6 +70,15 @@ public class AdminService {
     }
 
     @Transactional
+    public void deleteUser(UUID id) {
+        User user = userRepository
+            .findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + id));
+        userRepository.delete(user);
+        userRepository.save(user);
+    }
+
+    @Transactional
     public void activateUser(UUID id) {
         User user = userRepository
             .findById(id)
@@ -119,9 +128,9 @@ public class AdminService {
         if (refs.total() > 0 && !force) {
             throw new IllegalStateException(
                 "User cannot be hard-deleted: " +
-                refs.total() +
-                " dependent row(s) reference this user. " +
-                "Use ?force=true to nullify references and proceed."
+                    refs.total() +
+                    " dependent row(s) reference this user. " +
+                    "Use ?force=true to nullify references and proceed."
             );
         }
 

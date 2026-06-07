@@ -115,6 +115,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private int reportsCapacity;
     @Value("${rate-limit.reports.minutes:1}")
     private int reportsMinutes;
+    @Value("${rate-limit.trust-forwarded-for:false}")
+    private boolean trustForwardedFor;
 
     private int capacityFor(RateLimitedRoute route) {
         return switch (route) {
@@ -187,9 +189,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String resolveIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        // Solo se confía en X-Forwarded-For si está explícitamente activado
+        // (típicamente cuando hay un proxy reverso confiable como Render/Cloudflare).
+        // Por default NO se confía para evitar IP spoofing.
+        if (trustForwardedFor) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }

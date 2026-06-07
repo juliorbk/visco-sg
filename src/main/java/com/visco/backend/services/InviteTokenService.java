@@ -25,6 +25,7 @@ public class InviteTokenService {
   private static final int TOKEN_BYTES = 32;
 
   private final InviteTokenRepository inviteTokenRepository;
+  private final EmailService emailService;
 
   @Value("${app.invite.default-validity-hours:72}")
   private int defaultValidityHours;
@@ -52,9 +53,19 @@ public class InviteTokenService {
       .revoked(false)
       .build();
 
-    return InviteTokenResponse.fromEntity(inviteTokenRepository.save(invite));
+    InviteToken saved = inviteTokenRepository.save(invite);
+
+    emailService.sendInviteEmail(
+      saved.getEmail(),
+      null,
+      saved.getToken(),
+      saved.getIntendedRole()
+    );
+
+    return InviteTokenResponse.fromEntity(saved);
   }
 
+  @Transactional
   public InviteToken consumeInvite(String tokenValue, User newUser) {
     InviteToken invite = inviteTokenRepository
       .findByToken(tokenValue)

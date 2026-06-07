@@ -1,6 +1,7 @@
 package com.visco.backend.models.dtos;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record EmployeeRequestDto(
@@ -12,7 +13,7 @@ public record EmployeeRequestDto(
   @Size(max = 50)
   String documentNumber,
 
-  @NotBlank(message = "El ID desl centro de costo es obligatorio")
+  @NotNull(message = "El ID del centro de costo es obligatorio")
   Long costCenterId,
 
   Boolean isActive

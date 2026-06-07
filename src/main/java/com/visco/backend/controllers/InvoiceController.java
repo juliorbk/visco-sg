@@ -2,13 +2,13 @@ package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.CreateInvoiceRequest;
 import com.visco.backend.models.dtos.InvoiceResponse;
+import com.visco.backend.models.dtos.MarkInvoicePaidRequest;
 import com.visco.backend.services.InvoiceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -81,12 +81,11 @@ public class InvoiceController {
   )
   public ResponseEntity<InvoiceResponse> markAsPaid(
     @PathVariable Long id,
-    @RequestBody Map<String, Object> body
+    @RequestBody(required = false) MarkInvoicePaidRequest request
   ) {
-    LocalDate paymentDate =
-      body.get("paymentDate") != null
-        ? LocalDate.parse(body.get("paymentDate").toString())
-        : LocalDate.now();
+    LocalDate paymentDate = request != null && request.paymentDate() != null
+      ? request.paymentDate()
+      : LocalDate.now();
     return ResponseEntity.ok(invoiceService.markAsPaid(id, paymentDate));
   }
 

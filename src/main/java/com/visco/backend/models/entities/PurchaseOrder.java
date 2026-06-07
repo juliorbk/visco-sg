@@ -17,6 +17,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -151,4 +152,19 @@ public class PurchaseOrder {
     @ToString.Exclude
     @JsonManagedReference("purchase-order-items")
     private List<PurchaseOrderItem> items = new ArrayList<>();
+
+    @Transient
+    public java.math.BigDecimal getTotalAmount() {
+        if (items == null || items.isEmpty()) {
+            return java.math.BigDecimal.ZERO;
+        }
+        return items
+            .stream()
+            .map(item ->
+                item.getUnitPrice() != null && item.getQuantity() != null
+                    ? item.getUnitPrice().multiply(item.getQuantity())
+                    : java.math.BigDecimal.ZERO
+            )
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
 }

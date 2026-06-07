@@ -60,11 +60,15 @@ public class SecurityConfig {
   }
 
   /**
-   * Role hierarchy. A key {@code "SUPERADMIN"} with value
-   * {@code Set(ADMIN, MANAGER, ...)} means that a user holding the
-   * {@code SUPERADMIN} role is considered to also hold every role in the
-   * set, so {@code hasRole("ADMIN")} (and {@code hasRole("MANAGER")} etc.)
-   * returns true for them.
+   * Role hierarchy. The {@code ROLE_} prefix is REQUIRED so that
+   * {@code RoleHierarchyImpl} can match the entries against the
+   * {@code SimpleGrantedAuthority} names set by
+   * {@code CustomUserDetailsService} (which prepends {@code ROLE_}).
+   *
+   * <p>A line like {@code "ROLE_SUPERADMIN > ROLE_ADMIN"} means that
+   * a user holding {@code ROLE_SUPERADMIN} is also considered to hold
+   * {@code ROLE_ADMIN}, so {@code hasRole("ADMIN")} (and
+   * {@code hasAnyRole("ADMIN", ...)}) returns true for them.
    *
    * <p>This lets a {@code SUPERADMIN} pass every {@code hasRole("ADMIN")}
    * check across the app without having to rewrite every matchers list.
@@ -91,6 +95,19 @@ public class SecurityConfig {
       .csrf(csrf -> csrf.disable()) // CSRF is usually disabled for stateless APIs
       .cors(cors -> cors.configurationSource(corsConfigurationSource()))
       .httpBasic(httpBasic -> httpBasic.disable())
+      .headers(headers ->
+        headers
+          .httpStrictTransportSecurity(hsts ->
+            hsts
+              .includeSubDomains(true)
+              .maxAgeInSeconds(31536000)
+          )
+          .contentSecurityPolicy(csp ->
+            csp.policyDirectives("default-src 'self'")
+          )
+          .frameOptions(frame -> frame.deny())
+          .contentTypeOptions(contentType -> {})
+      )
       .exceptionHandling(ex ->
         ex
           .authenticationEntryPoint((request, response, authException) -> {
@@ -125,6 +142,7 @@ public class SecurityConfig {
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
             "/api/suppliers/**",
+            "/api/supplier-categories/**",
             "/api/procurement/**",
             "/api/requisitions/**"
           )

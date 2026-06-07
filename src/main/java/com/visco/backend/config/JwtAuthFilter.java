@@ -60,6 +60,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             email
           );
 
+          // 2b. Verificamos que el usuario esté activo. Un usuario desactivado
+          // que aún conserve un JWT no expirado queda bloqueado aquí.
+          if (!userDetails.isEnabled() || !userDetails.isAccountNonLocked()) {
+            log.warn("Intento de acceso con cuenta inactiva: {}", email);
+            response.setStatus(401);
+            response.setContentType("application/json");
+            response
+              .getWriter()
+              .write("{\"error\": \"Cuenta inactiva o bloqueada\"}");
+            return;
+          }
+
           // 3. Pasamos tu 'userDetails' como el "Principal" principal
           var authToken = new UsernamePasswordAuthenticationToken(
             userDetails,

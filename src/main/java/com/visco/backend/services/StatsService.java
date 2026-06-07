@@ -86,6 +86,7 @@ public class StatsService {
             o.getSupplier() != null ? o.getSupplier().getName() : "—"
           )
           .status(o.getStatus())
+          .amount(o.getTotalAmount())
           .build()
       )
       .toList();

@@ -150,7 +150,7 @@ public class ProcurementService {
     // ─────────────────────────────────────────────────────────────
 
     @Transactional
-    void submitForApproval(Long orderId) {
+    PurchaseOrder submitForApproval(Long orderId) {
         PurchaseOrder order = findOrderById(orderId);
         if (order.getStatus() != PurchaseOrderStatus.PENDING) {
             throw new IllegalStateException("Only pending orders can be submitted for approval");
@@ -158,11 +158,11 @@ public class ProcurementService {
         log.info("Submitting order ID: {} for approval", orderId);
         order.setStatus(PurchaseOrderStatus.AWAITING_APPROVAL);
         order.setUpdatedAt(LocalDateTime.now());
-        purchaseOrderRepository.save(order);
+        return purchaseOrderRepository.save(order);
     }
 
     @Transactional
-    void approveOrder(Long orderId, UUID approverUserId, String notes) {
+    PurchaseOrder approveOrder(Long orderId, UUID approverUserId, String notes) {
         PurchaseOrder order = findOrderById(orderId);
         if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
             throw new IllegalStateException("Only orders awaiting approval can be approved");
@@ -176,11 +176,11 @@ public class ProcurementService {
         order.setApprovedAt(LocalDateTime.now());
         order.setApprovalNotes(notes);
         order.setUpdatedAt(LocalDateTime.now());
-        purchaseOrderRepository.save(order);
+        return purchaseOrderRepository.save(order);
     }
 
     @Transactional
-    void rejectOrder(Long orderId, UUID rejecterUserId, String reason) {
+    PurchaseOrder rejectOrder(Long orderId, UUID rejecterUserId, String reason) {
         PurchaseOrder order = findOrderById(orderId);
         if (order.getStatus() != PurchaseOrderStatus.AWAITING_APPROVAL) {
             throw new IllegalStateException("Only orders awaiting approval can be rejected");
@@ -192,11 +192,11 @@ public class ProcurementService {
             userRepository.findById(rejecterUserId).ifPresent(order::setRejectedBy);
         }
         order.setUpdatedAt(LocalDateTime.now());
-        purchaseOrderRepository.save(order);
+        return purchaseOrderRepository.save(order);
     }
 
     @Transactional
-    void sendToSupplier(Long orderId) {
+    PurchaseOrder sendToSupplier(Long orderId) {
         PurchaseOrder order = findOrderById(orderId);
         if (order.getStatus() != PurchaseOrderStatus.APPROVED) {
             throw new IllegalStateException("Only approved orders can be sent to supplier");
@@ -204,11 +204,11 @@ public class ProcurementService {
         log.info("Sending order ID: {} to supplier", orderId);
         order.setStatus(PurchaseOrderStatus.IN_TRANSIT);
         order.setUpdatedAt(LocalDateTime.now());
-        purchaseOrderRepository.save(order);
+        return purchaseOrderRepository.save(order);
     }
 
     @Transactional
-    void cancelOrderById(Long orderId, String reason) {
+    PurchaseOrder cancelOrderById(Long orderId, String reason) {
         PurchaseOrder order = findOrderById(orderId);
         if (
             order.getStatus() == PurchaseOrderStatus.DELIVERED ||
@@ -295,7 +295,7 @@ public class ProcurementService {
             }
         }
 
-        purchaseOrderRepository.save(order);
+        return purchaseOrderRepository.save(order);
     }
 
     private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
@@ -327,8 +327,7 @@ public class ProcurementService {
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse submitOrderForApproval(Long id) {
-        submitForApproval(id);
-        return getOrderById(id);
+        return toResponse(submitForApproval(id));
     }
 
     /**
@@ -338,8 +337,7 @@ public class ProcurementService {
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse markAsApproved(Long id, UUID approverUserId, String notes) {
-        approveOrder(id, approverUserId, notes);
-        return getOrderById(id);
+        return toResponse(approveOrder(id, approverUserId, notes));
     }
 
     /**
@@ -359,37 +357,34 @@ public class ProcurementService {
             .orElseThrow(() ->
                 new UsernameNotFoundException("Approver not found: " + approverEmail)
             );
-        return markAsApproved(id, approver.getId(), notes);
+        return toResponse(approveOrder(id, approver.getId(), notes));
     }
 
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse rejectPurchaseOrder(Long id, String rejecterEmail, String reason) {
+        UUID rejecterId = null;
         if (rejecterEmail != null) {
             User rejecter = userRepository
                 .findByEmail(rejecterEmail)
                 .orElseThrow(() ->
                     new UsernameNotFoundException("Rejecter not found: " + rejecterEmail)
                 );
-            rejectOrder(id, rejecter.getId(), reason);
-        } else {
-            rejectOrder(id, null, reason);
+            rejecterId = rejecter.getId();
         }
-        return getOrderById(id);
+        return toResponse(rejectOrder(id, rejecterId, reason));
     }
 
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse markAsSentToSupplier(Long id) {
-        sendToSupplier(id);
-        return getOrderById(id);
+        return toResponse(sendToSupplier(id));
     }
 
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse cancelOrder(Long id, String reason) {
-        cancelOrderById(id, reason);
-        return getOrderById(id);
+        return toResponse(cancelOrderById(id, reason));
     }
 
     // ─────────────────────────────────────────────────────────────

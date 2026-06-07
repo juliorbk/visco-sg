@@ -110,17 +110,7 @@ public class WarehouseService {
             .findByIdDetailed(orderId)
             .orElseThrow(() -> new EntityNotFoundException("Purchase order not found: " + orderId));
 
-        if (
-            order.getStatus() == PurchaseOrderStatus.DELIVERED ||
-            order.getStatus() == PurchaseOrderStatus.CANCELLED ||
-            order.getStatus() == PurchaseOrderStatus.REJECTED ||
-            order.getStatus() == PurchaseOrderStatus.PENDING ||
-            order.getStatus() == PurchaseOrderStatus.AWAITING_APPROVAL
-        ) {
-            throw new IllegalStateException(
-                "Cannot receive goods for an order with status: " + order.getStatus()
-            );
-        }
+        validateOrderStatusForReceiving(order);
 
         Warehouse destWarehouse = warehouseRepository
             .findById(request.destinationWarehouseId())
@@ -167,74 +157,24 @@ public class WarehouseService {
                 )
             );
 
-        User receivedByUser;
-        if (request.receivedById() != null) {
-            receivedByUser = userRepository
-                .findById(request.receivedById())
-                .orElseThrow(() ->
-                    new EntityNotFoundException("User not found: " + request.receivedById())
-                );
-        } else {
-            receivedByUser = userRepository
-                .findById(order.getCreatedBy().getId())
-                .orElse(order.getCreatedBy());
-        }
-        receipt.setReceivedBy(receivedByUser);
-
         User createdBy = userRepository
             .findById(order.getCreatedBy().getId())
             .orElse(order.getCreatedBy());
+        receipt.setReceivedBy(resolveReceivedByUser(request, order, createdBy));
+
+        Map<Long, PurchaseOrderItem> poItemsByProduct = order
+            .getItems()
+            .stream()
+            .collect(Collectors.toMap(item -> item.getProduct().getId(), item -> item));
 
         for (ReceiveGoodsRequest.ReceiveItem itemReq : request.items()) {
-            PurchaseOrderItem poItem = order
-                .getItems()
-                .stream()
-                .filter((i) -> i.getProduct().getId().equals(itemReq.productId()))
-                .findFirst()
-                .orElseThrow(() ->
-                    new EntityNotFoundException(
-                        "Product not found in order: " + itemReq.productId()
-                    )
+            PurchaseOrderItem poItem = poItemsByProduct.get(itemReq.productId());
+            if (poItem == null) {
+                throw new EntityNotFoundException(
+                    "Product not found in order: " + itemReq.productId()
                 );
-
-            BigDecimal expected = poItem.getQuantity();
-            BigDecimal received = itemReq.receivedQuantity();
-
-            GoodReceiptItem item = GoodReceiptItem.builder()
-                .goodReceipt(receipt)
-                .product(poItem.getProduct())
-                .expectedQuantity(expected)
-                .receivedQuantity(received)
-                .location(location)
-                .build();
-
-            receipt.getItems().add(item);
-
-            // Operación atómica: upsert + increment en una sola sentencia SQL
-            stockLevelRepository.addCurrentStockAtomic(
-                poItem.getProduct().getId(),
-                destWarehouse.getId(),
-                received
-            );
-
-            // Descontar pending stock atómicamente
-            stockLevelRepository.subtractPendingStockAtomic(
-                poItem.getProduct().getId(),
-                destWarehouse.getId(),
-                received
-            );
-
-            InventoryMovement movement = InventoryMovement.builder()
-                .product(poItem.getProduct())
-                .toWarehouse(destWarehouse)
-                .quantity(received)
-                .type(MovementType.INPUT)
-                .reason("Goods receipt - PO: " + order.getOrderNumber())
-                .entryUnitPrice(poItem.getUnitPrice())
-                .createdAt(LocalDateTime.now())
-                .createdBy(createdBy)
-                .build();
-            inventoryMovementRepository.save(movement);
+            }
+            processReceiptItem(receipt, poItem, itemReq, destWarehouse, location, order, createdBy);
         }
 
         boolean allFullyReceived = determineIfFullyReceived(order, previousReceived, request);
@@ -247,6 +187,80 @@ public class WarehouseService {
         purchaseOrderRepository.save(order);
         goodReceiptRepository.save(receipt);
         return buildReceiptResponse(receipt, order);
+    }
+
+    private void validateOrderStatusForReceiving(PurchaseOrder order) {
+        if (
+            order.getStatus() == PurchaseOrderStatus.DELIVERED ||
+            order.getStatus() == PurchaseOrderStatus.CANCELLED ||
+            order.getStatus() == PurchaseOrderStatus.REJECTED ||
+            order.getStatus() == PurchaseOrderStatus.PENDING ||
+            order.getStatus() == PurchaseOrderStatus.AWAITING_APPROVAL
+        ) {
+            throw new IllegalStateException(
+                "Cannot receive goods for an order with status: " + order.getStatus()
+            );
+        }
+    }
+
+    private User resolveReceivedByUser(
+        ReceiveGoodsRequest request,
+        PurchaseOrder order,
+        User fallback
+    ) {
+        if (request.receivedById() == null) {
+            return fallback;
+        }
+        return userRepository
+            .findById(request.receivedById())
+            .orElseThrow(() ->
+                new EntityNotFoundException("User not found: " + request.receivedById())
+            );
+    }
+
+    private void processReceiptItem(
+        GoodReceipt receipt,
+        PurchaseOrderItem poItem,
+        ReceiveGoodsRequest.ReceiveItem itemReq,
+        Warehouse destWarehouse,
+        Location location,
+        PurchaseOrder order,
+        User createdBy
+    ) {
+        BigDecimal received = itemReq.receivedQuantity();
+        BigDecimal expected = poItem.getQuantity();
+
+        GoodReceiptItem item = GoodReceiptItem.builder()
+            .goodReceipt(receipt)
+            .product(poItem.getProduct())
+            .expectedQuantity(expected)
+            .receivedQuantity(received)
+            .location(location)
+            .build();
+        receipt.getItems().add(item);
+
+        stockLevelRepository.addCurrentStockAtomic(
+            poItem.getProduct().getId(),
+            destWarehouse.getId(),
+            received
+        );
+        stockLevelRepository.subtractPendingStockAtomic(
+            poItem.getProduct().getId(),
+            destWarehouse.getId(),
+            received
+        );
+
+        InventoryMovement movement = InventoryMovement.builder()
+            .product(poItem.getProduct())
+            .toWarehouse(destWarehouse)
+            .quantity(received)
+            .type(MovementType.INPUT)
+            .reason("Goods receipt - PO: " + order.getOrderNumber())
+            .entryUnitPrice(poItem.getUnitPrice())
+            .createdAt(LocalDateTime.now())
+            .createdBy(createdBy)
+            .build();
+        inventoryMovementRepository.save(movement);
     }
 
     @Transactional(readOnly = true)
