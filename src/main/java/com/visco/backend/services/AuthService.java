@@ -26,115 +26,104 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthService {
 
-  private final UserRepository userRepository;
-  private final CostCenterRepository costCenterRepository;
-  private final PasswordEncoder passwordEncoder;
-  private final JwtService jwtService;
-  private final EmailService emailService;
-  private final AuthenticationManager authenticationManager;
-  private final InviteTokenService inviteTokenService;
+    private final UserRepository userRepository;
+    private final CostCenterRepository costCenterRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final EmailService emailService;
+    private final AuthenticationManager authenticationManager;
+    private final InviteTokenService inviteTokenService;
 
-  @Transactional
-  public AuthResponse register(UserRegisterRequest request) {
-    String normalizedEmail = request.getEmail().trim().toLowerCase();
-    if (userRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
-      log.warn("Registro fallido: Email ya registrado");
-      throw new IllegalArgumentException("Email address is already in use");
+    @Transactional
+    public AuthResponse register(UserRegisterRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        if (userRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
+            log.warn("Registro fallido: Email ya registrado");
+            throw new IllegalArgumentException("Email address is already in use");
+        }
+
+        InviteToken invite = inviteTokenService.findByToken(request.getInviteToken());
+        UserRole intendedRole;
+        if (invite.getIntendedRole() == null) {
+            throw new IllegalStateException("Invite token is missing the intended role");
+        }
+        try {
+            intendedRole = UserRole.valueOf(invite.getIntendedRole());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Invite token has an invalid role configured");
+        }
+
+        CostCenter costCenter = null;
+        if (invite.getCostCenterId() != null) {
+            costCenter = costCenterRepository
+                .findById(invite.getCostCenterId())
+                .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
+        }
+
+        User newUser = User.builder()
+            .name(request.getName())
+            .email(normalizedEmail)
+            .password(passwordEncoder.encode(request.getPassword()))
+            .role(intendedRole)
+            .costCenter(costCenter)
+            .active(true)
+            .build();
+
+        userRepository.save(newUser);
+        inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
+        log.info("Registro exitoso: userId={}", newUser.getId());
+
+        // Fire-and-forget welcome email (sends async on the emailExecutor pool).
+        emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
+
+        return buildResponse(newUser);
     }
 
-    InviteToken invite = inviteTokenService.findByToken(
-      request.getInviteToken()
-    );
-    UserRole intendedRole;
-    if (invite.getIntendedRole() == null) {
-      throw new IllegalStateException(
-        "Invite token is missing the intended role"
-      );
-    }
-    try {
-      intendedRole = UserRole.valueOf(invite.getIntendedRole());
-    } catch (IllegalArgumentException e) {
-      throw new IllegalStateException(
-        "Invite token has an invalid role configured"
-      );
-    }
+    public AuthResponse login(LoginRequest request) {
+        log.info("Intento de login");
+        String email = request.getEmail();
 
-    CostCenter costCenter = null;
-    if (invite.getCostCenterId() != null) {
-      costCenter = costCenterRepository
-        .findById(invite.getCostCenterId())
-        .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
-    }
+        try {
+            authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, request.getPassword())
+            );
+        } catch (BadCredentialsException e) {
+            log.warn("Credenciales invalidas");
+            throw e;
+        }
 
-    User newUser = User.builder()
-      .name(request.getName())
-      .email(normalizedEmail)
-      .password(passwordEncoder.encode(request.getPassword()))
-      .role(intendedRole)
-      .costCenter(costCenter)
-      .active(true)
-      .build();
+        User user = userRepository
+            .findByEmail(email)
+            .orElseThrow(() -> {
+                log.error("Inconsistencia: Usuario autenticado pero no encontrado en DB");
+                return new BadCredentialsException("Invalid credentials");
+            });
 
-    userRepository.save(newUser);
-    inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
-    log.info("Registro exitoso: userId={}", newUser.getId());
+        log.info("Autenticacion exitosa: userId={}", user.getId());
+        log.debug("Generando JWT para usuario");
 
-    // Fire-and-forget welcome email (sends async on the emailExecutor pool).
-    emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
-
-    return buildResponse(newUser);
-  }
-
-  public AuthResponse login(LoginRequest request) {
-    log.info("Intento de login");
-    String normalizedEmail = request.getEmail().trim().toLowerCase();
-
-    try {
-      authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-          normalizedEmail,
-          request.getPassword()
-        )
-      );
-    } catch (BadCredentialsException e) {
-      log.warn("Credenciales invalidas");
-      throw e;
+        // Retornamos la info completa para que el controlador decida qué hacer con ella
+        return AuthResponse.builder()
+            .token(jwtService.generateToken(user))
+            .user(UserDTO.fromUser(user))
+            .build();
     }
 
-    User user = userRepository
-      .findByEmailIgnoreCase(normalizedEmail)
-      .orElseThrow(() -> {
-        log.error(
-          "Inconsistencia: Usuario autenticado pero no encontrado en DB"
-        );
-        return new BadCredentialsException("Invalid credentials");
-      });
+    private AuthResponse buildResponse(User user) {
+        return AuthResponse.builder()
+            .token(jwtService.generateToken(user))
+            .user(UserDTO.fromUser(user))
+            .build();
+    }
 
-    log.info("Autenticacion exitosa: userId={}", user.getId());
-    log.debug("Generando JWT para usuario");
+    public String refreshToken(User user) {
+        return jwtService.generateToken(user);
+    }
 
-    // Retornamos la info completa para que el controlador decida qué hacer con ella
-    return AuthResponse.builder()
-      .token(jwtService.generateToken(user))
-      .user(UserDTO.fromUser(user))
-      .build();
-  }
-
-  private AuthResponse buildResponse(User user) {
-    return AuthResponse.builder()
-      .token(jwtService.generateToken(user))
-      .user(UserDTO.fromUser(user))
-      .build();
-  }
-
-  public String refreshToken(User user) {
-    return jwtService.generateToken(user);
-  }
-
-  public UserDTO getCurrentUser(String email) {
-    User user = userRepository
-      .findByEmailWithCostCenter(email)
-      .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-    return UserDTO.fromUser(user);
-  }
+    public UserDTO getCurrentUser(String email) {
+        User user = userRepository
+            .findByEmailWithCostCenter(email)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return UserDTO.fromUser(user);
+    }
 }
