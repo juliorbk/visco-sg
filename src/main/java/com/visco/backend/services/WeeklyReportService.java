@@ -4,8 +4,6 @@ import com.visco.backend.models.dtos.CriticalInventoryItemDTO;
 import com.visco.backend.models.dtos.KpiStatsDTO;
 import com.visco.backend.models.dtos.RecentOrderDTO;
 import com.visco.backend.repositories.UserRepository;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,8 +21,6 @@ import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,10 +35,7 @@ public class WeeklyReportService {
 
   private final StatsService statsService;
   private final UserRepository userRepository;
-  private final JavaMailSender mailSender;
-
-  @Value("${spring.mail.username}")
-  private String senderEmail;
+  private final ResendEmailService resendEmailService;
 
   @Value("${report.recipients:}")
   private String reportRecipients;
@@ -517,27 +510,18 @@ public class WeeklyReportService {
     String subject,
     byte[] excelBytes
   ) {
-    try {
-      MimeMessage msg = mailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-      helper.setFrom(senderEmail);
-      helper.setTo(to);
-      helper.setSubject(subject);
-      helper.setText(
-        "Adjunto: Reporte Semanal en Excel\n\nVer archivo para detalle completo.",
-        false
-      );
-      helper.addAttachment(
-        "Reporte_Semanal_" +
-          LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) +
-          ".xlsx",
-        () -> new java.io.ByteArrayInputStream(excelBytes),
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      );
-      mailSender.send(msg);
-    } catch (MessagingException e) {
-      log.error("❌ Failed to send report to {}: {}", to, e.getMessage());
-    }
+    String filename =
+      "Reporte_Semanal_" +
+      LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) +
+      ".xlsx";
+    resendEmailService.sendEmailWithAttachment(
+      to,
+      subject,
+      "Adjunto: Reporte Semanal en Excel\n\nVer archivo para detalle completo.",
+      filename,
+      excelBytes,
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
   }
 
   // ── Style Helpers ──────────────────────────────────────────────────────────

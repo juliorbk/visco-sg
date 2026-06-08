@@ -1,12 +1,8 @@
 package com.visco.backend.services;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +23,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EmailService {
 
-  private final JavaMailSender mailSender;
+  private final ResendEmailService resendEmailService;
 
   @Value("${app.mail.from}")
   private String fromAddress;
@@ -38,8 +34,8 @@ public class EmailService {
   @Value("${app.invite.base-url:https://viscoorinocosia.vercel.app}")
   private String inviteBaseUrl;
 
-  public EmailService(JavaMailSender mailSender) {
-    this.mailSender = mailSender;
+  public EmailService(ResendEmailService resendEmailService) {
+    this.resendEmailService = resendEmailService;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────
@@ -115,24 +111,7 @@ public class EmailService {
   // ── Transport ──────────────────────────────────────────────────────────
 
   private void send(String to, String subject, String htmlBody) {
-    try {
-      MimeMessage msg = mailSender.createMimeMessage();
-      MimeMessageHelper helper = new MimeMessageHelper(
-        msg,
-        false,
-        StandardCharsets.UTF_8.name()
-      );
-      helper.setFrom(fromAddress);
-      helper.setTo(to);
-      helper.setSubject(subject);
-      helper.setText(htmlBody, true);
-      mailSender.send(msg);
-      log.info("📧 Email sent to {} | subject=\"{}\"", to, subject);
-    } catch (MessagingException e) {
-      log.error("❌ Failed to send email to {} | subject=\"{}\": {}", to, subject, e.getMessage(), e);
-    } catch (Exception e) {
-      log.error("❌ Unexpected error sending email to {}: {}", to, e.getMessage(), e);
-    }
+    resendEmailService.sendHtmlEmail(to, subject, htmlBody);
   }
 
   // ── HTML templates ─────────────────────────────────────────────────────

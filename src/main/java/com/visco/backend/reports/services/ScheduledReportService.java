@@ -6,19 +6,16 @@ import com.visco.backend.reports.models.enums.ReportFormat;
 import com.visco.backend.reports.models.enums.ReportStatus;
 import com.visco.backend.reports.repositories.ScheduledReportRepository;
 import com.visco.backend.reports.utils.DateUtils;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import com.visco.backend.services.ResendEmailService;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,10 +30,7 @@ public class ScheduledReportService {
 
   private final ScheduledReportRepository scheduledReportRepository;
   private final ReportService reportService;
-  private final JavaMailSender mailSender;
-
-  @Value("${spring.mail.username}")
-  private String senderEmail;
+  private final ResendEmailService resendEmailService;
 
   /**
    * Runs every hour, checks for due scheduled reports, generates them, and emails recipients.
@@ -101,51 +95,60 @@ public class ScheduledReportService {
     for (String email : emails) {
       email = email.trim();
       if (email.isBlank()) continue;
-      try {
-        MimeMessage msg = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
-        helper.setFrom(senderEmail);
-        helper.setTo(email);
-        helper.setSubject(
-          "Reporte: " +
-            reportDTO.getName() +
-            " - " +
-            java.time.LocalDate.now().format(
-              java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
-            )
-        );
-        helper.setText(
-          String.format(
-            "Adjunto encontrará el reporte '%s' generado automáticamente.<br><br>" +
-              "Tipo: %s<br>Registros: %s<br>Fecha: %s",
-            reportDTO.getName(),
-            reportDTO.getType().getDisplayName(),
-            reportDTO.getRecordCount() != null
-              ? reportDTO.getRecordCount()
-              : "N/A",
-            java.time.LocalDate.now().format(
-              java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
-            )
-          ),
-          true
-        );
 
-        if (reportDTO.getFilePath() != null) {
-          File file = Path.of(reportDTO.getFilePath()).toFile();
-          if (file.exists()) {
-            String ext =
-              reportDTO.getFormat() == ReportFormat.PDF ? ".pdf" : ".xlsx";
-            helper.addAttachment(
-              reportDTO.getName().replaceAll("[^a-zA-Z0-9\\-_]", "_") + ext,
-              new FileSystemResource(file)
+      String subject =
+        "Reporte: " +
+        reportDTO.getName() +
+        " - " +
+        java.time.LocalDate.now()
+          .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+      String text = String.format(
+        "Adjunto encontrara el reporte '%s' generado automaticamente.\n\n" +
+        "Tipo: %s\nRegistros: %s\nFecha: %s",
+        reportDTO.getName(),
+        reportDTO.getType().getDisplayName(),
+        reportDTO.getRecordCount() != null
+          ? reportDTO.getRecordCount()
+          : "N/A",
+        java.time.LocalDate.now()
+          .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+      );
+
+      if (reportDTO.getFilePath() != null) {
+        File file = Path.of(reportDTO.getFilePath()).toFile();
+        if (file.exists()) {
+          try {
+            byte[] fileBytes = Files.readAllBytes(file.toPath());
+            String ext = reportDTO.getFormat() == ReportFormat.PDF
+              ? ".pdf"
+              : ".xlsx";
+            String filename =
+              reportDTO.getName().replaceAll("[^a-zA-Z0-9\\-_]", "_") + ext;
+            resendEmailService.sendEmailWithAttachment(
+              email,
+              subject,
+              text,
+              filename,
+              fileBytes,
+              ext.equals(".pdf")
+                ? "application/pdf"
+                : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             );
+            log.info("Report sent to {}", email);
+          } catch (IOException e) {
+            log.error(
+              "Failed to read attachment file {}: {}",
+              file.getPath(),
+              e.getMessage()
+            );
+            resendEmailService.sendHtmlEmail(email, subject, text);
           }
+        } else {
+          resendEmailService.sendHtmlEmail(email, subject, text);
         }
-
-        mailSender.send(msg);
-        log.info("Report sent to {}", email);
-      } catch (MessagingException e) {
-        log.error("Failed to send report to {}: {}", email, e.getMessage());
+      } else {
+        resendEmailService.sendHtmlEmail(email, subject, text);
       }
     }
   }
