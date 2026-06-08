@@ -171,7 +171,14 @@ public class SecurityConfig {
             "/api/general-management/**"
           )
           .authenticated()
-          // ADMIN, MANAGER y PROCUREMENT
+          // Cualquier usuario autenticado: GET de referencia (dropdowns)
+          .requestMatchers(
+            HttpMethod.GET,
+            "/api/suppliers/**",
+            "/api/supplier-categories/**"
+          )
+          .authenticated()
+          // ADMIN, MANAGER y PROCUREMENT: escritura
           .requestMatchers(
             "/api/suppliers/**",
             "/api/supplier-categories/**",
