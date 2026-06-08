@@ -158,10 +158,11 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Modifying
   @Query(
     value = """
-    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
-    VALUES (:productId, :warehouseId, :quantity, 0)
+    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
+    VALUES (:productId, :warehouseId, :quantity, 0, NOW(), NOW())
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
-    DO UPDATE SET current_stock = stock_levels.current_stock + :quantity
+    DO UPDATE SET current_stock = stock_levels.current_stock + :quantity,
+                  updated_at = NOW()
     """,
     nativeQuery = true
   )
@@ -174,10 +175,11 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Modifying
   @Query(
     value = """
-    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
-    VALUES (:productId, :warehouseId, 0, :quantity)
+    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
+    VALUES (:productId, :warehouseId, 0, :quantity, NOW(), NOW())
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
-    DO UPDATE SET pending_stock = stock_levels.pending_stock + :quantity
+    DO UPDATE SET pending_stock = stock_levels.pending_stock + :quantity,
+                  updated_at = NOW()
     """,
     nativeQuery = true
   )
@@ -191,7 +193,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Query(
     value = """
     UPDATE stock_levels
-    SET current_stock = GREATEST(current_stock - :quantity, 0)
+    SET current_stock = GREATEST(current_stock - :quantity, 0),
+        updated_at = NOW()
     WHERE product_id = :productId AND warehouse_id = :warehouseId
       AND current_stock >= :quantity
     """,
@@ -223,7 +226,8 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Query(
     value = """
     UPDATE stock_levels
-    SET pending_stock = GREATEST(pending_stock - :quantity, 0)
+    SET pending_stock = GREATEST(pending_stock - :quantity, 0),
+        updated_at = NOW()
     WHERE product_id = :productId AND warehouse_id = :warehouseId
     """,
     nativeQuery = true
@@ -237,10 +241,11 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   @Modifying
   @Query(
     value = """
-    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock)
-    VALUES (:productId, :warehouseId, :newStock, 0)
+    INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
+    VALUES (:productId, :warehouseId, :newStock, 0, NOW(), NOW())
     ON CONFLICT ON CONSTRAINT uk_stock_levels_product_warehouse
-    DO UPDATE SET current_stock = :newStock
+    DO UPDATE SET current_stock = :newStock,
+                  updated_at = NOW()
     """,
     nativeQuery = true
   )
