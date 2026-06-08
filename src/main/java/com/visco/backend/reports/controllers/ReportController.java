@@ -75,17 +75,28 @@ public class ReportController {
     }
 
     @PostMapping("/generate")
-    @Operation(summary = "Generar nuevo reporte", description = "Genera un reporte de forma asíncrona según los parámetros especificados")
+    @Operation(summary = "Generar nuevo reporte", description = "Genera un reporte y devuelve el archivo para descargar")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Reporte creado y en proceso de generación"),
+        @ApiResponse(responseCode = "200", description = "Reporte generado y listo para descargar"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos")
     })
-    public ResponseEntity<ReportDTO> generateReport(
+    public ResponseEntity<Resource> generateReport(
             @Valid @RequestBody CreateReportRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         String username = userDetails != null ? userDetails.getUsername() : "anonymous";
         ReportDTO report = reportService.generateReport(request, username);
-        return ResponseEntity.ok(report);
+
+        Resource resource = reportService.downloadReport(report.getId());
+
+        String contentDisposition = "attachment; filename=\"" + report.getName() + "\"";
+        MediaType mediaType = report.getFormat() == ReportFormat.PDF
+                ? MediaType.APPLICATION_PDF
+                : MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+                .body(resource);
     }
 
     @GetMapping("/{id}/download")
