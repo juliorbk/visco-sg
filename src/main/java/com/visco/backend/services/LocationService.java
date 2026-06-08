@@ -15,6 +15,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for warehouse location operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class LocationService {
@@ -22,6 +25,13 @@ public class LocationService {
   private final LocationRepository locationRepository;
   private final WarehouseRepository warehouseRepository;
 
+  /**
+   * Retrieves paginated locations for a specific warehouse.
+   *
+   * @param warehouseId the warehouse ID
+   * @param pageable    pagination information
+   * @return page of location DTOs
+   */
   @Transactional(readOnly = true)
   public Page<LocationDTO> getLocationsByWarehouse(
     Long warehouseId,
@@ -32,6 +42,14 @@ public class LocationService {
       .map(LocationDTO::fromEntity);
   }
 
+  /**
+   * Retrieves paginated locations for a warehouse filtered by search term.
+   *
+   * @param warehouseId the warehouse ID
+   * @param search      the search string
+   * @param pageable    pagination information
+   * @return page of location DTOs
+   */
   @Transactional(readOnly = true)
   public Page<LocationDTO> getLocationsByWarehouseWithSearch(
     Long warehouseId,
@@ -43,6 +61,12 @@ public class LocationService {
       .map(LocationDTO::fromEntity);
   }
 
+  /**
+   * Retrieves all active locations for a warehouse.
+   *
+   * @param warehouseId the warehouse ID
+   * @return list of active location DTOs
+   */
   @Transactional(readOnly = true)
   public List<LocationDTO> getActiveLocationsByWarehouse(Long warehouseId) {
     return locationRepository
@@ -52,6 +76,12 @@ public class LocationService {
       .toList();
   }
 
+  /**
+   * Retrieves a location by its ID.
+   *
+   * @param id the location ID
+   * @return the location DTO
+   */
   @Transactional(readOnly = true)
   public LocationDTO getLocationById(Long id) {
     Location location = locationRepository
@@ -62,6 +92,12 @@ public class LocationService {
     return LocationDTO.fromEntity(location);
   }
 
+  /**
+   * Creates a new location in a warehouse with a unique code.
+   *
+   * @param request the location creation request
+   * @return the created location DTO
+   */
   @Transactional
   public LocationDTO createLocation(CreateLocationRequest request) {
     Warehouse warehouse = warehouseRepository
@@ -94,6 +130,13 @@ public class LocationService {
     return LocationDTO.fromEntity(locationRepository.save(location));
   }
 
+  /**
+   * Updates a location's active status.
+   *
+   * @param id      the location ID
+   * @param request the update request
+   * @return the updated location DTO
+   */
   @Transactional
   public LocationDTO updateLocation(Long id, UpdateLocationRequest request) {
     Location location = locationRepository
@@ -109,6 +152,11 @@ public class LocationService {
     return LocationDTO.fromEntity(locationRepository.save(location));
   }
 
+  /**
+   * Soft-deletes a location by setting it inactive.
+   *
+   * @param id the location ID
+   */
   @Transactional
   public void deleteLocation(Long id) {
     Location location = locationRepository

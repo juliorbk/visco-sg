@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
+// Request payload for creating a purchase order.
 public record CreatePurchaseOrderRequest(
   @NotBlank(message = "Order number is required") String orderNumber,
   @NotBlank(message = "Description is required") String description,

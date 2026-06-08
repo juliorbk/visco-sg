@@ -13,7 +13,9 @@ import com.visco.backend.models.entities.Supplier;
 import org.springframework.data.repository.query.Param;
 
 @Repository
+// Repository for supplier management with search, filtering, and order-count projections.
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
+	// Finds all suppliers with a count query for pagination.
 	@Query(value = "SELECT s FROM Supplier s",
 		   countQuery = "SELECT COUNT(s) FROM Supplier s")
 	Page<Supplier> findAllWithFetch(Pageable pageable);
@@ -34,20 +36,25 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 	)
 	Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
+	// Finds active suppliers with a count query.
 	@Query(value = "SELECT s FROM Supplier s WHERE s.active = true",
 		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = true")
 	Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);
 
+	// Finds inactive suppliers with a count query.
 	@Query(value = "SELECT s FROM Supplier s WHERE s.active = false",
 		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.active = false")
 	Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
+	// Finds suppliers by their currency.
 	Page<Supplier> findByCurrency(Currency currency, Pageable pageable);
 
+	// Finds suppliers by currency with phone numbers and representatives eagerly loaded.
 	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.currency = :currency",
 		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.currency = :currency")
 	Page<Supplier> findByCurrencyWithFetch(@Param("currency") Currency currency, Pageable pageable);
 
+	// Finds suppliers by category with phone numbers and representatives eagerly loaded.
 	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.category.id = :categoryId",
 		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.category.id = :categoryId")
 	Page<Supplier> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
@@ -65,5 +72,6 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 		Long getOrderCount();
 	}
 
+	// Checks whether a supplier with the given name already exists.
 	Boolean existsByName(String name);
 }

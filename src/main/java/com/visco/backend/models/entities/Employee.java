@@ -38,6 +38,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+// Represents an employee with personal details and uniform sizes.
 public class Employee {
 
   @Id
@@ -63,7 +64,7 @@ public class Employee {
   private String gender;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "cost_center_id")
+  @JoinColumn(name = "cost_center_id") // FK to CostCenter
   private CostCenter costCenter;
 
   @Column(name = "is_active", nullable = false)

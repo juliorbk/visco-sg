@@ -9,6 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+// Response DTO with product category details.
 public class CategoryDTO {
 
   private Long id;

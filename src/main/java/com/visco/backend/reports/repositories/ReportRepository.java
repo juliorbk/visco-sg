@@ -9,6 +9,8 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -27,4 +29,23 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     Optional<Report> findByIdAndCreatedBy(Long id, String createdBy);
 
     List<Report> findByCreatedAtBeforeAndActiveTrue(LocalDateTime date);
+
+    long countByActiveTrue();
+
+    long countByStatusAndActiveTrue(ReportStatus status);
+
+    @Query("SELECT r.type, COUNT(r) FROM Report r WHERE r.active = true GROUP BY r.type")
+    List<Object[]> countActiveByType();
+
+    @Query("SELECT r.status, COUNT(r) FROM Report r WHERE r.active = true GROUP BY r.status")
+    List<Object[]> countActiveByStatus();
+
+    @Query("SELECT YEAR(r.createdAt), MONTH(r.createdAt), COUNT(r) "
+            + "FROM Report r WHERE r.active = true AND r.createdAt >= :since "
+            + "GROUP BY YEAR(r.createdAt), MONTH(r.createdAt) "
+            + "ORDER BY YEAR(r.createdAt), MONTH(r.createdAt)")
+    List<Object[]> countByMonthSince(@Param("since") LocalDateTime since);
+
+    @Query("SELECT COALESCE(SUM(r.recordCount), 0) FROM Report r WHERE r.status = 'COMPLETED' AND r.active = true")
+    long sumCompletedRecordCount();
 }

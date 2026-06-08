@@ -37,6 +37,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for purchase order procurement operations.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -56,6 +59,12 @@ public class ProcurementService {
     // Create purchase order
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Creates a purchase order from a request with items and optional requisition.
+     *
+     * @param request the purchase order creation request
+     * @return the created purchase order response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse createPurchaseOrder(CreatePurchaseOrderRequest request) {
@@ -314,16 +323,34 @@ public class ProcurementService {
     // Public API (used by controller)
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Retrieves a paginated list of all purchase orders.
+     *
+     * @param pageable pagination information
+     * @return page of purchase order responses
+     */
     @Transactional(readOnly = true)
     public Page<PurchaseOrderResponse> getAllOrders(Pageable pageable) {
         return purchaseOrderRepository.findAllWithFetch(pageable).map(this::toResponse);
     }
 
+    /**
+     * Retrieves a purchase order by its ID.
+     *
+     * @param id the purchase order ID
+     * @return the purchase order response
+     */
     @Transactional(readOnly = true)
     public PurchaseOrderResponse getOrderById(Long id) {
         return toResponse(findOrderById(id));
     }
 
+    /**
+     * Submits a pending order for approval workflow.
+     *
+     * @param id the purchase order ID
+     * @return the updated purchase order response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse submitOrderForApproval(Long id) {
@@ -360,6 +387,14 @@ public class ProcurementService {
         return toResponse(approveOrder(id, approver.getId(), notes));
     }
 
+    /**
+     * Rejects a purchase order that is awaiting approval.
+     *
+     * @param id            the purchase order ID
+     * @param rejecterEmail the email of the rejecting user
+     * @param reason        the rejection reason
+     * @return the updated purchase order response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse rejectPurchaseOrder(Long id, String rejecterEmail, String reason) {
@@ -375,12 +410,25 @@ public class ProcurementService {
         return toResponse(rejectOrder(id, rejecterId, reason));
     }
 
+    /**
+     * Marks an approved order as sent to the supplier (in-transit).
+     *
+     * @param id the purchase order ID
+     * @return the updated purchase order response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse markAsSentToSupplier(Long id) {
         return toResponse(sendToSupplier(id));
     }
 
+    /**
+     * Cancels a purchase order and adjusts pending/current stock.
+     *
+     * @param id     the purchase order ID
+     * @param reason the cancellation reason
+     * @return the updated purchase order response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public PurchaseOrderResponse cancelOrder(Long id, String reason) {

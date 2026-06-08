@@ -1,5 +1,6 @@
 package com.visco.backend.models.entities;
 
+// Units of measure for products in the inventory system.
 public enum Uom {
   EA,
   LB,

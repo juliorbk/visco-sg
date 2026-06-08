@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+// Utility for formatting currency, percentages, and numbers for report output.
 public final class NumberFormatter {
 
     private static final NumberFormat CURRENCY_FMT = NumberFormat.getCurrencyInstance(new Locale("es", "VE"));

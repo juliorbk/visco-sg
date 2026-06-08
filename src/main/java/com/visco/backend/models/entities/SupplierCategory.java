@@ -25,6 +25,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// Represents a classification category for suppliers.
 public class SupplierCategory {
 
     @Id

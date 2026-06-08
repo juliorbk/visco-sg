@@ -17,6 +17,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for administrative user management operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class AdminService {
@@ -25,11 +28,23 @@ public class AdminService {
     private final CostCenterRepository costCenterRepository;
     private final UserReferenceCountRepository userReferenceCountRepository;
 
+    /**
+     * Retrieves a paginated list of all users.
+     *
+     * @param pageable pagination information
+     * @return page of user DTOs
+     */
     @Transactional(readOnly = true)
     public Page<UserDTO> getAllUsers(Pageable pageable) {
         return userRepository.findAllWithFetch(pageable).map(UserDTO::fromUser);
     }
 
+    /**
+     * Retrieves a user by their ID.
+     *
+     * @param id the user UUID
+     * @return the user DTO
+     */
     @Transactional(readOnly = true)
     public UserDTO getUserById(UUID id) {
         User user = userRepository
@@ -38,6 +53,14 @@ public class AdminService {
         return UserDTO.fromUser(user);
     }
 
+    /**
+     * Updates a user's role and cost center.
+     *
+     * @param id         the user UUID
+     * @param request    the update request
+     * @param callerRole the role of the calling user
+     * @return the updated user DTO
+     */
     @Transactional
     public UserDTO updateUser(
         UUID id,
@@ -74,6 +97,11 @@ public class AdminService {
         return UserDTO.fromUser(userRepository.save(user));
     }
 
+    /**
+     * Deactivates a user account (soft disable).
+     *
+     * @param id the user UUID
+     */
     @Transactional
     public void deactivateUser(UUID id) {
         User user = userRepository
@@ -83,6 +111,11 @@ public class AdminService {
         userRepository.save(user);
     }
 
+    /**
+     * Permanently deletes a user from the database.
+     *
+     * @param id the user UUID
+     */
     @Transactional
     public void deleteUser(UUID id) {
         User user = userRepository
@@ -91,6 +124,11 @@ public class AdminService {
         userRepository.delete(user);
     }
 
+    /**
+     * Activates a previously deactivated user account.
+     *
+     * @param id the user UUID
+     */
     @Transactional
     public void activateUser(UUID id) {
         User user = userRepository
@@ -100,6 +138,12 @@ public class AdminService {
         userRepository.save(user);
     }
 
+    /**
+     * Counts all database references to a user across related entities.
+     *
+     * @param userId the user UUID
+     * @return reference counts grouped by entity type
+     */
     @Transactional(readOnly = true)
     public UserReferencesResponse countUserReferences(UUID userId) {
         // Touch the row to fail fast with a clear 404 if the user does not exist.

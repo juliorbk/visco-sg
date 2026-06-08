@@ -10,11 +10,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+// Repository for Product entities with stock-aware queries and inventory projections.
 public interface ProductRepository extends JpaRepository<Product, Long> {
+  // Finds a product by its unique internal code.
   Optional<Product> findByInternalCode(String internalCode);
 
+  // Finds a product by its unique SKU.
   Optional<Product> findBySku(String sku);
 
+  // Finds products by category with supplier and category eagerly loaded.
   @Query(
     "SELECT p FROM Product p LEFT JOIN FETCH p.supplier LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId"
   )
@@ -23,6 +27,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Pageable pageable
   );
 
+  // Finds products that have stock in a specific warehouse.
   @Query(
     """
       SELECT p FROM Product p
@@ -39,6 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   Page<Product> findAll(Pageable pageable);
 
+  // Counts active products whose stock is at or below their reorder point.
   @Query(
     "SELECT COUNT(DISTINCT p) FROM Product p " +
       "JOIN StockLevel s ON s.product.id = p.id " +
@@ -52,6 +58,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       + "ORDER BY s.currentStock ASC")
   List<Product> findProductsBelowReorderPoint(Pageable pageable);
 
+  // Returns the sum of all current stock across all products and warehouses.
   @Query("SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s")
   BigDecimal getTotalInventoryUnits();
 
@@ -173,6 +180,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Param("category") Long category
   );
 
+  // Counts products with zero or negative total stock across all warehouses.
   @Query("SELECT COUNT(DISTINCT p.id) FROM Product p "
       + "LEFT JOIN StockLevel s ON s.product = p "
       + "GROUP BY p.id HAVING COALESCE(SUM(s.currentStock), 0) <= 0")
@@ -187,6 +195,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     BigDecimal getMaxStock();
   }
 
+  // Returns the count of all active (non-archived) products.
   @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true")
   long countTotalActiveProducts();
 

@@ -10,6 +10,7 @@ import java.time.LocalTime;
 import lombok.Data;
 
 @Data
+// Request payload for creating a scheduled report.
 public class CreateScheduledReportRequest {
     @NotBlank(message = "El nombre es requerido")
     private String name;

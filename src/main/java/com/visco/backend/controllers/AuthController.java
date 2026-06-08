@@ -36,6 +36,10 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
 
     @PostMapping("/register")
+    @Operation(
+        summary = "Register new user",
+        description = "Registers a new user using an invite token and returns auth data"
+    )
     public ResponseEntity<?> registerUser(
         @Valid @RequestBody UserRegisterRequest request,
         HttpServletResponse response

@@ -44,6 +44,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @Builder
 @EntityListeners(AuditingEntityListener.class)
+// Represents a product/item with inventory, procurement, and supplier attributes.
 public class Product {
 
   @Id
@@ -85,11 +86,11 @@ public class Product {
   private Boolean active = true;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "supplier_id", referencedColumnName = "id")
+  @JoinColumn(name = "supplier_id", referencedColumnName = "id") // FK to Supplier
   private Supplier supplier;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "category_id", referencedColumnName = "id")
+  @JoinColumn(name = "category_id", referencedColumnName = "id") // FK to Category
   private Category category;
 
   @CreatedDate

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
+// Request payload for creating a requisition.
 public record CreateRequisitionRequest(
   @NotBlank(message = "Requisition number is required")
   String requisitionNumber,

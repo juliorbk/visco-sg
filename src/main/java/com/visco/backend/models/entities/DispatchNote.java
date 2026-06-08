@@ -38,6 +38,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// Represents a warehouse dispatch/withdrawal note for issuing inventory.
 public class DispatchNote {
 
   @Id
@@ -48,7 +49,7 @@ public class DispatchNote {
   private String dispatchNumber;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "warehouse_id", nullable = false)
+  @JoinColumn(name = "warehouse_id", nullable = false) // FK to Warehouse
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Warehouse warehouse;
@@ -58,7 +59,7 @@ public class DispatchNote {
   private Long version;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "withdrawn_by_id", nullable = false)
+  @JoinColumn(name = "withdrawn_by_id", nullable = false) // FK to Employee
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Employee withdrawnBy;
@@ -70,7 +71,7 @@ public class DispatchNote {
   private LocalDateTime createdAt;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "created_by_id", nullable = false)
+  @JoinColumn(name = "created_by_id", nullable = false) // FK to User
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private User createdBy;

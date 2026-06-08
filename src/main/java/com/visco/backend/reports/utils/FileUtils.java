@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+// Utility for report file path management, name generation, and cleanup.
 public final class FileUtils {
 
     public static Path ensureReportsDir(String storagePath) {

@@ -36,6 +36,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+// Represents a physical warehouse or storage location.
 public class Warehouse {
 
   @Id
@@ -58,7 +59,7 @@ public class Warehouse {
   private boolean active;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "responsible_user_id")
+  @JoinColumn(name = "responsible_user_id") // FK to responsible User
   private User responsibleUser;
 
   @OneToMany(mappedBy = "warehouse", fetch = FetchType.LAZY)

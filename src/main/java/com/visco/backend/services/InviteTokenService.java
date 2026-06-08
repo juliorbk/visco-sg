@@ -16,6 +16,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for user invitation token management.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,6 +33,13 @@ public class InviteTokenService {
   @Value("${app.invite.default-validity-hours:72}")
   private int defaultValidityHours;
 
+  /**
+   * Creates an invite token and sends the invitation email.
+   *
+   * @param request     the invite creation request
+   * @param createdById the ID of the user creating the invite
+   * @return the created invite token response
+   */
   @Transactional
   public InviteTokenResponse createInvite(
     CreateInviteRequest request,
@@ -65,6 +75,13 @@ public class InviteTokenService {
     return InviteTokenResponse.fromEntity(saved);
   }
 
+  /**
+   * Consumes an invite token during user registration.
+   *
+   * @param tokenValue the token string
+   * @param newUser    the newly registered user
+   * @return the consumed invite token
+   */
   @Transactional
   public InviteToken consumeInvite(String tokenValue, User newUser) {
     InviteToken invite = inviteTokenRepository
@@ -86,6 +103,11 @@ public class InviteTokenService {
     return inviteTokenRepository.save(invite);
   }
 
+  /**
+   * Lists all invite tokens.
+   *
+   * @return list of invite token responses
+   */
   public List<InviteTokenResponse> listInvites() {
     return inviteTokenRepository
       .findAll()
@@ -94,6 +116,12 @@ public class InviteTokenService {
       .toList();
   }
 
+  /**
+   * Revokes an unused invite token by its ID.
+   *
+   * @param id the invite token ID
+   * @return the updated invite token response
+   */
   @Transactional
   public InviteTokenResponse revokeInvite(UUID id) {
     InviteToken invite = inviteTokenRepository
@@ -111,6 +139,12 @@ public class InviteTokenService {
     return InviteTokenResponse.fromEntity(inviteTokenRepository.save(invite));
   }
 
+  /**
+   * Finds an invite token by its string value.
+   *
+   * @param tokenValue the token string
+   * @return the invite token entity
+   */
   public InviteToken findByToken(String tokenValue) {
     return inviteTokenRepository
       .findByToken(tokenValue)

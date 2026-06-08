@@ -24,12 +24,23 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Global exception handler for REST controllers. Translates exceptions
+ * thrown by the application layer into consistent JSON error responses with
+ * appropriate HTTP status codes. Covers validation, authentication,
+ * authorization, data integrity, and unexpected errors.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // ── Validation errors (@Valid) ────────────────────────────────────────────
 
+    /**
+     * Handles {@link MethodArgumentNotValidException} thrown when
+     * {@code @Valid} validation fails. Returns a 400 response with
+     * per-field error messages.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
@@ -45,6 +56,10 @@ public class GlobalExceptionHandler {
 
     // ── Domain / business logic errors ───────────────────────────────────────
 
+    /**
+     * Handles {@link EntityNotFoundException} when a requested entity is
+     * not found. Returns a 404 response.
+     */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex) {
         return ResponseEntity
@@ -52,6 +67,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage()));
     }
 
+    /**
+     * Handles {@link IllegalArgumentException} for invalid argument
+     * values. Returns a 400 response with the exception message.
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity
@@ -59,6 +78,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(ex.getMessage()));
     }
 
+    /**
+     * Handles {@link IllegalStateException} for business-logic conflicts.
+     * Returns a 409 Conflict response.
+     */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity
@@ -68,6 +91,11 @@ public class GlobalExceptionHandler {
 
     // ── Auth errors ───────────────────────────────────────────────────────────
 
+    /**
+     * Handles {@link BadCredentialsException} on login failure. Returns a
+     * 401 response without revealing whether the email or password was
+     * incorrect.
+     */
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity
@@ -75,6 +103,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Invalid email or password"));
     }
 
+    /**
+     * Handles {@link UsernameNotFoundException} when a user is not found.
+     * Returns a 401 response.
+     */
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUsernameNotFound(UsernameNotFoundException ex) {
         return ResponseEntity
@@ -82,6 +114,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("User not found"));
     }
 
+    /**
+     * Catch-all handler for other {@link AuthenticationException}
+     * subtypes. Returns a 401 response.
+     */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
         return ResponseEntity
@@ -89,6 +125,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Authentication failed"));
     }
 
+    /**
+     * Handles {@link AuthorizationDeniedException} when the user lacks
+     * the required role or permission. Returns a 403 response.
+     */
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AuthorizationDeniedException ex) {
         return ResponseEntity
@@ -98,6 +138,10 @@ public class GlobalExceptionHandler {
 
     // ── Type / format errors ──────────────────────────────────────────────────
 
+    /**
+     * Handles {@link DateTimeParseException} for invalid date string
+     * formats. Returns a 400 response.
+     */
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<ErrorResponse> handleDateTimeParse(DateTimeParseException ex) {
         return ResponseEntity
@@ -105,6 +149,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Invalid date format: " + ex.getMessage()));
     }
 
+    /**
+     * Handles {@link MethodArgumentTypeMismatchException} when a method
+     * argument cannot be converted to the required type. Returns a 400
+     * response.
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity
@@ -112,6 +161,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Invalid value for parameter: " + ex.getName()));
     }
 
+    /**
+     * Handles {@link HttpMessageNotReadableException} for malformed
+     * request bodies (e.g. invalid JSON). Returns a 400 response.
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleMalformedBody(HttpMessageNotReadableException ex) {
         return ResponseEntity
@@ -119,6 +172,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Malformed request body"));
     }
 
+    /**
+     * Handles {@link MissingServletRequestParameterException} when a
+     * required request parameter is missing. Returns a 400 response.
+     */
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex) {
         return ResponseEntity
@@ -126,6 +183,10 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("Missing required parameter: " + ex.getParameterName()));
     }
 
+    /**
+     * Handles {@link OptimisticLockException} for concurrent-update
+     * conflicts. Returns a 409 response instructing the client to retry.
+     */
     @ExceptionHandler(OptimisticLockException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex) {
         log.warn("Optimistic lock conflict: {}", ex.getMessage());
@@ -134,6 +195,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("The record was updated by another user. Please refresh and retry."));
     }
 
+    /**
+     * Handles {@link DataIntegrityViolationException} for database
+     * constraint violations such as unique-key duplicates. Returns a
+     * 409 response.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
         log.warn("Data integrity violation: {}", ex.getMessage());
@@ -144,6 +210,10 @@ public class GlobalExceptionHandler {
 
     // ── Catch-all ─────────────────────────────────────────────────────────────
 
+    /**
+     * Catch-all handler for any unhandled exception. Logs the error and
+     * returns a 500 Internal Server Error response with a generic message.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
@@ -154,6 +224,10 @@ public class GlobalExceptionHandler {
 
     // ── Response body ─────────────────────────────────────────────────────────
 
+    /**
+     * Standard error response body with a top-level message, optional
+     * field-level errors, and a timestamp of when the error occurred.
+     */
     public record ErrorResponse(
             String message,
             Map<String, String> errors,

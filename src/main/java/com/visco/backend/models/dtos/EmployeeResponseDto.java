@@ -2,6 +2,7 @@ package com.visco.backend.models.dtos;
 
 import com.visco.backend.models.entities.Employee;
 
+// Response DTO with employee details and associated cost center.
 public record EmployeeResponseDto(
   Long id,
   String fullName,

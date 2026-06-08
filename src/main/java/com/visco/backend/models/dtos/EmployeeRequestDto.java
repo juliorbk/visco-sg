@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+// Request payload for creating or updating an employee.
 public record EmployeeRequestDto(
   @NotBlank(message = "El nombre es obligatorio")
   @Size(max = 255)

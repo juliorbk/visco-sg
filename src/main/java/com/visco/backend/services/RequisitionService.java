@@ -30,6 +30,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for requisition management operations.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,6 +44,12 @@ public class RequisitionService {
   private final ProductRepository productRepository;
   private final StockLevelRepository stockLevelRepository;
 
+  /**
+   * Creates a new requisition with requested products.
+   *
+   * @param request the requisition creation request
+   * @return the created requisition response
+   */
   @Transactional
   public RequisitionResponse createRequisition(
     CreateRequisitionRequest request
@@ -100,6 +109,12 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Submits a pending or draft requisition for approval.
+   *
+   * @param id the requisition ID
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse submitForApproval(Long id) {
     Requisition req = findById(id);
@@ -120,6 +135,14 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Approves a requisition that is awaiting approval.
+   *
+   * @param id            the requisition ID
+   * @param approverUserId the approving user's UUID
+   * @param notes         approval notes
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse approveRequisition(
     Long id,
@@ -150,6 +173,14 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Rejects a requisition that is awaiting approval.
+   *
+   * @param id            the requisition ID
+   * @param rejecterUserId the rejecting user's UUID
+   * @param reason        the rejection reason
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse rejectRequisition(
     Long id,
@@ -173,6 +204,12 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Cancels a requisition that has not been converted yet.
+   *
+   * @param id the requisition ID
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse cancelRequisition(Long id) {
     Requisition req = findById(id);
@@ -189,6 +226,13 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Retrieves a paginated list of requisitions with optional search.
+   *
+   * @param search   optional search term
+   * @param pageable pagination information
+   * @return page of requisition responses
+   */
   @Transactional(readOnly = true)
   public Page<RequisitionResponse> getAllRequisitions(String search, Pageable pageable) {
     if (search != null && search.trim().isEmpty()) search = null;
@@ -197,6 +241,14 @@ public class RequisitionService {
       .map(this::toResponse);
   }
 
+  /**
+   * Retrieves requisitions filtered by status.
+   *
+   * @param status   the status to filter by
+   * @param search   optional search term
+   * @param pageable pagination information
+   * @return page of requisition responses
+   */
   @Transactional(readOnly = true)
   public Page<RequisitionResponse> getRequisitionsByStatus(
     RequisitionStatus status,
@@ -209,6 +261,12 @@ public class RequisitionService {
       .map(this::toResponse);
   }
 
+  /**
+   * Retrieves a requisition by its ID with full details.
+   *
+   * @param id the requisition ID
+   * @return the requisition response
+   */
   @Transactional(readOnly = true)
   public RequisitionResponse getRequisitionById(Long id) {
     return toResponse(getRequisitionByIdDetailed(id));
@@ -230,6 +288,12 @@ public class RequisitionService {
       );
   }
 
+  /**
+   * Marks an approved requisition as converted to a purchase order.
+   *
+   * @param id the requisition ID
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse markAsConverted(Long id) {
     Requisition req = findById(id);
@@ -243,6 +307,14 @@ public class RequisitionService {
     return toResponse(saved);
   }
 
+  /**
+   * Updates a draft requisition's description, cost center, and items.
+   *
+   * @param id            the requisition ID
+   * @param requestedById the requester's UUID
+   * @param request       the update data
+   * @return the updated requisition response
+   */
   @Transactional
   public RequisitionResponse updateRequisition(
     Long id,

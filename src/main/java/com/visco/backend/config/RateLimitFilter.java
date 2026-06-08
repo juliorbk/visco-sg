@@ -17,6 +17,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Rate-limiting filter using the token-bucket algorithm (Bucket4j) to
+ * throttle requests per IP address on a per-route basis. Limits are
+ * configured through {@code rate-limit.*} application properties. Applied
+ * before Spring Security's authentication filter.
+ */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -201,6 +207,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
+    /**
+     * Matches the request URI against rate-limited routes, consumes a token
+     * from the per-IP bucket, and either proceeds with the filter chain or
+     * responds with 429 Too Many Requests when the bucket is exhausted.
+     */
     @Override
     public void doFilterInternal(
         @NonNull HttpServletRequest request,

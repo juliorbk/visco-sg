@@ -14,14 +14,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
+// Repository for requisitions with eager-fetch queries and search support.
 public interface RequisitionRepository extends JpaRepository<Requisition, Long> {
     Page<Requisition> findByStatus(RequisitionStatus status, Pageable pageable);
     List<Requisition> findByStatus(RequisitionStatus status);
     Page<Requisition> findByRequestedById(java.util.UUID requestedById, Pageable pageable);
 
+    // Finds all requisitions with requester, cost center, and approver eagerly loaded.
     @Query("SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy")
     Page<Requisition> findAllWithFetch(Pageable pageable);
 
+    // Finds requisitions by status with related entities eagerly loaded.
     @Query("SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.status = :status")
     Page<Requisition> findByStatusWithFetch(@Param("status") RequisitionStatus status, Pageable pageable);
 
@@ -69,9 +72,11 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         Pageable pageable
     );
 
+    // Finds requisitions requested by a specific user with related entities eagerly loaded.
     @Query("SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.requestedBy.id = :requestedById")
     Page<Requisition> findByRequestedByIdWithFetch(@Param("requestedById") java.util.UUID requestedById, Pageable pageable);
 
+    // Finds a single requisition with all details including items and products.
     @Query("""
             SELECT DISTINCT r FROM Requisition r
             JOIN FETCH r.requestedBy
@@ -83,6 +88,7 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
             """)
     Optional<Requisition> findByIdDetailed(@Param("id") Long id);
 
+    // Deletes all line items for a requisition (used before re-adding items on update).
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM RequisitionItem ri WHERE ri.requisition.id = :requisitionId")
     void deleteItemsByRequisitionId(@Param("requisitionId") Long requisitionId);

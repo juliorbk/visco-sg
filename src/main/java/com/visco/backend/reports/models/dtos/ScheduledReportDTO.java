@@ -11,6 +11,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// Response DTO with scheduled report configuration and execution state.
 public class ScheduledReportDTO {
     private Long id;
     private String name;

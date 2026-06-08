@@ -12,6 +12,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for product category operations.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -19,10 +22,22 @@ public class CategoryService {
 
   private final CategoryRepository categoryRepository;
 
+  /**
+   * Retrieves a paginated list of all categories.
+   *
+   * @param pageable pagination information
+   * @return page of category DTOs
+   */
   public Page<CategoryDTO> getAllCategories(Pageable pageable) {
     return categoryRepository.findAll(pageable).map(CategoryDTO::fromEntity);
   }
 
+  /**
+   * Retrieves a category by its ID.
+   *
+   * @param id the category ID
+   * @return the category DTO
+   */
   public CategoryDTO getCategoryById(Long id) {
     return categoryRepository
       .findById(id)
@@ -32,6 +47,12 @@ public class CategoryService {
       );
   }
 
+  /**
+   * Creates a new category with optional parent category.
+   *
+   * @param request the category creation request
+   * @return the created category DTO
+   */
   @Transactional
   public CategoryDTO createCategory(CreateCategoryRequest request) {
     String name = request.name().trim();
@@ -57,6 +78,13 @@ public class CategoryService {
     return CategoryDTO.fromEntity(categoryRepository.save(category));
   }
 
+  /**
+   * Updates an existing category's name and parent.
+   *
+   * @param id      the category ID
+   * @param request the update request
+   * @return the updated category DTO
+   */
   @Transactional
   public CategoryDTO updateCategory(Long id, UpdateCategoryRequest request) {
     Category existing = categoryRepository
@@ -93,6 +121,11 @@ public class CategoryService {
     return CategoryDTO.fromEntity(categoryRepository.save(existing));
   }
 
+  /**
+   * Deletes a category by its ID.
+   *
+   * @param id the category ID
+   */
   @Transactional
   public void deleteCategory(Long id) {
     if (!categoryRepository.existsById(id)) {

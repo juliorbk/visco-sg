@@ -13,6 +13,12 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+/**
+ * Main entry point for the Visco SG backend application. Configures core
+ * beans: caching, scheduling, async execution, Spring Data web support with
+ * DTO serialization mode, and a dedicated {@link TaskExecutor} for email
+ * delivery.
+ */
 @EnableCaching
 @EnableScheduling
 @EnableAsync
@@ -25,6 +31,12 @@ public class SystemApplication {
   }
 
   // Add this method to explicitly provide the ObjectMapper bean
+  /**
+   * Provides the default {@link ObjectMapper} bean for JSON serialization
+   * and deserialization across the application.
+   *
+   * @return the object mapper bean
+   */
   @Bean
   public ObjectMapper objectMapper() {
     return new ObjectMapper();

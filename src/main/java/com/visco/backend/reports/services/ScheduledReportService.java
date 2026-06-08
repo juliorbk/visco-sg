@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+/**
+ * Periodically executes scheduled reports and distributes them by email.
+ */
 public class ScheduledReportService {
 
   private final ScheduledReportRepository scheduledReportRepository;
@@ -35,6 +38,9 @@ public class ScheduledReportService {
   @Value("${spring.mail.username}")
   private String senderEmail;
 
+  /**
+   * Runs every hour, checks for due scheduled reports, generates them, and emails recipients.
+   */
   @Scheduled(cron = "0 0 * * * *")
   @Transactional
   public void executeScheduledReports() {

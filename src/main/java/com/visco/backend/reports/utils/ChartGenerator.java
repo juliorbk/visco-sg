@@ -21,6 +21,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.DefaultPieDataset;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+// Utility for generating JFreeChart-based pie, bar, gauge, and line charts for report PDFs.
 public final class ChartGenerator {
 
     private static final Color PRIMARY = new Color(92, 18, 18);

@@ -22,6 +22,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for dashboard statistics and KPIs.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -39,6 +42,11 @@ public class StatsService {
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
 
+  /**
+   * Retrieves key performance indicators for the dashboard.
+   *
+   * @return KPI statistics DTO
+   */
   @Cacheable(value = "dashboard", key = "'kpis'")
   @Transactional(readOnly = true)
   public KpiStatsDTO getKpis() {
@@ -72,6 +80,12 @@ public class StatsService {
 
   // ── Pedidos recientes ─────────────────────────────────────────────────────
 
+  /**
+   * Retrieves the most recent purchase orders.
+   *
+   * @param limit maximum number of orders to return
+   * @return list of recent order DTOs
+   */
   @Transactional(readOnly = true)
   public List<RecentOrderDTO> getRecentOrders(int limit) {
     return orderRepository
@@ -94,6 +108,11 @@ public class StatsService {
 
   // ── Gastos ────────────────────────────────────────────────────────────────
 
+  /**
+   * Retrieves spending statistics over the last six months.
+   *
+   * @return spending statistics DTO
+   */
   @Cacheable(value = "dashboard", key = "'spending'")
   @Transactional(readOnly = true)
   public SpendingStatsDTO getSpendingStats() {
@@ -165,12 +184,23 @@ public class StatsService {
 
   // ── Inventario crítico ────────────────────────────────────────────────────
 
+  /**
+   * Retrieves products with critically low stock (cached default limit).
+   *
+   * @return list of critical inventory item DTOs
+   */
   @Cacheable(value = "dashboard", key = "'critical'")
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getCriticalInventory() {
     return getCriticalInventory(maxRecords);
   }
 
+  /**
+   * Retrieves products with stock below reorder point.
+   *
+   * @param limit maximum number of items to return
+   * @return list of critical inventory item DTOs
+   */
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getCriticalInventory(int limit) {
     return productRepository
@@ -194,12 +224,23 @@ public class StatsService {
       .toList();
   }
 
+  /**
+   * Retrieves products exceeding their maximum stock level (cached).
+   *
+   * @return list of overstock inventory item DTOs
+   */
   @Cacheable(value = "dashboard", key = "'overstock'")
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getOverstockInventory() {
     return getOverstockInventory(maxRecords);
   }
 
+  /**
+   * Retrieves products exceeding their maximum stock level.
+   *
+   * @param limit maximum number of items to return
+   * @return list of overstock inventory item DTOs
+   */
   @Transactional(readOnly = true)
   public List<CriticalInventoryItemDTO> getOverstockInventory(int limit) {
     return productRepository

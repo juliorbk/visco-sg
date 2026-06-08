@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+// Response DTO with user profile and cost center information.
 public class UserDTO {
 
     private UUID id;

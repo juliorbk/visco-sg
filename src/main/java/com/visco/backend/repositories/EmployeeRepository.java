@@ -8,14 +8,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+// Repository for Employee entities with cost center eager loading.
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+  // Finds all employees with their cost center eagerly loaded, sorted by name.
   @Query(
     "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter ORDER BY e.fullName ASC"
   )
   Page<Employee> findAllWithFetch(Pageable pageable);
 
+  // Finds an employee by their unique document number.
   Optional<Employee> findByDocumentNumber(String documentNumber);
 
+  // Finds employees belonging to a specific cost center with eager loading.
   @Query(
     "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter WHERE e.costCenter.id = :costCenterId"
   )

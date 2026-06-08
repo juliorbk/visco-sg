@@ -9,9 +9,20 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configures the OpenAPI 3.0 specification document for the Visco SG API.
+ * Includes API metadata (title, version, contact, license) and a bearer-token
+ * security scheme for JWT authentication in Swagger UI.
+ */
 @Configuration
 public class OpenApiConfig {
 
+    /**
+     * Builds the OpenAPI specification with API metadata and a bearer-token
+     * security scheme for JWT. The resulting bean is consumed by Swagger UI.
+     *
+     * @return the configured {@link OpenAPI} instance
+     */
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "bearerAuth";

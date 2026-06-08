@@ -9,6 +9,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// Response DTO with generated report metadata and file info.
 public class ReportDTO {
     private Long id;
     private String name;

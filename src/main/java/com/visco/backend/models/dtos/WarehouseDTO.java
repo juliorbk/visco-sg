@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+// Response DTO with full warehouse details including responsible user.
 public class WarehouseDTO {
 
 	private Long id;

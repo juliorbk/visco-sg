@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
+// Request payload for user registration via invite token.
 public class UserRegisterRequest {
 
     @NotBlank(message = "El nombre es obligatorio")

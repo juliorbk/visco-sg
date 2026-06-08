@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
+// Repository for stock level tracking with atomic update operations and aggregation queries.
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
+  // Returns stock entries for a product across different warehouses.
   List<StockLevel> findByProductId(Long productId, Pageable pageable);
 
   @Query(
@@ -29,21 +31,25 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("productIds") List<Long> productIds
   );
 
+  // Finds the stock level for a specific product in a specific warehouse.
   Optional<StockLevel> findByProductIdAndWarehouseId(
     Long productId,
     Long warehouseId
   );
 
+  // Finds stock levels for a product across multiple warehouses.
   List<StockLevel> findByProductIdAndWarehouseIdIn(
     Long productId,
     List<Long> warehouseIds
   );
 
+  // Sums current stock for a product across all warehouses.
   @Query(
     "SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
   )
   BigDecimal getTotalStockByProductId(@Param("productId") Long productId);
 
+  // Sums pending (in-transit) stock for a product across all warehouses.
   @Query(
     "SELECT COALESCE(SUM(s.pendingStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
   )

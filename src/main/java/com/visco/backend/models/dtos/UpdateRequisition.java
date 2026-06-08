@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
+// Request payload for updating an existing requisition.
 public record UpdateRequisition(
   @NotBlank String description,
   @NotNull Long costCenterId,

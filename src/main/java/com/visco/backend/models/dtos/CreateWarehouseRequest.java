@@ -5,6 +5,7 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+// Request payload for creating a new warehouse.
 public record CreateWarehouseRequest(
 
 		@NotBlank(message = "El nombre es obligatorio") String name,

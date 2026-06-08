@@ -21,6 +21,12 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Extracts a JWT from the {@code Authorization} header or an HttpOnly
+ * cookie, validates it via {@link JwtService}, and sets the Spring Security
+ * {@code SecurityContext} with a {@link UserPrincipal} loaded from the
+ * database. Applied on every request through the filter chain.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -33,6 +39,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   // 1. Inyectamos tu nuevo servicio
   private final CustomUserDetailsService userDetailsService;
 
+  /**
+   * Extracts and validates the JWT from the request. If valid, loads the
+   * corresponding {@link UserPrincipal} from the database and sets the
+   * Spring Security authentication context. Returns 401 for expired or
+   * invalid tokens, or when the referenced user no longer exists.
+   */
   @Override
   protected void doFilterInternal(
     HttpServletRequest request,

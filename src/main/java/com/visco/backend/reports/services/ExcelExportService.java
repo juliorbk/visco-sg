@@ -29,6 +29,9 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+/**
+ * Exports report data to Excel (.xlsx) files using Apache POI SXSSF streaming.
+ */
 public class ExcelExportService {
 
   private static final XSSFColor PRIMARY = new XSSFColor(
@@ -44,6 +47,9 @@ public class ExcelExportService {
     null
   );
 
+  /**
+   * Writes a stock inventory report as an Excel workbook to the given output stream.
+   */
   public void exportStockReportToExcel(
     List<StockReportDTO> data,
     String title,
@@ -73,6 +79,9 @@ public class ExcelExportService {
     }
   }
 
+  /**
+   * Writes a movement history report as an Excel workbook to the given output stream.
+   */
   public void exportMovementReportToExcel(
     List<MovementReportDTO> data,
     String title,
@@ -101,6 +110,9 @@ public class ExcelExportService {
     }
   }
 
+  /**
+   * Writes an inventory alert report as an Excel workbook to the given output stream.
+   */
   public void exportAlertReportToExcel(
     List<AlertReportDTO> data,
     String title,
@@ -127,6 +139,9 @@ public class ExcelExportService {
     }
   }
 
+  /**
+   * Writes a warehouse analysis report (summary + per-warehouse sheets) to the given output stream.
+   */
   public void exportWarehouseAnalysisToExcel(
     List<WarehouseAnalysisDTO> data,
     String title,

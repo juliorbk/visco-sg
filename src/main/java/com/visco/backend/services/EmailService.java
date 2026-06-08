@@ -44,6 +44,12 @@ public class EmailService {
 
   // ── Public API ─────────────────────────────────────────────────────────
 
+  /**
+   * Sends a welcome email to a newly registered user.
+   *
+   * @param toEmail  the recipient email
+   * @param userName the recipient's name
+   */
   @Async
   public void sendWelcomeEmail(String toEmail, String userName) {
     String subject = "Tu acceso a Visco Orinoco está listo";
@@ -51,6 +57,13 @@ public class EmailService {
     send(toEmail, subject, html);
   }
 
+  /**
+   * Sends a password reset email with a single-use token link.
+   *
+   * @param toEmail  the recipient email
+   * @param userName the recipient's name
+   * @param token    the reset token
+   */
   @Async
   public void sendPasswordResetEmail(String toEmail, String userName, String token) {
     String subject = "Restablece tu contraseña — Visco Orinoco";
@@ -60,6 +73,14 @@ public class EmailService {
     send(toEmail, subject, html);
   }
 
+  /**
+   * Sends an invitation email with a registration link.
+   *
+   * @param toEmail      the recipient email
+   * @param invitedName  the invited person's name
+   * @param token        the invite token
+   * @param intendedRole the role assigned to the invite
+   */
   @Async
   public void sendInviteEmail(
     String toEmail,
@@ -78,6 +99,12 @@ public class EmailService {
     send(toEmail, subject, html);
   }
 
+  /**
+   * Sends a confirmation email after a successful password change.
+   *
+   * @param toEmail  the recipient email
+   * @param userName the recipient's name
+   */
   @Async
   public void sendPasswordChangedEmail(String toEmail, String userName) {
     String subject = "Tu contraseña fue actualizada";

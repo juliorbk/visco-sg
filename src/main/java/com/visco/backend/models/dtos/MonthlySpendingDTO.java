@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO representing monthly spending with actual and projected values.
 public class MonthlySpendingDTO {
 	private String month; // "2025-07"
 	private BigDecimal actual;

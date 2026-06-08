@@ -25,6 +25,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "general_management")
+// Represents the top-level general management division.
 public class GeneralManagement {
 
   @Id

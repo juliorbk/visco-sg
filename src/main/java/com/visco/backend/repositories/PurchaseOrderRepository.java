@@ -12,14 +12,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+// Repository for purchase orders with analytics and projections.
 public interface PurchaseOrderRepository
   extends JpaRepository<PurchaseOrder, Long>
 {
+  // Finds all purchase orders with related entities eagerly loaded.
   @Query(
     "SELECT o FROM PurchaseOrder o JOIN FETCH o.supplier JOIN FETCH o.createdBy LEFT JOIN FETCH o.approvedBy LEFT JOIN FETCH o.destinationWarehouse LEFT JOIN FETCH o.requisition"
   )
   Page<PurchaseOrder> findAllWithFetch(Pageable pageable);
 
+  // Finds a purchase order with all details including items and products.
   @Query(
     "SELECT o FROM PurchaseOrder o " +
       "JOIN FETCH o.supplier " +
@@ -33,6 +36,7 @@ public interface PurchaseOrderRepository
   )
   Optional<PurchaseOrder> findByIdDetailed(@Param("id") Long id);
 
+  // Finds a purchase order with its line items and products (no outer relations).
   @Query(
     "SELECT o FROM PurchaseOrder o " +
       "LEFT JOIN FETCH o.items i " +

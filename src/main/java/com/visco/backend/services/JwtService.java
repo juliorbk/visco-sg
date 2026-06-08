@@ -16,6 +16,9 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
+/**
+ * Handles JWT token generation, parsing, and validation.
+ */
 @Service
 public class JwtService {
 
@@ -54,6 +57,12 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    /**
+     * Generates a JWT token containing user claims.
+     *
+     * @param user the authenticated user
+     * @return the signed JWT token string
+     */
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
@@ -64,19 +73,45 @@ public class JwtService {
                 .signWith(getSigningKey()).compact();
     }
 
+    /**
+     * Extracts the email (subject) from a JWT token.
+     *
+     * @param token the JWT token
+     * @return the email claim
+     */
     public String extractEmail(String token) {
         return extractClaims(token).getSubject();
     }
 
+    /**
+     * Extracts the role claim from a JWT token.
+     *
+     * @param token the JWT token
+     * @return the role string
+     */
     public String extractRole(String token) {
         return extractClaims(token).get("role", String.class);
     }
 
+    /**
+     * Validates a JWT token against a user entity.
+     *
+     * @param token the JWT token
+     * @param user  the user to validate against
+     * @return true if the token is valid and matches the user
+     */
     public boolean isTokenValid(String token, User user) {
         final String email = extractEmail(token);
         return email.equals(user.getEmail()) && !isTokenExpired(token);
     }
 
+    /**
+     * Validates a JWT token against an email string.
+     *
+     * @param token the JWT token
+     * @param email the expected email
+     * @return true if the token is valid and matches the email
+     */
     public boolean isTokenValid(String token, String email) {
         return extractEmail(token).equals(email) && !isTokenExpired(token);
     }

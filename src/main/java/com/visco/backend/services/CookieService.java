@@ -4,6 +4,9 @@ import jakarta.servlet.http.Cookie;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+/**
+ * Handles creation of HTTP cookies for JWT authentication.
+ */
 @Service
 public class CookieService {
 
@@ -26,6 +29,12 @@ public class CookieService {
     this.jwtService = jwtService;
   }
 
+  /**
+   * Creates an HTTP-only cookie containing the JWT token.
+   *
+   * @param jwtToken the JWT token string
+   * @return the configured cookie
+   */
   public Cookie createJwtCookie(String jwtToken) {
     Cookie cookie = new Cookie(cookieName, jwtToken);
     cookie.setHttpOnly(true);
@@ -43,6 +52,11 @@ public class CookieService {
     return cookie;
   }
 
+  /**
+   * Creates a cookie that expires immediately to clear the authentication token.
+   *
+   * @return the logout cookie
+   */
   public Cookie createLogoutCookie() {
     Cookie cookie = new Cookie(cookieName, null);
     cookie.setHttpOnly(true);

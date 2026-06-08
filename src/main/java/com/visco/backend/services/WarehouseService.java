@@ -55,6 +55,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for warehouse, stock, and inventory operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class WarehouseService {
@@ -70,6 +73,12 @@ public class WarehouseService {
     private final EmployeeRepository employeeRepository;
     private final LocationRepository locationRepository;
 
+    /**
+     * Creates a new warehouse with a responsible user.
+     *
+     * @param request the warehouse creation request
+     * @return the created warehouse DTO
+     */
     @Transactional
     public WarehouseDTO createWarehouse(CreateWarehouseRequest request) {
         User responsible = userRepository
@@ -90,11 +99,23 @@ public class WarehouseService {
         return WarehouseDTO.fromEntity(warehouseRepository.save(warehouse));
     }
 
+    /**
+     * Retrieves a paginated list of all warehouses.
+     *
+     * @param pageable pagination information
+     * @return page of warehouse DTOs
+     */
     @Transactional(readOnly = true)
     public Page<WarehouseDTO> getAllWarehouses(Pageable pageable) {
         return warehouseRepository.findAllWithFetch(pageable).map(WarehouseDTO::fromEntity);
     }
 
+    /**
+     * Retrieves a warehouse by its ID.
+     *
+     * @param id the warehouse ID
+     * @return the warehouse DTO
+     */
     @Transactional(readOnly = true)
     public WarehouseDTO getWarehouse(Long id) {
         return warehouseRepository
@@ -103,6 +124,13 @@ public class WarehouseService {
             .orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + id));
     }
 
+    /**
+     * Receives goods for a purchase order and updates stock levels.
+     *
+     * @param orderId the purchase order ID
+     * @param request the goods receipt request
+     * @return the goods receipt response
+     */
     @Transactional
     @CacheEvict(value = "dashboard", allEntries = true)
     public GoodReceiptResponse receiveGoods(Long orderId, ReceiveGoodsRequest request) {
@@ -263,6 +291,12 @@ public class WarehouseService {
         inventoryMovementRepository.save(movement);
     }
 
+    /**
+     * Retrieves a summary of received quantities for a purchase order.
+     *
+     * @param orderId the purchase order ID
+     * @return the receipt summary
+     */
     @Transactional(readOnly = true)
     public PurchaseOrderReceiptSummary getReceiptSummaryByOrder(Long orderId) {
         PurchaseOrder order = purchaseOrderRepository
@@ -377,6 +411,13 @@ public class WarehouseService {
     // Stock helpers — operaciones atómicas vía SQL nativo
     // ─────────────────────────────────────────────────────────────
 
+    /**
+     * Adds pending stock for a product in a specific warehouse.
+     *
+     * @param productId   the product ID
+     * @param warehouseId the warehouse ID
+     * @param quantity    the quantity to add
+     */
     public void addPendingStockByWarehouse(Long productId, Long warehouseId, BigDecimal quantity) {
         warehouseRepository
             .findById(warehouseId)
@@ -389,14 +430,35 @@ public class WarehouseService {
         stockLevelRepository.addPendingStockAtomic(productId, warehouseId, quantity);
     }
 
+    /**
+     * Adds current (available) stock for a product in a warehouse.
+     *
+     * @param productId   the product ID
+     * @param warehouseId the warehouse ID
+     * @param quantity    the quantity to add
+     */
     public void addCurrentStock(Long productId, Long warehouseId, BigDecimal quantity) {
         stockLevelRepository.addCurrentStockAtomic(productId, warehouseId, quantity);
     }
 
+    /**
+     * Subtracts pending stock for a product in a warehouse.
+     *
+     * @param productId   the product ID
+     * @param warehouseId the warehouse ID
+     * @param quantity    the quantity to subtract
+     */
     public void substractPendingStock(Long productId, Long warehouseId, BigDecimal quantity) {
         stockLevelRepository.subtractPendingStockAtomic(productId, warehouseId, quantity);
     }
 
+    /**
+     * Subtracts current stock for a product in a warehouse atomically.
+     *
+     * @param productId   the product ID
+     * @param warehouseId the warehouse ID
+     * @param quantity    the quantity to subtract
+     */
     public void substractCurrentStock(Long productId, Long warehouseId, BigDecimal quantity) {
         int updated = stockLevelRepository.subtractCurrentStockAtomic(
             productId,
@@ -428,6 +490,12 @@ public class WarehouseService {
         }
     }
 
+    /**
+     * Retrieves all goods receipts for a given purchase order.
+     *
+     * @param orderId the purchase order ID
+     * @return list of goods receipt responses
+     */
     @Transactional(readOnly = true)
     public List<GoodReceiptResponse> getReceiptsByOrderId(Long orderId) {
         return goodReceiptRepository
@@ -437,12 +505,25 @@ public class WarehouseService {
             .toList();
     }
 
+    /**
+     * Retrieves a paginated list of goods receipts with optional search.
+     *
+     * @param search   optional search term
+     * @param pageable pagination information
+     * @return page of goods receipt responses
+     */
     @Transactional(readOnly = true)
     public Page<GoodReceiptResponse> getAllOrders(String search, Pageable pageable) {
         if (search != null && search.trim().isEmpty()) search = null;
         return goodReceiptRepository.findAllWithSearch(search, pageable).map(this::toResponse);
     }
 
+    /**
+     * Retrieves a goods receipt by its ID.
+     *
+     * @param id the receipt ID
+     * @return the goods receipt response
+     */
     @Transactional(readOnly = true)
     public GoodReceiptResponse getReceiptById(Long id) {
         GoodReceipt receipt = goodReceiptRepository
@@ -451,6 +532,12 @@ public class WarehouseService {
         return toResponse(receipt);
     }
 
+    /**
+     * Retrieves stock breakdown for a product across all warehouses.
+     *
+     * @param productId the product ID
+     * @return the stock breakdown with warehouse entries
+     */
     @Transactional(readOnly = true)
     public ProductStockBreakdown getStockBreakdownByProduct(Long productId) {
         BigDecimal totalStock = stockLevelRepository.getTotalStockByProductId(productId);
@@ -488,6 +575,11 @@ public class WarehouseService {
             .build();
     }
 
+    /**
+     * Retrieves a global stock summary grouped by warehouse.
+     *
+     * @return list of warehouse stock summaries
+     */
     @Transactional(readOnly = true)
     public List<WarehouseStockSummary> getGlobalStockSummary() {
         return stockLevelRepository
@@ -506,6 +598,14 @@ public class WarehouseService {
             .toList();
     }
 
+    /**
+     * Retrieves products with stock levels for a specific warehouse.
+     *
+     * @param warehouseId the warehouse ID
+     * @param search      optional search term
+     * @param pageable    pagination information
+     * @return page of products on stock
+     */
     @Transactional(readOnly = true)
     public Page<ProductOnStock> getProductsOnStock(
         Long warehouseId,
@@ -535,6 +635,14 @@ public class WarehouseService {
         });
     }
 
+    /**
+     * Retrieves all products (including zero-stock) for a warehouse.
+     *
+     * @param warehouseId the warehouse ID
+     * @param search      optional search term
+     * @param pageable    pagination information
+     * @return page of products on stock
+     */
     @Transactional(readOnly = true)
     public Page<ProductOnStock> getAllProductsInWarehouse(
         Long warehouseId,
@@ -601,6 +709,11 @@ public class WarehouseService {
         );
     }
 
+    /**
+     * Transfers stock between two warehouses atomically.
+     *
+     * @param request the transfer request
+     */
     @Transactional
     public void transferStock(TransferStockRequest request) {
         if (request.fromWarehouseId().equals(request.toWarehouseId())) {
@@ -665,6 +778,13 @@ public class WarehouseService {
         inventoryMovementRepository.save(movement);
     }
 
+    /**
+     * Creates a dispatch note and debits stock for the withdrawn products.
+     *
+     * @param request          the dispatch request
+     * @param currentUserEmail the email of the user creating the dispatch
+     * @return the dispatch response
+     */
     @Transactional
     public DispatchResponse outputStock(DispatchRequest request, String currentUserEmail) {
         Warehouse warehouse = warehouseRepository
@@ -746,6 +866,13 @@ public class WarehouseService {
         return DispatchResponse.fromEntity(note);
     }
 
+    /**
+     * Retrieves a paginated list of dispatch notes with optional search.
+     *
+     * @param search   optional search term
+     * @param pageable pagination information
+     * @return page of dispatch responses
+     */
     @Transactional(readOnly = true)
     public Page<DispatchResponse> getAllDispatches(String search, Pageable pageable) {
         if (search != null && search.trim().isEmpty()) search = null;
@@ -754,6 +881,12 @@ public class WarehouseService {
             .map(DispatchResponse::fromEntity);
     }
 
+    /**
+     * Retrieves a dispatch note by its ID.
+     *
+     * @param id the dispatch ID
+     * @return the dispatch response
+     */
     @Transactional(readOnly = true)
     public DispatchResponse getDispatchById(Long id) {
         DispatchNote note = dispatchNoteRepository
@@ -762,6 +895,11 @@ public class WarehouseService {
         return DispatchResponse.fromEntity(note);
     }
 
+    /**
+     * Adjusts stock to a new value and records an inventory movement.
+     *
+     * @param request the stock adjustment request
+     */
     @Transactional
     public void adjustStock(AdjustStockRequest request) {
         Warehouse warehouse = warehouseRepository
@@ -806,6 +944,17 @@ public class WarehouseService {
         inventoryMovementRepository.save(movement);
     }
 
+    /**
+     * Retrieves paginated inventory movements with filters and running balance.
+     *
+     * @param productId   optional product filter
+     * @param warehouseId optional warehouse filter
+     * @param type        optional movement type filter
+     * @param startDate   optional start date filter
+     * @param endDate     optional end date filter
+     * @param pageable    pagination information
+     * @return page of inventory movement responses
+     */
     @Transactional(readOnly = true)
     public Page<InventoryMovementResponse> getMovements(
         Long productId,

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visco.backend.reports.models.dtos.CreateReportRequest;
 import com.visco.backend.reports.models.dtos.CreateScheduledReportRequest;
+import com.visco.backend.reports.models.dtos.ReportAnalyticsDTO;
 import com.visco.backend.reports.models.dtos.ReportDTO;
 import com.visco.backend.reports.models.dtos.ScheduledReportDTO;
 import com.visco.backend.reports.models.dtos.UpdateScheduledReportRequest;
@@ -42,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+/**
+ * Orchestrates report generation, scheduling, and retrieval.
+ */
 public class ReportService {
 
     private final ReportRepository reportRepository;
@@ -57,6 +61,9 @@ public class ReportService {
     @Value("${app.reports.max-records-per-export:50000}")
     private int maxRecords;
 
+    /**
+     * Returns a paginated list of reports, optionally filtered by type and/or status.
+     */
     public Page<ReportDTO> getReports(Pageable pageable, ReportType type, ReportStatus status) {
         if (type != null && status != null) {
             return reportRepository.findByTypeAndStatus(type, status, pageable).map(this::toDTO);
@@ -70,16 +77,25 @@ public class ReportService {
         return reportRepository.findAll(pageable).map(this::toDTO);
     }
 
+    /**
+     * Returns a paginated list of all reports.
+     */
     public Page<ReportDTO> getReports(Pageable pageable) {
         return reportRepository.findAll(pageable).map(this::toDTO);
     }
 
+    /**
+     * Returns a single report by its ID, or throws EntityNotFoundException.
+     */
     public ReportDTO getReportById(Long id) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reporte no encontrado: " + id));
         return toDTO(report);
     }
 
+    /**
+     * Asynchronously generates a report (fetches data, exports to file, persists metadata).
+     */
     @Async
     @Transactional
     public ReportDTO generateReport(CreateReportRequest request, String username) {
@@ -211,6 +227,9 @@ public class ReportService {
         return toDTO(report);
     }
 
+    /**
+     * Soft-deletes a report and removes its file from disk.
+     */
     @Transactional
     public void deleteReport(Long id) {
         Report report = reportRepository.findById(id)
@@ -227,6 +246,9 @@ public class ReportService {
         }
     }
 
+    /**
+     * Returns the report file as a downloadable Resource.
+     */
     public Resource downloadReport(Long id) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reporte no encontrado: " + id));
@@ -238,12 +260,18 @@ public class ReportService {
         return new FileSystemResource(Path.of(report.getFilePath()));
     }
 
+    /**
+     * Returns all scheduled reports ordered by creation date.
+     */
     public List<ScheduledReportDTO> getScheduledReports() {
         return scheduledReportRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::toScheduledDTO)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Creates a new scheduled report with calculated next execution date.
+     */
     @Transactional
     public ScheduledReportDTO createScheduledReport(CreateScheduledReportRequest request) {
         LocalDateTime nextExecution = DateUtils.calculateNextExecution(
@@ -267,6 +295,9 @@ public class ReportService {
         return toScheduledDTO(sr);
     }
 
+    /**
+     * Updates an existing scheduled report and recalculates its next execution date.
+     */
     @Transactional
     public ScheduledReportDTO updateScheduledReport(Long id, UpdateScheduledReportRequest request) {
         ScheduledReport sr = scheduledReportRepository.findById(id)
@@ -291,6 +322,9 @@ public class ReportService {
         return toScheduledDTO(sr);
     }
 
+    /**
+     * Permanently deletes a scheduled report.
+     */
     @Transactional
     public void deleteScheduledReport(Long id) {
         ScheduledReport sr = scheduledReportRepository.findById(id)
@@ -298,6 +332,9 @@ public class ReportService {
         scheduledReportRepository.delete(sr);
     }
 
+    /**
+     * Manually triggers a scheduled report, persisting and returning the generated report.
+     */
     @Transactional
     public ReportDTO executeScheduledReport(Long id) {
         ScheduledReport sr = scheduledReportRepository.findById(id)
@@ -329,6 +366,64 @@ public class ReportService {
         scheduledReportRepository.save(sr);
 
         return result;
+    }
+
+    /**
+     * Returns aggregated analytics: counts by status/type, monthly trend, and totals.
+     */
+    @Transactional(readOnly = true)
+    public ReportAnalyticsDTO getReportAnalytics() {
+        long totalReports = reportRepository.countByActiveTrue();
+        long totalScheduled = scheduledReportRepository.count();
+        long completedReports = reportRepository.countByStatusAndActiveTrue(ReportStatus.COMPLETED);
+        long failedReports = reportRepository.countByStatusAndActiveTrue(ReportStatus.FAILED);
+        long pendingReports = reportRepository.countByStatusAndActiveTrue(ReportStatus.PENDING);
+        long totalRecordsExported = reportRepository.sumCompletedRecordCount();
+
+        Map<String, Long> reportsByType = reportRepository.countActiveByType().stream()
+                .collect(Collectors.toMap(
+                        row -> ((ReportType) row[0]).name(),
+                        row -> (Long) row[1]
+                ));
+
+        Map<String, Long> reportsByStatus = reportRepository.countActiveByStatus().stream()
+                .collect(Collectors.toMap(
+                        row -> ((ReportStatus) row[0]).name(),
+                        row -> (Long) row[1]
+                ));
+
+        LocalDateTime sixMonthsAgo = LocalDateTime.now()
+                .minusMonths(6)
+                .withDayOfMonth(1)
+                .withHour(0)
+                .withMinute(0)
+                .withSecond(0);
+
+        List<ReportAnalyticsDTO.MonthlyCount> monthlyTrend = reportRepository
+                .countByMonthSince(sixMonthsAgo)
+                .stream()
+                .map(row -> {
+                    int year = ((Number) row[0]).intValue();
+                    int month = ((Number) row[1]).intValue();
+                    long count = (Long) row[2];
+                    return ReportAnalyticsDTO.MonthlyCount.builder()
+                            .month(String.format("%d-%02d", year, month))
+                            .count(count)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return ReportAnalyticsDTO.builder()
+                .totalReports(totalReports)
+                .totalScheduledReports(totalScheduled)
+                .completedReports(completedReports)
+                .failedReports(failedReports)
+                .pendingReports(pendingReports)
+                .totalRecordsExported(totalRecordsExported)
+                .reportsByType(reportsByType)
+                .reportsByStatus(reportsByStatus)
+                .monthlyTrend(monthlyTrend)
+                .build();
     }
 
     private ReportDTO toDTO(Report report) {

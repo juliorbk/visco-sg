@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import lombok.Data;
 
 @Data
+// Request payload for updating an existing scheduled report configuration.
 public class UpdateScheduledReportRequest {
     private String name;
     private ReportType reportType;

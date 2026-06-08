@@ -7,7 +7,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+// Repository for CostCenter entities with eager-fetch queries.
 public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
+    // Finds all cost centers with their management hierarchy eagerly loaded, paginated.
     @Query("SELECT cc FROM CostCenter cc LEFT JOIN FETCH cc.management mgmt LEFT JOIN FETCH mgmt.generalManagement ORDER BY cc.fullDescription ASC")
     Page<CostCenter> findAllWithFetch(Pageable pageable);
 

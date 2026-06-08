@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.ALWAYS)
+// Response DTO containing authentication token and user details.
 public class AuthResponse {
   private UserDTO user;
   

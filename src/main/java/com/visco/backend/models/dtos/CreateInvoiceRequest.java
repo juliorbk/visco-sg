@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+// Request payload for creating an invoice against a purchase order.
 public record CreateInvoiceRequest(
     @NotBlank(message = "Invoice number is required") String invoiceNumber,
     @NotNull(message = "Purchase order ID is required") Long purchaseOrderId,

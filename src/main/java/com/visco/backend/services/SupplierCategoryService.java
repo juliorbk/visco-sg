@@ -14,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for supplier category operations.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -21,6 +24,12 @@ public class SupplierCategoryService {
 
     private final SupplierCategoryRepository categoryRepository;
 
+    /**
+     * Creates a new supplier category with a unique name.
+     *
+     * @param request the category creation request
+     * @return the created supplier category DTO
+     */
     @Transactional
     public SupplierCategoryDTO createCategory(CreateSupplierCategoryRequest request) {
         String name = request.name().trim();
@@ -37,11 +46,23 @@ public class SupplierCategoryService {
         return SupplierCategoryDTO.fromCategory(categoryRepository.save(category));
     }
 
+    /**
+     * Retrieves a paginated list of all supplier categories.
+     *
+     * @param pageable pagination information
+     * @return page of supplier category DTOs
+     */
     @Transactional(readOnly = true)
     public Page<SupplierCategoryDTO> getAllCategories(Pageable pageable) {
         return categoryRepository.findAll(pageable).map(SupplierCategoryDTO::fromCategory);
     }
 
+    /**
+     * Retrieves only active supplier categories.
+     *
+     * @param pageable pagination information
+     * @return page of active supplier category DTOs
+     */
     @Transactional(readOnly = true)
     public Page<SupplierCategoryDTO> getActiveCategories(Pageable pageable) {
         return categoryRepository
@@ -49,6 +70,12 @@ public class SupplierCategoryService {
             .map(SupplierCategoryDTO::fromCategory);
     }
 
+    /**
+     * Retrieves only inactive supplier categories.
+     *
+     * @param pageable pagination information
+     * @return page of inactive supplier category DTOs
+     */
     @Transactional(readOnly = true)
     public Page<SupplierCategoryDTO> getInactiveCategories(Pageable pageable) {
         return categoryRepository
@@ -56,6 +83,12 @@ public class SupplierCategoryService {
             .map(SupplierCategoryDTO::fromCategory);
     }
 
+    /**
+     * Retrieves a supplier category by its ID.
+     *
+     * @param id the supplier category ID
+     * @return the supplier category DTO
+     */
     @Transactional(readOnly = true)
     public SupplierCategoryDTO getCategoryById(Long id) {
         return SupplierCategoryDTO.fromCategory(
@@ -65,6 +98,13 @@ public class SupplierCategoryService {
         );
     }
 
+    /**
+     * Updates an existing supplier category's name, description, and active status.
+     *
+     * @param id      the supplier category ID
+     * @param request the update request
+     * @return the updated supplier category DTO
+     */
     @Transactional
     public SupplierCategoryDTO updateCategory(Long id, UpdateSupplierCategoryRequest request) {
         SupplierCategory existing = categoryRepository.findById(id).orElseThrow(() ->
@@ -92,6 +132,11 @@ public class SupplierCategoryService {
         return SupplierCategoryDTO.fromCategory(categoryRepository.save(existing));
     }
 
+    /**
+     * Deactivates an active supplier category.
+     *
+     * @param id the supplier category ID
+     */
     @Transactional
     public void deactivateCategory(Long id) {
         SupplierCategory category = categoryRepository.findById(id).orElseThrow(() ->
@@ -108,6 +153,11 @@ public class SupplierCategoryService {
         log.info("Deactivated supplier category with id: {}", id);
     }
 
+    /**
+     * Activates an inactive supplier category.
+     *
+     * @param id the supplier category ID
+     */
     @Transactional
     public void activateCategory(Long id) {
         SupplierCategory category = categoryRepository.findById(id).orElseThrow(() ->

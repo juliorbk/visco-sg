@@ -29,6 +29,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for supplier management operations.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -53,6 +56,12 @@ public class SupplierService {
 
   // Create Supplier
 
+  /**
+   * Creates a new supplier with optional category and representatives.
+   *
+   * @param request the supplier creation request
+   * @return the created supplier DTO
+   */
   @Transactional
   public SupplierDTO createSupplier(CreateSupplierRequest request) {
     if (supplierRepository.existsByName(request.name())) {
@@ -97,6 +106,13 @@ public class SupplierService {
   }
 
   // Read all Suppliers
+  /**
+   * Retrieves a paginated list of suppliers with optional search.
+   *
+   * @param search   optional search term
+   * @param pageable pagination information
+   * @return page of supplier DTOs
+   */
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getAllSuppliers(String search, Pageable pageable) {
     if (search != null && search.trim().isEmpty()) search = null;
@@ -106,6 +122,13 @@ public class SupplierService {
   }
 
   // Update Supplier
+  /**
+   * Updates an existing supplier's details and category.
+   *
+   * @param id      the supplier ID
+   * @param request the update request
+   * @return the updated supplier DTO
+   */
   @Transactional
   public SupplierDTO updateSupplier(Long id, UpdateSupplierRequest request) {
     Supplier existing = supplierRepository
@@ -137,6 +160,11 @@ public class SupplierService {
 
   // Deacativate - Delete Suppplier
 
+  /**
+   * Soft-deletes a supplier by setting it inactive.
+   *
+   * @param Id the supplier ID
+   */
   @Transactional
   public void deleteSupplier(Long Id) {
     Supplier supplier = supplierRepository
@@ -151,6 +179,11 @@ public class SupplierService {
     log.info("Soft-deleted (deactivated) supplier with id: {}", Id);
   }
 
+  /**
+   * Deactivates an active supplier.
+   *
+   * @param id the supplier ID
+   */
   @Transactional
   public void deactivateSupplier(Long id) {
     // 1. Properly handle the Optional using orElseThrow
@@ -176,6 +209,11 @@ public class SupplierService {
     supplierRepository.save(supplier);
   }
 
+  /**
+   * Activates an inactive supplier.
+   *
+   * @param id the supplier ID
+   */
   @Transactional
   public void activateSupplier(Long id) {
     Supplier supplier = supplierRepository
@@ -198,6 +236,12 @@ public class SupplierService {
     supplierRepository.save(supplier);
   }
 
+  /**
+   * Retrieves a supplier by its ID.
+   *
+   * @param id the supplier ID
+   * @return the supplier DTO
+   */
   @Transactional(readOnly = true)
   public SupplierDTO getSupplierById(Long id) {
     return SupplierDTO.fromSupplier(
@@ -209,6 +253,12 @@ public class SupplierService {
     );
   }
 
+  /**
+   * Retrieves a paginated list of active suppliers.
+   *
+   * @param pageable pagination information
+   * @return page of supplier DTOs
+   */
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getActiveSuppliers(Pageable pageable) {
     return supplierRepository
@@ -216,6 +266,12 @@ public class SupplierService {
       .map(SupplierDTO::fromSupplier);
   }
 
+  /**
+   * Retrieves a paginated list of inactive suppliers.
+   *
+   * @param pageable pagination information
+   * @return page of supplier DTOs
+   */
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getInactiveSuppliers(Pageable pageable) {
     return supplierRepository
@@ -223,6 +279,13 @@ public class SupplierService {
       .map(SupplierDTO::fromSupplier);
   }
 
+  /**
+   * Retrieves suppliers filtered by currency.
+   *
+   * @param currency the currency to filter by
+   * @param pageable pagination information
+   * @return page of supplier DTOs
+   */
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getSuppliersByCurrency(
     Currency currency,
@@ -233,6 +296,13 @@ public class SupplierService {
       .map(SupplierDTO::fromSupplier);
   }
 
+  /**
+   * Retrieves suppliers filtered by category.
+   *
+   * @param categoryId the category ID
+   * @param pageable   pagination information
+   * @return page of supplier DTOs
+   */
   @Transactional(readOnly = true)
   public Page<SupplierDTO> getSuppliersByCategory(Long categoryId, Pageable pageable) {
     if (!categoryRepository.existsById(categoryId)) {
@@ -243,6 +313,12 @@ public class SupplierService {
       .map(SupplierDTO::fromSupplier);
   }
 
+  /**
+   * Retrieves supplier performance metrics over a given number of months.
+   *
+   * @param months the lookback period in months
+   * @return list of supplier performance DTOs
+   */
   @Transactional(readOnly = true)
   public List<SupplierPerformanceDTO> getSupplierPerformance(int months) {
     LocalDateTime from = LocalDateTime.now()
@@ -333,6 +409,12 @@ public class SupplierService {
       .toList();
   }
 
+  /**
+   * Retrieves monthly supplier performance data for charting.
+   *
+   * @param months the lookback period in months
+   * @return list of monthly supplier performance DTOs
+   */
   @Transactional(readOnly = true)
   public List<SupplierPerformanceMonthlyDTO> getSupplierPerformanceChart(
     int months

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 
+// Request payload for updating an existing supplier.
 public record UpdateSupplierRequest(
   @NotBlank(message = "El nombre es obligatorio") String name,
 

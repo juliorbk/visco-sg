@@ -8,6 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// Response DTO for an invitation token with full details.
 public class InviteTokenResponse {
   UUID id;
   String token;

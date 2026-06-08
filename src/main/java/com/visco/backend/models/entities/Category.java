@@ -35,6 +35,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
   name = "categories",
   indexes = { @Index(name = "idx_category_parent", columnList = "parent_id") }
 )
+// Represents a product category with optional parent-child hierarchy.
 public class Category {
 
   @Id
@@ -48,7 +49,7 @@ public class Category {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "parent_id")
+  @JoinColumn(name = "parent_id") // FK to self (parent category)
   private Category parentCategory;
 
   @Transient

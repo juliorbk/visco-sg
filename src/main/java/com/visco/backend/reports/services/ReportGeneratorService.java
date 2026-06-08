@@ -34,6 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+/**
+ * Generates the raw data DTOs that feed into Excel and PDF export services.
+ */
 public class ReportGeneratorService {
 
   private final ProductRepository productRepository;
@@ -44,6 +47,9 @@ public class ReportGeneratorService {
   @Value("${app.reports.max-records-per-export:50000}")
   private int maxRecords;
 
+  /**
+   * Builds a list of StockReportDTO with current stock, pending stock, and status classification.
+   */
   public List<StockReportDTO> generateStockReport(
     LocalDateTime startDate,
     LocalDateTime endDate,
@@ -163,6 +169,9 @@ public class ReportGeneratorService {
       .collect(Collectors.toList());
   }
 
+  /**
+   * Builds a list of MovementReportDTO from inventory movements using a streaming query.
+   */
   public List<MovementReportDTO> generateMovementReport(
     LocalDateTime startDate,
     LocalDateTime endDate,
@@ -220,6 +229,9 @@ public class ReportGeneratorService {
     }
   }
 
+  /**
+   * Builds a list of AlertReportDTO by evaluating products below reorder point and overstock.
+   */
   public List<AlertReportDTO> generateAlertReport(
     String severity,
     String alertType,
@@ -374,6 +386,9 @@ public class ReportGeneratorService {
     return alerts;
   }
 
+  /**
+   * Builds a list of WarehouseAnalysisDTO with per-warehouse metrics, top products, and category distribution.
+   */
   public List<WarehouseAnalysisDTO> generateWarehouseAnalysis(
     Long warehouseId
   ) {

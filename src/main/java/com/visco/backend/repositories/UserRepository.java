@@ -14,7 +14,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
+// Repository for user accounts with email lookups, role queries, and hard-delete helpers.
 public interface UserRepository extends JpaRepository<User, UUID> {
+    // Finds a user by their exact email address.
     Optional<User> findByEmail(String email);
 
     @Query(
@@ -37,10 +39,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u.email FROM User u WHERE u.active = true AND u.role IN ('ADMIN', 'MANAGER')")
     List<String> findActiveAdminAndManagerEmails();
 
+    // Counts users by role regardless of active status.
     long countByRole(UserRole role);
 
+    // Counts active users by role.
     long countByRoleAndActiveTrue(UserRole role);
 
+    // Raw lookup without any fetch-joins, bypassing auditing.
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdRaw(@Param("id") UUID id);
 

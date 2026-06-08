@@ -29,6 +29,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles weekly report generation and email distribution.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -54,6 +57,9 @@ public class WeeklyReportService {
     "dd/MM/yyyy"
   );
 
+  /**
+   * Generates and sends the weekly report via email (scheduled every Monday at 8 AM).
+   */
   @Scheduled(cron = "0 0 8 * * MON")
   @Transactional(readOnly = true)
   public void sendWeeklyReport() {
@@ -112,6 +118,9 @@ public class WeeklyReportService {
     }
   }
 
+  /**
+   * Triggers an immediate weekly report generation and delivery.
+   */
   @Transactional(readOnly = true)
   public void sendReportNow() {
     sendWeeklyReport();

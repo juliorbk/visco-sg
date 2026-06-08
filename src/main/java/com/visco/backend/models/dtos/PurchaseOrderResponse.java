@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Response DTO for a complete purchase order with items and related parties.
 public record PurchaseOrderResponse(
     Long id,
     String orderNumber,

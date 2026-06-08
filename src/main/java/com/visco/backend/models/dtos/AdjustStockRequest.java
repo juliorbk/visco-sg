@@ -6,6 +6,7 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
+// Request payload to manually adjust stock for a product in a warehouse.
 public record AdjustStockRequest(
 
 		@NotNull(message = "El producto es obligatorio") Long productId,

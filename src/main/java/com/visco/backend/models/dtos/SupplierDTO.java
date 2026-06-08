@@ -12,6 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+// Response DTO with full supplier details and representative info.
 public class SupplierDTO {
 
   private Long id;

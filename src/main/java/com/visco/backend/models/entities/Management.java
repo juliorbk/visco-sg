@@ -37,6 +37,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     ),
   }
 )
+// Represents a management division under a general management.
 public class Management {
 
   @Id
@@ -50,7 +51,7 @@ public class Management {
   private String description;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "general_management_id", nullable = false)
+  @JoinColumn(name = "general_management_id", nullable = false) // FK to GeneralManagement
   private GeneralManagement generalManagement;
 
   @CreatedDate

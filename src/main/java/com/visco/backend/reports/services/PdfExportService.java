@@ -39,6 +39,9 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+/**
+ * Exports report data to PDF documents using iText 7.
+ */
 public class PdfExportService {
 
     private static final DeviceRgb PRIMARY = new DeviceRgb(92, 18, 18);
@@ -46,6 +49,9 @@ public class PdfExportService {
     private static final DeviceRgb LIGHT_GRAY = new DeviceRgb(245, 245, 247);
     private static final DeviceRgb DARK_TEXT = new DeviceRgb(55, 65, 81);
 
+    /**
+     * Writes a stock inventory report as a PDF document to the given output stream.
+     */
     public void exportStockReportToPdf(List<StockReportDTO> data, String title,
                                         Map<String, String> metadata, OutputStream outputStream) {
         try (Document document = createDocument(outputStream)) {
@@ -57,6 +63,9 @@ public class PdfExportService {
         }
     }
 
+    /**
+     * Writes a movement history report as a PDF document to the given output stream.
+     */
     public void exportMovementReportToPdf(List<MovementReportDTO> data, String title,
                                            Map<String, String> metadata, OutputStream outputStream) {
         try (Document document = createDocument(outputStream)) {
@@ -68,6 +77,9 @@ public class PdfExportService {
         }
     }
 
+    /**
+     * Writes an inventory alert report as a PDF document to the given output stream.
+     */
     public void exportAlertReportToPdf(List<AlertReportDTO> data, String title,
                                         Map<String, String> metadata, OutputStream outputStream) {
         try (Document document = createDocument(outputStream)) {
@@ -79,6 +91,9 @@ public class PdfExportService {
         }
     }
 
+    /**
+     * Writes a warehouse analysis report (summary + per-warehouse sections with charts) as a PDF.
+     */
     public void exportWarehouseAnalysisToPdf(List<WarehouseAnalysisDTO> data, String title,
                                               Map<String, String> metadata, OutputStream outputStream) {
         try (Document document = createDocument(outputStream)) {

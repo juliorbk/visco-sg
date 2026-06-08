@@ -1,5 +1,6 @@
 package com.visco.backend.reports.models.enums;
 
+// Lifecycle status of a report from creation to completion or failure.
 public enum ReportStatus {
     PENDING("Pendiente"),
     PROCESSING("Procesando"),

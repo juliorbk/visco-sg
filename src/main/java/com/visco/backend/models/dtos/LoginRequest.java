@@ -7,6 +7,7 @@ import lombok.*;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+// Request payload for user authentication.
 public class LoginRequest {
   
     @NotBlank(message = "Email is required")

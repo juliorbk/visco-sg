@@ -1,5 +1,6 @@
 package com.visco.backend.reports.models.enums;
 
+// Supported report output formats with their MIME types.
 public enum ReportFormat {
     PDF("application/pdf"),
     EXCEL("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),

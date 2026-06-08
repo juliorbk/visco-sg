@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+// Response DTO with basic warehouse identification info.
 public class WarehouseResponse {
 
   private Long id;

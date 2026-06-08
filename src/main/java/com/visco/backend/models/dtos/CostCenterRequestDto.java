@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+// Request payload for creating or updating a cost center.
 public record CostCenterRequestDto(
   Boolean isActive,
 

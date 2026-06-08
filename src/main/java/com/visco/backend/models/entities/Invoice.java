@@ -43,6 +43,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Represents a supplier invoice linked to a purchase order for three-way matching.
 public class Invoice {
 
   @Id
@@ -53,13 +54,13 @@ public class Invoice {
   private String invoiceNumber;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "purchase_order_id", nullable = false)
+  @JoinColumn(name = "purchase_order_id", nullable = false) // FK to PurchaseOrder
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private PurchaseOrder purchaseOrder;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "supplier_id", nullable = false)
+  @JoinColumn(name = "supplier_id", nullable = false) // FK to Supplier
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Supplier supplier;

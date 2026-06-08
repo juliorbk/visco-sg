@@ -2,6 +2,7 @@ package com.visco.backend.reports.controllers;
 
 import com.visco.backend.reports.models.dtos.CreateReportRequest;
 import com.visco.backend.reports.models.dtos.CreateScheduledReportRequest;
+import com.visco.backend.reports.models.dtos.ReportAnalyticsDTO;
 import com.visco.backend.reports.models.dtos.ReportDTO;
 import com.visco.backend.reports.models.dtos.ScheduledReportDTO;
 import com.visco.backend.reports.models.dtos.UpdateScheduledReportRequest;
@@ -118,6 +119,12 @@ public class ReportController {
                 .map(t -> Map.of("type", t.name(), "displayName", t.getDisplayName()))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(templates);
+    }
+
+    @GetMapping("/analytics")
+    @Operation(summary = "Analíticas de reportes", description = "Retorna métricas agregadas y tendencias de reportes generados")
+    public ResponseEntity<ReportAnalyticsDTO> getReportAnalytics() {
+        return ResponseEntity.ok(reportService.getReportAnalytics());
     }
 
     @GetMapping("/scheduled")

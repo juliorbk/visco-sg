@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+// Request payload for transferring stock between warehouses.
 public record TransferStockRequest(
     @NotNull(message = "El producto es obligatorio") Long productId,
 

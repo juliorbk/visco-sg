@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+// Request payload for creating a dispatch (stock exit) note.
 public record DispatchRequest(
     @NotNull(message = "El almacén es obligatorio") Long warehouseId,
 

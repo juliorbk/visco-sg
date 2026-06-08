@@ -43,6 +43,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Represents a purchase requisition requesting items for a cost center.
 public class Requisition {
 
   @Id
@@ -56,13 +57,13 @@ public class Requisition {
   private String description;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "requested_by_id", nullable = false)
+  @JoinColumn(name = "requested_by_id", nullable = false) // FK to User (requester)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private User requestedBy;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "cost_center_id", nullable = false)
+  @JoinColumn(name = "cost_center_id", nullable = false) // FK to CostCenter
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private CostCenter costCenter;
@@ -78,7 +79,7 @@ public class Requisition {
   private String approvalNotes;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "approved_by_id")
+  @JoinColumn(name = "approved_by_id") // FK to User (approver)
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private User approvedBy;

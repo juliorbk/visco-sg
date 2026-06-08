@@ -8,6 +8,7 @@ import com.visco.backend.models.entities.Warehouse;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Response DTO for a goods receipt with items and purchase order summary.
 public record GoodReceiptResponse(
     Long id,
     String receiptNumber,

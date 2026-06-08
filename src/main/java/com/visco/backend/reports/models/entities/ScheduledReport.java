@@ -25,6 +25,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+// JPA entity representing a recurring report schedule with email distribution.
 @Entity
 @Table(name = "scheduled_reports", indexes = {
     @Index(name = "idx_scheduled_enabled", columnList = "enabled"),

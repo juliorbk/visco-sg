@@ -9,6 +9,7 @@ import java.util.Map;
 import lombok.Data;
 
 @Data
+// Request payload for generating a new report.
 public class CreateReportRequest {
     @NotBlank(message = "El nombre del reporte es requerido")
     private String name;

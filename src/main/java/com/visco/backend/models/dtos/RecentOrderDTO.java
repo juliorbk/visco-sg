@@ -8,6 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO summarizing a recent purchase order for dashboard display.
 public class RecentOrderDTO {
 
   private Long id;

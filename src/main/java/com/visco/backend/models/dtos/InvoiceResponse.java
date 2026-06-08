@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Response DTO for a complete invoice with items and payment status.
 public record InvoiceResponse(
     Long id,
     String invoiceNumber,

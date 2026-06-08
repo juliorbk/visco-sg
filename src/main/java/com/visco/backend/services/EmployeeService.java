@@ -13,6 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for employee operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class EmployeeService {
@@ -20,6 +23,12 @@ public class EmployeeService {
   private final EmployeeRepository employeeRepository;
   private final CostCenterRepository costCenterRepository;
 
+  /**
+   * Retrieves a paginated list of all employees.
+   *
+   * @param pageable pagination information
+   * @return page of employee DTOs
+   */
   @Transactional(readOnly = true)
   public Page<EmployeeResponseDto> getAllEmployees(Pageable pageable) {
     return employeeRepository
@@ -27,6 +36,13 @@ public class EmployeeService {
       .map(EmployeeResponseDto::fromEntity);
   }
 
+  /**
+   * Retrieves employees filtered by cost center.
+   *
+   * @param pageable     pagination information
+   * @param costCenterId the cost center ID
+   * @return page of employee DTOs
+   */
   @Transactional(readOnly = true)
   public Page<EmployeeResponseDto> getEmployeesByCostCenter(
     Pageable pageable,
@@ -37,6 +53,12 @@ public class EmployeeService {
       .map(EmployeeResponseDto::fromEntity);
   }
 
+  /**
+   * Retrieves an employee by their document number.
+   *
+   * @param document the employee document number
+   * @return the employee DTO
+   */
   @Transactional(readOnly = true)
   public EmployeeResponseDto getEmployeeByDocument(String document) {
     return employeeRepository
@@ -47,6 +69,12 @@ public class EmployeeService {
       );
   }
 
+  /**
+   * Creates a new employee with optional cost center assignment.
+   *
+   * @param request the employee creation request
+   * @return the created employee DTO
+   */
   @Transactional
   public EmployeeResponseDto createEmployee(EmployeeRequestDto request) {
     Employee.EmployeeBuilder builder = Employee.builder()
@@ -73,6 +101,13 @@ public class EmployeeService {
     );
   }
 
+  /**
+   * Updates an existing employee's details and cost center.
+   *
+   * @param document the employee document number
+   * @param request  the update request
+   * @return the updated employee DTO
+   */
   @Transactional
   public EmployeeResponseDto updateEmployee(
     String document,
@@ -107,6 +142,11 @@ public class EmployeeService {
     return EmployeeResponseDto.fromEntity(employeeRepository.save(employee));
   }
 
+  /**
+   * Deactivates an employee by their document number.
+   *
+   * @param document the employee document number
+   */
   @Transactional
   public void deactivateEmployee(String document) {
     Employee employee = employeeRepository
@@ -118,6 +158,11 @@ public class EmployeeService {
     employeeRepository.save(employee);
   }
 
+  /**
+   * Activates a previously deactivated employee.
+   *
+   * @param document the employee document number
+   */
   @Transactional
   public void activateEmployee(String document) {
     Employee employee = employeeRepository

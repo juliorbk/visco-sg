@@ -22,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for product and stock operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -98,6 +101,12 @@ public class ProductService {
   // Writes
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Creates a new product with a generated internal code.
+   *
+   * @param dto the product creation request
+   * @return the created product DTO
+   */
   @Transactional
   public ProductDTO createProduct(CreateProductRequest dto) {
     if (productRepository.findBySku(dto.sku()).isPresent()) {
@@ -148,6 +157,13 @@ public class ProductService {
     return String.format("%06d", nextVal);
   }
 
+  /**
+   * Updates an existing product's details and stock references.
+   *
+   * @param id  the product ID
+   * @param dto the product update data
+   * @return the updated product DTO
+   */
   @Transactional
   public ProductDTO updateProduct(Long id, ProductDTO dto) {
     Product existing = productRepository
@@ -196,6 +212,11 @@ public class ProductService {
     );
   }
 
+  /**
+   * Soft-deletes a product by setting it inactive.
+   *
+   * @param id the product ID
+   */
   @Transactional
   public void deleteProduct(Long id) {
     Product product = productRepository
@@ -207,6 +228,12 @@ public class ProductService {
     productRepository.save(product);
   }
 
+  /**
+   * Creates a new category entity directly.
+   *
+   * @param category the category entity to save
+   * @return the saved category
+   */
   @Transactional
   public Category createCategory(Category category) {
     return categoryRepository.save(category);
@@ -216,6 +243,12 @@ public class ProductService {
   // Reads
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Retrieves a product by its internal code with stock information.
+   *
+   * @param internalCode the product internal code
+   * @return the product DTO with stock data
+   */
   @Transactional(readOnly = true)
   public ProductDTO getProductByInternalCode(String internalCode) {
     Product product = productRepository
@@ -232,6 +265,12 @@ public class ProductService {
     );
   }
 
+  /**
+   * Retrieves a product by its ID with stock information.
+   *
+   * @param id the product ID
+   * @return the product DTO with stock data
+   */
   @Transactional(readOnly = true)
   public ProductDTO getProductById(Long id) {
     Product product = productRepository
@@ -246,6 +285,17 @@ public class ProductService {
     );
   }
 
+  /**
+   * Retrieves a paginated, filterable, and sortable list of products.
+   *
+   * @param pageable pagination information
+   * @param search   optional search term
+   * @param category optional category filter
+   * @param sortBy   optional sort field
+   * @param sortDir  sort direction (asc/desc)
+   * @param hasStock filter products with stock only
+   * @return page of product DTOs
+   */
   @Transactional(readOnly = true)
   public Page<ProductDTO> getProducts(
     Pageable pageable,
@@ -302,6 +352,13 @@ public class ProductService {
     return toProductDTOPage(products, pageable);
   }
 
+  /**
+   * Retrieves products filtered by category.
+   *
+   * @param categoryId the category ID
+   * @param pageable   pagination information
+   * @return page of product DTOs
+   */
   @Transactional(readOnly = true)
   public Page<ProductDTO> getProductsByCategory(
     Long categoryId,
@@ -316,6 +373,13 @@ public class ProductService {
     return toProductDTOPage(products, pageable);
   }
 
+  /**
+   * Retrieves products available in a specific warehouse.
+   *
+   * @param warehouseId the warehouse ID
+   * @param pageable    pagination information
+   * @return page of product DTOs
+   */
   @Transactional(readOnly = true)
   public Page<ProductDTO> getProductsByWarehouse(
     Long warehouseId,

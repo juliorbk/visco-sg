@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
+// Request payload for a single line item in a requisition.
 public record RequisitionItemRequest(
     @NotNull(message = "Product ID is required") Long productId,
     @NotNull(message = "Quantity is required")

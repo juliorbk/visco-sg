@@ -9,6 +9,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+// Response DTO for a supplier category with metadata.
 public class SupplierCategoryDTO {
 
     private Long id;

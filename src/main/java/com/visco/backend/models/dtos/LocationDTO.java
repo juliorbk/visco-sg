@@ -8,6 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+// Response DTO with warehouse location details.
 public class LocationDTO {
 
   private Long id;

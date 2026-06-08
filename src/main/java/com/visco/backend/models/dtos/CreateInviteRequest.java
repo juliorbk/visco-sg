@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
+// Request payload for creating a user invitation token.
 public class CreateInviteRequest {
 
   @NotBlank(message = "El email es obligatorio")

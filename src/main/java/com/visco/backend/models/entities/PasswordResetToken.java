@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+// Token used for resetting user passwords via email.
 public class PasswordResetToken {
 
   @Id

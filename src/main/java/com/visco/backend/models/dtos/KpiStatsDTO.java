@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO holding high-level KPI statistics for the dashboard.
 public class KpiStatsDTO {
 	private long totalOrders;
 	private BigDecimal totalInventoryUnits;

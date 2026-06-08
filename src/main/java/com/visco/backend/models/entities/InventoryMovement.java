@@ -36,6 +36,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+// Records inventory movements (input, output, transfer, adjustment, dispatch).
 public class InventoryMovement {
 
   @Id
@@ -43,19 +44,19 @@ public class InventoryMovement {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id", nullable = false)
+  @JoinColumn(name = "product_id", nullable = false) // FK to Product
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Product product;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "from_warehouse_id")
+  @JoinColumn(name = "from_warehouse_id") // FK to source Warehouse
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Warehouse fromWarehouse;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "to_warehouse_id")
+  @JoinColumn(name = "to_warehouse_id") // FK to destination Warehouse
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Warehouse toWarehouse;
@@ -80,7 +81,7 @@ public class InventoryMovement {
   private LocalDateTime createdAt;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "created_by_id", nullable = false)
+  @JoinColumn(name = "created_by_id", nullable = false) // FK to User
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private User createdBy;

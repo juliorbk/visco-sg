@@ -8,6 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO summarizing receipt status and quantities for a purchase order.
 public class PurchaseOrderReceiptSummary {
 
   private Long orderId;

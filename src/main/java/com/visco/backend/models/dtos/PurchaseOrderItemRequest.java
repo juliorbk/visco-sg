@@ -6,6 +6,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+// Request payload for a single line item in a purchase order.
 public record PurchaseOrderItemRequest(
 
         @NotNull(message = "Product ID is required") Long productId,

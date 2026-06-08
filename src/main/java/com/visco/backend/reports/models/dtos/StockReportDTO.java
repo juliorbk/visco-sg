@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO with stock report details per product and warehouse breakdown.
 public class StockReportDTO {
     private Long productId;
     private String internalCode;

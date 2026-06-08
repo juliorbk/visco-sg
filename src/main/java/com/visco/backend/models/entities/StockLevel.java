@@ -44,6 +44,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     ),
   }
 )
+// Tracks current and pending stock for a product at a warehouse (optimistic locking).
 public class StockLevel {
 
   @Id
@@ -51,11 +52,11 @@ public class StockLevel {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id", nullable = false)
+  @JoinColumn(name = "product_id", nullable = false) // FK to Product
   private Product product;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "warehouse_id", nullable = false)
+  @JoinColumn(name = "warehouse_id", nullable = false) // FK to Warehouse
   private Warehouse warehouse;
 
   @Builder.Default

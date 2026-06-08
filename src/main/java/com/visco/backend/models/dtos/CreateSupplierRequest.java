@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Set;
 
+// Request payload for creating a new supplier.
 public record CreateSupplierRequest(
   @NotBlank String name,
   @NotBlank String address,

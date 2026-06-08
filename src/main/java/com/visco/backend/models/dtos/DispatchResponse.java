@@ -5,6 +5,7 @@ import com.visco.backend.models.entities.Warehouse;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Response DTO for a complete dispatch note with items and warehouse info.
 public record DispatchResponse(
     Long id,
     String dispatchNumber,

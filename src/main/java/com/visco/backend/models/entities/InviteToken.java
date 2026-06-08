@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+// Token used for inviting new users to register in the system.
 public class InviteToken {
 
   @Id

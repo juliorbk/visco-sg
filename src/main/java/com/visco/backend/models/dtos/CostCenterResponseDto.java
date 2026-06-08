@@ -2,6 +2,7 @@ package com.visco.backend.models.dtos;
 
 import com.visco.backend.models.entities.CostCenter;
 
+// Response DTO with cost center and associated management hierarchy.
 public record CostCenterResponseDto(
   Long id,
   Boolean isActive,

@@ -1,5 +1,6 @@
 package com.visco.backend.reports.models.enums;
 
+// Execution frequency options for scheduled reports.
 public enum ReportFrequency {
     DAILY("Diario"),
     WEEKLY("Semanal"),

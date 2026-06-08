@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+// Response DTO with full product details and aggregated stock info.
 public class ProductDTO {
 
   private Long id;

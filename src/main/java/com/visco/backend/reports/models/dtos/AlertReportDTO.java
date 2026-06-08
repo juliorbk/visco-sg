@@ -8,6 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO representing a product inventory alert with severity and action.
 public class AlertReportDTO {
     private Long productId;
     private String internalCode;

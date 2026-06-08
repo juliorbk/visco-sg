@@ -8,9 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+// Repository for dispatch note persistence with search and eager-fetch support.
 public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long> {
   Page<DispatchNote> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+  // Finds all dispatch notes with related warehouse, employee, and creator eagerly loaded.
   @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy")
   Page<DispatchNote> findAllWithFetch(Pageable pageable);
 
@@ -34,6 +36,7 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
+  // Finds a single dispatch note by ID with all details including items and products.
   @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
   Optional<DispatchNote> findByIdDetailed(@Param("id") Long id);
 }

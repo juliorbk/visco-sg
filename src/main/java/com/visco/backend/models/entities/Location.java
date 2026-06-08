@@ -39,6 +39,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+// Represents a physical location or bin within a warehouse for inventory tracking.
 public class Location {
 
   @Id
@@ -53,7 +54,7 @@ public class Location {
   private Boolean active = true;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "warehouse_id", nullable = false)
+  @JoinColumn(name = "warehouse_id", nullable = false) // FK to Warehouse
   private Warehouse warehouse;
 
   @CreatedDate

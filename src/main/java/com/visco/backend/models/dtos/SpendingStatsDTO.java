@@ -9,6 +9,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO with detailed spending statistics broken down by category and month.
 public class SpendingStatsDTO {
 	private BigDecimal totalMonthly;
 	private List<MonthlySpendingDTO> monthlyBreakdown;

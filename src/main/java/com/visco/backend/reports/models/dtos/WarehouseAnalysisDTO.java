@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO with warehouse analysis including top products and category distribution.
 public class WarehouseAnalysisDTO {
     private Long warehouseId;
     private String warehouseName;

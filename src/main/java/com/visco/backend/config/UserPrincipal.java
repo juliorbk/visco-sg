@@ -6,6 +6,12 @@ import java.util.UUID; // O Long, dependiendo del tipo de ID de tu User
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+/**
+ * Represents the authenticated user principal in Spring Security. Wraps a
+ * {@link User} entity and provides access to the user's ID, email, roles,
+ * and account status. Used throughout the application as the principal
+ * returned by {@link CustomUserDetailsService}.
+ */
 public class UserPrincipal implements UserDetails {
 
   private final UUID id;
@@ -14,6 +20,16 @@ public class UserPrincipal implements UserDetails {
   private final boolean active;
   private final Collection<? extends GrantedAuthority> authorities;
 
+  /**
+   * Constructs a new {@link UserPrincipal} with the given ID, email,
+   * password, account status, and granted authorities.
+   *
+   * @param id          the user's unique identifier
+   * @param email       the user's email address (used as username)
+   * @param password    the user's hashed password
+   * @param active      whether the account is enabled
+   * @param authorities the granted authorities / roles
+   */
   public UserPrincipal(
     UUID id,
     String email,
@@ -50,6 +66,11 @@ public class UserPrincipal implements UserDetails {
     return UserRole.USER;
   }
 
+  /**
+   * Returns the unique identifier of the authenticated user.
+   *
+   * @return the user's UUID
+   */
   public UUID getId() {
     return id;
   }

@@ -31,6 +31,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Line item within a requisition, linking a product and requested quantity.
 public class RequisitionItem {
 
     @Id
@@ -38,14 +39,14 @@ public class RequisitionItem {
     private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "requisition_id", nullable = false)
+  @JoinColumn(name = "requisition_id", nullable = false) // FK to Requisition
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   @JsonBackReference("requisition-items")
   private Requisition requisition;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id", nullable = false) // FK to Product
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private Product product;

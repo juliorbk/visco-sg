@@ -23,6 +23,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+// JPA entity representing a generated report (stock, movements, alerts, or warehouse analysis).
 @Entity
 @Table(name = "reports", indexes = {
     @Index(name = "idx_reports_type", columnList = "type"),

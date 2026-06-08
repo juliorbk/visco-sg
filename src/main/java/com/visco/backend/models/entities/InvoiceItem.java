@@ -33,6 +33,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Line item within an invoice with PO matching fields (quantity, price, line total).
 public class InvoiceItem {
 
   @Id
@@ -40,14 +41,14 @@ public class InvoiceItem {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "invoice_id", nullable = false)
+  @JoinColumn(name = "invoice_id", nullable = false) // FK to Invoice
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   @JsonBackReference("invoice-items")
   private Invoice invoice;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id", nullable = false)
+  @JoinColumn(name = "product_id", nullable = false) // FK to Product
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Product product;

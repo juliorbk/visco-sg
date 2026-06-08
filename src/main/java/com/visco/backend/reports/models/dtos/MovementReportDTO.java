@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO representing an inventory movement for reporting purposes.
 public class MovementReportDTO {
     private Long id;
     private LocalDateTime movementDate;

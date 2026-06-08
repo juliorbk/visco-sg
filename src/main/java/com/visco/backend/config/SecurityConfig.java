@@ -26,6 +26,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+/**
+ * Configures Spring Security for the application: stateless session management,
+ * JWT-based authentication via {@link JwtAuthFilter}, CORS, role-based
+ * authorization with a role hierarchy (SUPERADMIN > ADMIN > MANAGER >
+ * PROCUREMENT / WAREHOUSEMAN > USER), and BCrypt password encoding.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -43,6 +49,13 @@ public class SecurityConfig {
   @Value("${app.openapi.enabled:false}")
   private boolean openapiEnabled;
 
+  /**
+   * Configures CORS with allowed origins from {@code app.cors.allowed-origins},
+   * standard HTTP methods, and credential support (cookies). Used by the
+   * {@code cors()} DSL in the security filter chain.
+   *
+   * @return the {@link CorsConfigurationSource} for the application
+   */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
@@ -91,6 +104,15 @@ public class SecurityConfig {
     );
   }
 
+  /**
+   * Defines the Spring Security filter chain: disables CSRF, configures CORS,
+   * sets security headers (HSTS, CSP, frame-options), registers the JWT auth
+   * filter, and enforces role-based access rules for each API route group.
+   *
+   * @param http the {@link HttpSecurity} to configure
+   * @return the built {@link SecurityFilterChain}
+   * @throws Exception if configuration fails
+   */
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http)
     throws Exception {
@@ -197,6 +219,12 @@ public class SecurityConfig {
     return http.build();
   }
 
+  /**
+   * Returns an {@link AccessDeniedHandler} that responds with a 403 status
+   * and a JSON body instead of redirecting to a login page.
+   *
+   * @return the access-denied handler bean
+   */
   @Bean
   public AccessDeniedHandler accessDeniedHandler() {
     return (request, response, accessDeniedException) -> {
@@ -206,6 +234,12 @@ public class SecurityConfig {
     };
   }
 
+  /**
+   * Configures a {@link DaoAuthenticationProvider} backed by
+   * {@link CustomUserDetailsService} and the BCrypt password encoder.
+   *
+   * @return the authentication provider bean
+   */
   @Bean
   public AuthenticationProvider authenticationProvider() {
     DaoAuthenticationProvider provider = new DaoAuthenticationProvider(
@@ -215,6 +249,15 @@ public class SecurityConfig {
     return provider;
   }
 
+  /**
+   * Exposes the {@link AuthenticationManager} from Spring's
+   * {@link AuthenticationConfiguration} for use in custom authentication
+   * controllers.
+   *
+   * @param config the authentication configuration
+   * @return the authentication manager
+   * @throws Exception if the manager cannot be obtained
+   */
   @Bean
   public AuthenticationManager authenticationManager(
     AuthenticationConfiguration config
@@ -222,6 +265,12 @@ public class SecurityConfig {
     return config.getAuthenticationManager();
   }
 
+  /**
+   * Provides a {@link BCryptPasswordEncoder} for hashing and verifying
+   * user passwords.
+   *
+   * @return the password encoder bean
+   */
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();

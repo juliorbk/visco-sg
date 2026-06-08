@@ -19,6 +19,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Represents a legal representative associated with a supplier.
 public class LegalRepresentative {
 
     @Id

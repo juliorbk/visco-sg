@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+// Request payload for receiving goods against a purchase order.
 public record ReceiveGoodsRequest(
   @NotEmpty(message = "Al menos un item es requerido")
   @Valid

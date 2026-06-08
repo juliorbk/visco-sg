@@ -8,6 +8,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO with supplier performance metrics and monthly fulfillment breakdown.
 public class SupplierPerformanceDTO {
 	private Long supplierId;
 	private String supplierName;

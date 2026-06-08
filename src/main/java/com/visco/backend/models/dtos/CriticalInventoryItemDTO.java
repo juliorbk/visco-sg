@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
+// DTO representing a product with critical, low, or overstock inventory levels.
 public class CriticalInventoryItemDTO {
 	private Long productId;
 	private String productName;

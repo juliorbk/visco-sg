@@ -31,6 +31,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+// Line item within a dispatch note, linking a product and quantity.
 public class DispatchNoteItem {
 
   @Id
@@ -38,14 +39,14 @@ public class DispatchNoteItem {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "dispatch_note_id", nullable = false)
+  @JoinColumn(name = "dispatch_note_id", nullable = false) // FK to DispatchNote
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   @JsonBackReference("dispatch-note-items")
   private DispatchNote dispatchNote;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id", nullable = false)
+  @JoinColumn(name = "product_id", nullable = false) // FK to Product
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Product product;

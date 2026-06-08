@@ -16,11 +16,14 @@ import org.springframework.stereotype.Repository;
 import jakarta.persistence.QueryHint;
 
 @Repository
+// Repository for inventory movements with filtered queries and streaming support.
 public interface InventoryMovementRepository
   extends JpaRepository<InventoryMovement, Long>
 {
+  // Finds movements for a product ordered by date, for balance calculation.
   List<InventoryMovement> findByProductIdOrderByCreatedAtAsc(Long productId, Pageable pageable);
 
+  // Finds movements for a product within a date range, for period-based queries.
   List<InventoryMovement> findByProductIdAndCreatedAtBetweenOrderByCreatedAtAsc(
     Long productId,
     LocalDateTime startDate,
@@ -28,12 +31,14 @@ public interface InventoryMovementRepository
     Pageable pageable
   );
 
+  // Finds movements for a product filtered by movement type.
   List<InventoryMovement> findByProductIdAndTypeOrderByCreatedAtAsc(
     Long productId,
     MovementType type,
     Pageable pageable
   );
 
+  // Paginated query with optional filters for product, warehouse, type, and date range.
   @Query(
     """
     SELECT m FROM InventoryMovement m
@@ -58,6 +63,7 @@ public interface InventoryMovementRepository
     Pageable pageable
   );
 
+  // Streaming version of findMovementsWithFilters for large export operations.
   @QueryHints(@QueryHint(name = "org.hibernate.fetchSize", value = "-2147483648"))
   @Query(
     """
@@ -82,6 +88,7 @@ public interface InventoryMovementRepository
     @Param("endDate") LocalDateTime endDate
   );
 
+  // Calculates the cumulative balance for a product up to a given date.
   @Query(
     """
         SELECT COALESCE(SUM(

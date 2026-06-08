@@ -30,6 +30,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles business logic for invoice processing and matching.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -41,6 +44,12 @@ public class InvoiceService {
   private final ProductRepository productRepository;
   private final GoodReceiptRepository goodReceiptRepository;
 
+  /**
+   * Creates an invoice from a purchase order with item matching validation.
+   *
+   * @param request the invoice creation request
+   * @return the created invoice response
+   */
   @Transactional
   @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
@@ -158,16 +167,34 @@ public class InvoiceService {
     return toResponse(saved);
   }
 
+  /**
+   * Retrieves a paginated list of all invoices.
+   *
+   * @param pageable pagination information
+   * @return page of invoice responses
+   */
   @Transactional(readOnly = true)
   public Page<InvoiceResponse> getAllInvoices(Pageable pageable) {
     return invoiceRepository.findAllWithFetch(pageable).map(this::toResponse);
   }
 
+  /**
+   * Retrieves an invoice by its ID.
+   *
+   * @param id the invoice ID
+   * @return the invoice response
+   */
   @Transactional(readOnly = true)
   public InvoiceResponse getInvoiceById(Long id) {
     return toResponse(findById(id));
   }
 
+  /**
+   * Retrieves all invoices associated with a purchase order.
+   *
+   * @param orderId the purchase order ID
+   * @return list of invoice responses
+   */
   @Transactional(readOnly = true)
   public List<InvoiceResponse> getInvoicesByOrderId(Long orderId) {
     return invoiceRepository
@@ -177,6 +204,13 @@ public class InvoiceService {
       .toList();
   }
 
+  /**
+   * Marks an invoice as paid with the given payment date.
+   *
+   * @param id          the invoice ID
+   * @param paymentDate the date of payment
+   * @return the updated invoice response
+   */
   @Transactional
   @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse markAsPaid(Long id, LocalDate paymentDate) {
@@ -196,6 +230,12 @@ public class InvoiceService {
     return toResponse(saved);
   }
 
+  /**
+   * Cancels an invoice that has not been paid yet.
+   *
+   * @param id the invoice ID
+   * @return the updated invoice response
+   */
   @Transactional
   @CacheEvict(value = "dashboard", allEntries = true)
   public InvoiceResponse cancelInvoice(Long id) {

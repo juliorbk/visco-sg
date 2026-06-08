@@ -35,6 +35,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_cost_center_management", columnList = "management_id"),
   }
 )
+// Represents a cost center linked to a management division.
 public class CostCenter {
 
   @Id
@@ -55,7 +56,7 @@ public class CostCenter {
   private boolean active = true;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "management_id", nullable = false)
+  @JoinColumn(name = "management_id", nullable = false) // FK to Management
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Management management;
