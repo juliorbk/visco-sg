@@ -171,14 +171,22 @@ public class SecurityConfig {
             "/api/general-management/**"
           )
           .authenticated()
-          // Cualquier usuario autenticado: GET de referencia (dropdowns)
+          // Cualquier usuario autenticado: GET de referencia (listas, dropdowns, dashboards)
           .requestMatchers(
             HttpMethod.GET,
+            "/api/employees/**",
             "/api/suppliers/**",
-            "/api/supplier-categories/**"
+            "/api/supplier-categories/**",
+            "/api/procurement/**",
+            "/api/requisitions/**",
+            "/api/warehouse/**",
+            "/api/invoices/**",
+            "/api/inventory/**",
+            "/api/reports/**",
+            "/api/dashboard/**"
           )
           .authenticated()
-          // ADMIN, MANAGER y PROCUREMENT: escritura
+          // ADMIN, MANAGER y PROCUREMENT: escritura proveedores, compras, requisiciones
           .requestMatchers(
             "/api/suppliers/**",
             "/api/supplier-categories/**",
@@ -186,10 +194,10 @@ public class SecurityConfig {
             "/api/requisitions/**"
           )
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
-          // ADMIN, MANAGER, PROCUREMENT y WAREHOUSEMAN
+          // ADMIN, MANAGER, PROCUREMENT y WAREHOUSEMAN: escritura almacen
           .requestMatchers("/api/warehouse/**")
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT", "WAREHOUSEMAN")
-          // ADMIN, MANAGER, PROCUREMENT
+          // ADMIN, MANAGER, PROCUREMENT: escritura facturas
           .requestMatchers("/api/invoices/**")
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           //Admin
@@ -207,16 +215,11 @@ public class SecurityConfig {
           .hasRole("SUPERADMIN")
           .requestMatchers("/actuator/**")
           .hasRole("SUPERADMIN")
-          // Roles específicos
-          .requestMatchers("/api/inventory/**", "/api/warehouse/dispatches/**")
+          // Roles específicos: escritura inventario, reportes
+          .requestMatchers("/api/inventory/**")
           .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN")
           .requestMatchers("/api/reports/**")
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
-          .requestMatchers("/api/dashboard/**")
-          .hasAnyRole("ADMIN", "MANAGER", "WAREHOUSEMAN", "PROCUREMENT")
-          // Cualquier otra petición debe estar autenticada
-          .anyRequest()
-          .authenticated()
       )
       // Define el manejo de sesiones como STATELESS (Sin estado) para JWT
       .sessionManagement(session ->
