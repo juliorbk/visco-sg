@@ -96,7 +96,6 @@ public class ReportService {
     /**
      * Asynchronously generates a report (fetches data, exports to file, persists metadata).
      */
-    @Async
     @Transactional
     public ReportDTO generateReport(CreateReportRequest request, String username) {
         if (request.getStartDate() != null && request.getEndDate() != null
