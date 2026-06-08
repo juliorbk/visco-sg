@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -57,6 +59,7 @@ public class ScheduledReport {
     @Column(name = "recipient_emails", columnDefinition = "TEXT")
     private String recipientEmails;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "filter_config", columnDefinition = "jsonb")
     private String filterConfig;
 
