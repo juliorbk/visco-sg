@@ -52,7 +52,7 @@ class AuthServiceTest {
       invite.getToken()
     );
 
-    AuthResponse response = authService.register(req);
+    AuthResponse response = authService.register(req, null);
 
     assertNotNull(response.getUser());
     assertEquals("new@example.com", response.getUser().getEmail());
@@ -81,7 +81,7 @@ class AuthServiceTest {
       "Dup", "dup@example.com", "password123", invite.getToken()
     );
 
-    assertThrows(IllegalArgumentException.class, () -> authService.register(req));
+    assertThrows(IllegalArgumentException.class, () -> authService.register(req, null));
   }
 
   @Test
@@ -90,7 +90,7 @@ class AuthServiceTest {
       "New", "x@example.com", "password123", "no-such-token"
     );
 
-    assertThrows(RuntimeException.class, () -> authService.register(req));
+    assertThrows(RuntimeException.class, () -> authService.register(req, null));
   }
 
   @Test
@@ -100,7 +100,7 @@ class AuthServiceTest {
       "Encoded", "encode@example.com", "plain-password", invite.getToken()
     );
 
-    authService.register(req);
+    authService.register(req, null);
 
     User persisted = userRepository.findByEmail("encode@example.com").orElseThrow();
     assertNotEquals("plain-password", persisted.getPassword());
@@ -113,7 +113,7 @@ class AuthServiceTest {
     UserRegisterRequest register = registerRequest(
       "Login User", "login@example.com", "password123", invite.getToken()
     );
-    authService.register(register);
+    authService.register(register, null);
 
     LoginRequest login = new LoginRequest("login@example.com", "password123");
     AuthResponse response = authService.login(login);
@@ -127,7 +127,7 @@ class AuthServiceTest {
     InviteTokenResponse invite = mintInvite("badpass@example.com", "USER");
     authService.register(registerRequest(
       "User", "badpass@example.com", "password123", invite.getToken()
-    ));
+    ), null);
 
     LoginRequest login = new LoginRequest("badpass@example.com", "wrong");
     assertThrows(BadCredentialsException.class, () -> authService.login(login));
@@ -144,7 +144,7 @@ class AuthServiceTest {
     InviteTokenResponse invite = mintInvite("deact@example.com", "USER");
     authService.register(registerRequest(
       "Deact", "deact@example.com", "password123", invite.getToken()
-    ));
+    ), null);
     User user = userRepository.findByEmail("deact@example.com").orElseThrow();
     user.setActive(false);
     userRepository.saveAndFlush(user);
@@ -174,7 +174,7 @@ class AuthServiceTest {
     InviteTokenResponse invite = mintInvite("me@example.com", "MANAGER");
     authService.register(registerRequest(
       "Me", "me@example.com", "password123", invite.getToken()
-    ));
+    ), null);
 
     var dto = authService.getCurrentUser("me@example.com");
 

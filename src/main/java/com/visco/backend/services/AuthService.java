@@ -113,43 +113,6 @@ public class AuthService {
         return buildResponse(newUser);
     }
 
-        InviteToken invite = inviteTokenService.findByToken(request.getInviteToken());
-        UserRole intendedRole;
-        if (invite.getIntendedRole() == null) {
-            throw new IllegalStateException("Invite token is missing the intended role");
-        }
-        try {
-            intendedRole = UserRole.valueOf(invite.getIntendedRole());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Invite token has an invalid role configured");
-        }
-
-        CostCenter costCenter = null;
-        if (invite.getCostCenterId() != null) {
-            costCenter = costCenterRepository
-                .findById(invite.getCostCenterId())
-                .orElseThrow(() -> new IllegalArgumentException("Área no encontrada"));
-        }
-
-        User newUser = User.builder()
-            .name(request.getName())
-            .email(normalizedEmail)
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(intendedRole)
-            .costCenter(costCenter)
-            .active(true)
-            .build();
-
-        userRepository.save(newUser);
-        inviteTokenService.consumeInvite(request.getInviteToken(), newUser);
-        log.info("Registro exitoso: userId={}", newUser.getId());
-
-        // Fire-and-forget welcome email (sends async on the emailExecutor pool).
-        emailService.sendWelcomeEmail(newUser.getEmail(), newUser.getName());
-
-        return buildResponse(newUser);
-    }
-
     /**
      * Authenticates a user and returns a JWT token.
      *
