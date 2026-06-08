@@ -38,12 +38,28 @@ public class AuthController {
     private final CookieService cookieService;
     private final PasswordResetService passwordResetService;
 
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+        summary = "Register new user (JSON)",
+        description = "Registers a new user using an invite token. No profile picture."
+    )
+    public ResponseEntity<?> registerUserJson(
+        @Valid @RequestBody UserRegisterRequest request,
+        HttpServletResponse response
+    ) {
+        AuthResponse registeredUser = authService.register(request, null);
+        var jwtCookie = cookieService.createJwtCookie(registeredUser.getToken());
+        response.addCookie(jwtCookie);
+        registeredUser.setToken(null);
+        return ResponseEntity.ok(registeredUser);
+    }
+
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Register new user",
-        description = "Registers a new user using an invite token and returns auth data"
+        summary = "Register new user (multipart)",
+        description = "Registers a new user with optional profile picture"
     )
-    public ResponseEntity<?> registerUser(
+    public ResponseEntity<?> registerUserMultipart(
         @Valid @RequestPart("user") UserRegisterRequest request,
         @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
         HttpServletResponse response
