@@ -153,6 +153,9 @@ public class SecurityConfig {
             "/health"
           )
           .permitAll()
+          // Auth endpoints que requieren autenticación
+          .requestMatchers("/api/auth/me", "/api/auth/logout")
+          .authenticated()
           // OpenAPI / Swagger: gated by app.openapi.enabled (default OFF in prod)
           .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
           .access((authentication, context) ->
