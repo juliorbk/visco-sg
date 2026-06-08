@@ -162,11 +162,13 @@ public class SecurityConfig {
           .requestMatchers(
             "/api/users/**",
             "/api/employees/**",
-            "/api/cost-centers/**",
             "/api/management/**",
             "/api/general-management/**"
           )
           .hasRole("ADMIN")
+          // Cualquier usuario autenticado (dropdowns)
+          .requestMatchers("/api/cost-centers/**")
+          .authenticated()
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
             "/api/suppliers/**",
