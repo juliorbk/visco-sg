@@ -13,6 +13,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Implementation of Spring Security's {@link UserDetailsService} that loads
+ * user details from the database via {@link UserRepository}. Maps the
+ * {@link User} entity to a {@link UserPrincipal} with the appropriate
+ * Spring Security authorities (roles prefixed as {@code ROLE_}).
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -21,6 +27,15 @@ public class CustomUserDetailsService implements UserDetailsService {
   // Inyectamos tu repositorio existente
   private final UserRepository userRepository;
 
+  /**
+   * Loads a user by their email address. Looks up the user in the database
+   * and returns a {@link UserPrincipal} with the role prefixed as
+   * {@code ROLE_} for Spring Security authorization.
+   *
+   * @param email the email address identifying the user
+   * @return the fully populated {@link UserDetails} instance
+   * @throws UsernameNotFoundException if the user is not found
+   */
   @Override
   public UserDetails loadUserByUsername(String email)
     throws UsernameNotFoundException {
@@ -47,7 +62,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     return new UserPrincipal(
       user.getId(),
       user.getEmail(),
-      "",
+      user.getPassword(),
       Boolean.TRUE.equals(user.getActive()),
       authorities
     );

@@ -20,6 +20,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Handles authentication and registration business logic.
+ */
 @Service
 @Slf4j
 @Transactional(readOnly = true)
@@ -34,6 +37,12 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final InviteTokenService inviteTokenService;
 
+    /**
+     * Registers a new user using an invite token and sends a welcome email.
+     *
+     * @param request the registration request
+     * @return authentication response with JWT token
+     */
     @Transactional
     public AuthResponse register(UserRegisterRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase();
@@ -79,9 +88,15 @@ public class AuthService {
         return buildResponse(newUser);
     }
 
+    /**
+     * Authenticates a user and returns a JWT token.
+     *
+     * @param request the login request
+     * @return authentication response with JWT token and user info
+     */
     public AuthResponse login(LoginRequest request) {
         log.info("Intento de login");
-        String email = request.getEmail();
+        String email = request.getEmail().trim().toLowerCase();
 
         try {
             authenticationManager.authenticate(
@@ -93,7 +108,7 @@ public class AuthService {
         }
 
         User user = userRepository
-            .findByEmail(email)
+            .findByEmailIgnoreCase(email)
             .orElseThrow(() -> {
                 log.error("Inconsistencia: Usuario autenticado pero no encontrado en DB");
                 return new BadCredentialsException("Invalid credentials");
@@ -116,10 +131,22 @@ public class AuthService {
             .build();
     }
 
+    /**
+     * Generates a new JWT token for the given user.
+     *
+     * @param user the authenticated user
+     * @return a new JWT token string
+     */
     public String refreshToken(User user) {
         return jwtService.generateToken(user);
     }
 
+    /**
+     * Retrieves the current user's profile by email.
+     *
+     * @param email the user's email
+     * @return the current user DTO
+     */
     public UserDTO getCurrentUser(String email) {
         User user = userRepository
             .findByEmailWithCostCenter(email)
