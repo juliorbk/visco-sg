@@ -25,6 +25,9 @@ public class ResendEmailService {
   @Value("${app.mail.from}")
   private String fromAddress;
 
+  @Value("${app.email.enabled:false}")
+  private boolean emailEnabled;
+
   private static final String RESEND_API_URL = "https://api.resend.com/emails";
 
   public ResendEmailService() {
@@ -32,6 +35,10 @@ public class ResendEmailService {
   }
 
   public void sendHtmlEmail(String to, String subject, String html) {
+    if (!emailEnabled) {
+      log.info("Email disabled — skipping send to {} | subject=\"{}\"", to, subject);
+      return;
+    }
     try {
       Map<String, Object> body = new LinkedHashMap<>();
       body.put("from", fromAddress);
@@ -54,6 +61,15 @@ public class ResendEmailService {
     byte[] content,
     String contentType
   ) {
+    if (!emailEnabled) {
+      log.info(
+        "Email disabled — skipping send to {} | subject=\"{}\" | file={}",
+        to,
+        subject,
+        filename
+      );
+      return;
+    }
     try {
       String base64Content = Base64.getEncoder().encodeToString(content);
 
