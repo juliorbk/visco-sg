@@ -186,6 +186,8 @@ public class SecurityConfig {
           .hasRole("ADMIN")
           .requestMatchers("/api/admin/**")
           .hasRole("ADMIN")
+          .requestMatchers("/api/invites/by-token/**")
+          .permitAll()
           .requestMatchers("/api/invites/**")
           .hasRole("ADMIN")
           .requestMatchers(HttpMethod.DELETE, "/api/users/**")

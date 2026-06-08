@@ -82,8 +82,10 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     "SELECT s.warehouse.id                 as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
       "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
-      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock " +
-      "FROM StockLevel s GROUP BY s.warehouse.id, s.warehouse.name"
+      "       COALESCE(SUM(s.pendingStock), 0) as pendingStock, " +
+      "       COUNT(DISTINCT s.product.id) as productCount " +
+      "FROM StockLevel s WHERE s.currentStock > 0 " +
+      "GROUP BY s.warehouse.id, s.warehouse.name"
   )
   List<GlobalStockProjection> getGlobalStockByWarehouse();
 
@@ -267,5 +269,6 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     String getWarehouseName();
     BigDecimal getCurrentStock();
     BigDecimal getPendingStock();
+    Long getProductCount();
   }
 }

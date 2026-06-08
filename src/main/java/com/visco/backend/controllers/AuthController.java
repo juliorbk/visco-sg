@@ -16,13 +16,16 @@ import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -35,16 +38,17 @@ public class AuthController {
     private final CookieService cookieService;
     private final PasswordResetService passwordResetService;
 
-    @PostMapping("/register")
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
         summary = "Register new user",
         description = "Registers a new user using an invite token and returns auth data"
     )
     public ResponseEntity<?> registerUser(
-        @Valid @RequestBody UserRegisterRequest request,
+        @Valid @RequestPart("user") UserRegisterRequest request,
+        @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
         HttpServletResponse response
     ) {
-        AuthResponse registeredUser = authService.register(request);
+        AuthResponse registeredUser = authService.register(request, profilePicture);
         var jwtCookie = cookieService.createJwtCookie(registeredUser.getToken());
         response.addCookie(jwtCookie);
         registeredUser.setToken(null);

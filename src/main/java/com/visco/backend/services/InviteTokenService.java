@@ -151,6 +151,17 @@ public class InviteTokenService {
       .orElseThrow(() -> new EntityNotFoundException("Invalid invite token"));
   }
 
+  /**
+   * Resolves an invite token for the public registration flow.
+   * Returns the invite details without requiring authentication.
+   *
+   * @param tokenValue the token string
+   * @return the invite token response
+   */
+  public InviteTokenResponse resolveByToken(String tokenValue) {
+    return InviteTokenResponse.fromEntity(findByToken(tokenValue));
+  }
+
   private String generateToken() {
     byte[] bytes = new byte[TOKEN_BYTES];
     RANDOM.nextBytes(bytes);

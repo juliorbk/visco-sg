@@ -60,4 +60,14 @@ public class InviteTokenController {
   public ResponseEntity<InviteTokenResponse> revoke(@PathVariable UUID id) {
     return ResponseEntity.ok(inviteTokenService.revokeInvite(id));
   }
+
+  @GetMapping("/by-token/{token}")
+  @PreAuthorize("permitAll()")
+  @Operation(
+    summary = "Resolve an invite token",
+    description = "Public endpoint that returns invite details for the registration flow."
+  )
+  public ResponseEntity<InviteTokenResponse> resolve(@PathVariable String token) {
+    return ResponseEntity.ok(inviteTokenService.resolveByToken(token));
+  }
 }

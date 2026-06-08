@@ -593,6 +593,7 @@ public class WarehouseService {
                     .totalPendingStock(
                         p.getPendingStock() != null ? p.getPendingStock() : BigDecimal.ZERO
                     )
+                    .productCount(p.getProductCount())
                     .build()
             )
             .toList();

@@ -22,4 +22,5 @@ public class WarehouseStockSummary {
   private String warehouseName;
   private BigDecimal totalStock;
   private BigDecimal totalPendingStock;
+  private Long productCount;
 }
