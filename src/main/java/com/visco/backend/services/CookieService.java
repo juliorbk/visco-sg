@@ -40,15 +40,8 @@ public class CookieService {
     cookie.setHttpOnly(true);
     cookie.setSecure(cookieSecure);
     cookie.setPath("/");
-    // Sincronizado con la expiración real del JWT para evitar que la cookie
-    // sobreviva tokens ya rechazados por el servidor.
+    cookie.setAttribute("SameSite", "None");
     long maxAgeSeconds = Math.max(1, jwtExpirationMs / 1000);
-    cookie.setMaxAge((int) Math.min(maxAgeSeconds, Integer.MAX_VALUE));
-    if (cookieSecure) {
-      cookie.setAttribute("SameSite", "None");
-    } else {
-      cookie.setAttribute("SameSite", "Lax");
-    }
     return cookie;
   }
 
@@ -63,11 +56,7 @@ public class CookieService {
     cookie.setSecure(cookieSecure);
     cookie.setPath("/");
     cookie.setMaxAge(0);
-    if (cookieSecure) {
-      cookie.setAttribute("SameSite", "None");
-    } else {
-      cookie.setAttribute("SameSite", "Lax");
-    }
+    cookie.setAttribute("SameSite", "None");
 
     return cookie;
   }
