@@ -9,24 +9,32 @@ import com.visco.backend.models.entities.UserRole;
 import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.UserReferenceCountRepository;
 import com.visco.backend.repositories.UserRepository;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import jakarta.persistence.EntityNotFoundException;
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Handles business logic for administrative user management operations.
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminService {
 
     private final UserRepository userRepository;
     private final CostCenterRepository costCenterRepository;
     private final UserReferenceCountRepository userReferenceCountRepository;
+    private final Cloudinary cloudinary;
 
     /**
      * Retrieves a paginated list of all users.
@@ -237,5 +245,52 @@ public class AdminService {
     @Transactional(readOnly = true)
     public long countSuperadmins() {
         return userRepository.countByRoleAndActiveTrue(UserRole.SUPERADMIN);
+    }
+
+    @Transactional
+    public UserDTO uploadProfilePicture(UUID userId, MultipartFile file) {
+        User user = userRepository
+            .findById(userId)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        try {
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                    "folder", "profile-pictures",
+                    "public_id", "user_" + userId,
+                    "overwrite", true,
+                    "resource_type", "image"
+                )
+            );
+            String url = (String) uploadResult.get("secure_url");
+            user.setProfilePictureUrl(url);
+            userRepository.save(user);
+            log.info("Profile picture uploaded for user {}", userId);
+            return UserDTO.fromUser(user);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload profile picture", e);
+        }
+    }
+
+    @Transactional
+    public UserDTO deleteProfilePicture(UUID userId) {
+        User user = userRepository
+            .findById(userId)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        try {
+            cloudinary.uploader().destroy(
+                "profile-pictures/user_" + userId,
+                ObjectUtils.asMap("resource_type", "image")
+            );
+        } catch (IOException e) {
+            log.warn("Failed to delete profile picture from Cloudinary: {}", e.getMessage());
+        }
+
+        user.setProfilePictureUrl(null);
+        userRepository.save(user);
+        log.info("Profile picture removed for user {}", userId);
+        return UserDTO.fromUser(user);
     }
 }

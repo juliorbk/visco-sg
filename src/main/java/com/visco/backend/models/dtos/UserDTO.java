@@ -22,6 +22,7 @@ public class UserDTO {
 
     private Long costCenterId;
     private String costCenterName;
+    private String profilePictureUrl;
 
     public static UserDTO fromUser(User user) {
         if (user == null) {
@@ -38,6 +39,7 @@ public class UserDTO {
                     ? user.getCostCenter().getFullDescription()
                     : "Without area"
             )
+            .profilePictureUrl(user.getProfilePictureUrl())
             .build();
     }
 }

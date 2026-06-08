@@ -21,11 +21,13 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -116,5 +118,22 @@ public class UserController {
         // to avoid the TOCTOU race that a controller-level check would have.
         adminService.hardDeleteUser(id, force);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/profile-picture")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Upload profile picture", description = "Uploads a profile picture for a user")
+    public ResponseEntity<UserDTO> uploadProfilePicture(
+        @PathVariable UUID id,
+        @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(adminService.uploadProfilePicture(id, file));
+    }
+
+    @DeleteMapping("/{id}/profile-picture")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Remove profile picture", description = "Removes the profile picture of a user")
+    public ResponseEntity<UserDTO> deleteProfilePicture(@PathVariable UUID id) {
+        return ResponseEntity.ok(adminService.deleteProfilePicture(id));
     }
 }

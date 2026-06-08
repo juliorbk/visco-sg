@@ -98,6 +98,9 @@ public class User implements UserDetails {
     @Column(name = "is_active")
     private Boolean active;
 
+    @Column(name = "profile_picture_url", length = 512)
+    private String profilePictureUrl;
+
     @PrePersist
     @PreUpdate
     private void normalizeEmail() {
