@@ -158,16 +158,18 @@ public class SecurityConfig {
           .access((authentication, context) ->
             new org.springframework.security.authorization.AuthorizationDecision(openapiEnabled)
           )
-          // Solo ADMIN (y cost-centers requiere al menos autenticación)
+          // Solo ADMIN
           .requestMatchers(
             "/api/users/**",
-            "/api/employees/**",
+            "/api/employees/**"
+          )
+          .hasRole("ADMIN")
+          // Cualquier usuario autenticado (dropdowns de solo lectura)
+          .requestMatchers(
+            "/api/cost-centers/**",
             "/api/management/**",
             "/api/general-management/**"
           )
-          .hasRole("ADMIN")
-          // Cualquier usuario autenticado (dropdowns)
-          .requestMatchers("/api/cost-centers/**")
           .authenticated()
           // ADMIN, MANAGER y PROCUREMENT
           .requestMatchers(
