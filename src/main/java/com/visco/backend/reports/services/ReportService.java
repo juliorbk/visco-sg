@@ -403,11 +403,10 @@ public class ReportService {
                 .countByMonthSince(sixMonthsAgo)
                 .stream()
                 .map(row -> {
-                    int year = ((Number) row[0]).intValue();
-                    int month = ((Number) row[1]).intValue();
-                    long count = (Long) row[2];
+                    java.sql.Timestamp ts = (java.sql.Timestamp) row[0];
+                    long count = (Long) row[1];
                     return ReportAnalyticsDTO.MonthlyCount.builder()
-                            .month(String.format("%d-%02d", year, month))
+                            .month(ts.toString().substring(0, 7))
                             .count(count)
                             .build();
                 })
