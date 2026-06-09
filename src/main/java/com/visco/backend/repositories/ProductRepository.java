@@ -101,7 +101,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -128,7 +128,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
@@ -139,7 +139,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -159,7 +159,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
@@ -170,7 +170,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -212,7 +212,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """,
@@ -222,7 +222,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -243,7 +243,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -255,7 +255,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -276,7 +276,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -288,7 +288,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
       (:search IS NULL
         OR p.name ILIKE CONCAT('%', :search, '%')
         OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR CAST(p.internalCode AS text) ILIKE CONCAT('%', :search, '%'))
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
