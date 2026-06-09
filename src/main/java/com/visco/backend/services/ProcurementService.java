@@ -24,6 +24,7 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -89,7 +90,11 @@ public class ProcurementService {
             );
 
         PurchaseOrder order = PurchaseOrder.builder()
-            .orderNumber(request.orderNumber())
+            .orderNumber(
+              request.orderNumber() != null && !request.orderNumber().isBlank()
+                ? request.orderNumber()
+                : generateOrderNumber()
+            )
             .description(request.description())
             .createdBy(createdBy)
             .destinationWarehouse(destinationWarehouse)
@@ -492,5 +497,10 @@ public class ProcurementService {
             PurchaseOrderResponse.WarehouseInfo.fromEntity(wh),
             itemResponses
         );
+    }
+
+    private String generateOrderNumber() {
+        Long nextSeq = purchaseOrderRepository.getNextOrderSequence();
+        return String.format("OC-%05d/%d", nextSeq, Year.now().getValue());
     }
 }

@@ -234,7 +234,10 @@ public class RequisitionService {
    * @return page of requisition responses
    */
   @Transactional(readOnly = true)
-  public Page<RequisitionResponse> getAllRequisitions(String search, Pageable pageable) {
+  public Page<RequisitionResponse> getAllRequisitions(
+    String search,
+    Pageable pageable
+  ) {
     if (search != null && search.trim().isEmpty()) search = null;
     return requisitionRepository
       .findAllWithSearch(search, pageable)
@@ -412,4 +415,5 @@ public class RequisitionService {
       itemResponses
     );
   }
+
 }

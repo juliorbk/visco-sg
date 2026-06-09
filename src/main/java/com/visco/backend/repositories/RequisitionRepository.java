@@ -92,4 +92,5 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM RequisitionItem ri WHERE ri.requisition.id = :requisitionId")
     void deleteItemsByRequisitionId(@Param("requisitionId") Long requisitionId);
+
 }

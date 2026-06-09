@@ -19,6 +19,7 @@ import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -81,7 +82,11 @@ public class InvoiceService {
     );
 
     Invoice invoice = Invoice.builder()
-      .invoiceNumber(request.invoiceNumber())
+      .invoiceNumber(
+        request.invoiceNumber() != null && !request.invoiceNumber().isBlank()
+          ? request.invoiceNumber()
+          : generateInvoiceNumber()
+      )
       .purchaseOrder(order)
       .supplier(supplier)
       .invoiceDate(request.invoiceDate())
@@ -306,5 +311,10 @@ public class InvoiceService {
       invoice.getCreatedAt(),
       itemResponses
     );
+  }
+
+  private String generateInvoiceNumber() {
+    Long nextSeq = invoiceRepository.getNextInvoiceSequence();
+    return String.format("FAC-%05d/%d", nextSeq, Year.now().getValue());
   }
 }

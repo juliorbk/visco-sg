@@ -162,18 +162,22 @@ public class WarehouseService {
 
         int currentYear = Year.now().getValue();
 
+        Long nextSeq = goodReceiptRepository.getNextReceiptSequence();
+        String receiptNumber = String.format("RC-%04d/%d", nextSeq, currentYear);
+
+        User createdBy = userRepository
+            .findById(order.getCreatedBy().getId())
+            .orElse(order.getCreatedBy());
+
         GoodReceipt receipt = GoodReceipt.builder()
-            .receiptNumber("PENDING")
+            .receiptNumber(receiptNumber)
             .purchaseOrder(order)
             .destinationWarehouse(destWarehouse)
             .receivedAt(LocalDateTime.now())
             .notes(request.notes())
+            .receivedBy(resolveReceivedByUser(request, order, createdBy))
             .build();
 
-        receipt = goodReceiptRepository.saveAndFlush(receipt);
-
-        String receiptNumber = String.format("RC-%04d/%d", receipt.getId(), currentYear);
-        receipt.setReceiptNumber(receiptNumber);
         Map<Long, BigDecimal> previousReceived = goodReceiptRepository
             .getTotalReceivedByOrder(orderId)
             .stream()
@@ -184,11 +188,6 @@ public class WarehouseService {
                     BigDecimal::add
                 )
             );
-
-        User createdBy = userRepository
-            .findById(order.getCreatedBy().getId())
-            .orElse(order.getCreatedBy());
-        receipt.setReceivedBy(resolveReceivedByUser(request, order, createdBy));
 
         Map<Long, PurchaseOrderItem> poItemsByProduct = order
             .getItems()
@@ -808,19 +807,17 @@ public class WarehouseService {
             .findByEmail(currentUserEmail)
             .orElseThrow(() -> new EntityNotFoundException("User not found: " + currentUserEmail));
 
+        Long nextSeq = dispatchNoteRepository.getNextDispatchSequence();
+        String dispatchNumber = String.format("DS-%04d/%d", nextSeq, Year.now().getValue());
+
         DispatchNote note = DispatchNote.builder()
-            .dispatchNumber("PENDING")
+            .dispatchNumber(dispatchNumber)
             .warehouse(warehouse)
             .withdrawnBy(employee)
             .notes(request.notes())
             .createdAt(LocalDateTime.now())
             .createdBy(createdBy)
             .build();
-
-        note = dispatchNoteRepository.saveAndFlush(note);
-
-        String dispatchNumber = String.format("DS-%04d/%d", note.getId(), Year.now().getValue());
-        note.setDispatchNumber(dispatchNumber);
 
         List<Long> productIds = request
             .items()

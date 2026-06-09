@@ -10,7 +10,7 @@ import java.util.List;
 
 // Request payload for creating an invoice against a purchase order.
 public record CreateInvoiceRequest(
-    @NotBlank(message = "Invoice number is required") String invoiceNumber,
+    String invoiceNumber,
     @NotNull(message = "Purchase order ID is required") Long purchaseOrderId,
     @NotNull(message = "Supplier ID is required") Long supplierId,
     @NotNull(message = "Invoice date is required") LocalDate invoiceDate,

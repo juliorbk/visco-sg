@@ -37,4 +37,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     // Finds all invoices for a purchase order with items and products eagerly loaded.
     @Query("SELECT DISTINCT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier LEFT JOIN FETCH i.items it LEFT JOIN FETCH it.product WHERE i.purchaseOrder.id = :orderId")
     List<Invoice> findByPurchaseOrderIdWithFetch(@Param("orderId") Long orderId);
+
+    @Query(value = "SELECT nextval('invoice_seq')", nativeQuery = true)
+    Long getNextInvoiceSequence();
 }

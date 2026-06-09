@@ -12,7 +12,7 @@ import java.util.UUID;
 
 // Request payload for creating a purchase order.
 public record CreatePurchaseOrderRequest(
-  @NotBlank(message = "Order number is required") String orderNumber,
+  String orderNumber,
   @NotBlank(message = "Description is required") String description,
   @NotNull(message = "Supplier ID is required") Long supplierId,
 

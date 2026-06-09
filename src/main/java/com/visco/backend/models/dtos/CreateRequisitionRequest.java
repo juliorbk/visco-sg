@@ -9,8 +9,7 @@ import java.util.UUID;
 
 // Request payload for creating a requisition.
 public record CreateRequisitionRequest(
-  @NotBlank(message = "Requisition number is required")
-  String requisitionNumber,
+  @NotBlank(message = "Requisition number is required") String requisitionNumber,
   @NotBlank(message = "Description is required") String description,
   @NotNull(message = "Requested by is required") UUID requestedById,
   @NotNull(message = "Cost Center ID is required") Long costCenterId,
