@@ -107,7 +107,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (:search IS NULL
       OR p.name ILIKE CONCAT('%', :search, '%')
       OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode LIKE CONCAT('%', :search, '%')
+      OR p.internalCode ILIKE CONCAT('%', :search, '%')
       OR p.sapCode ILIKE CONCAT('%', :search, '%'))
     """,
     countQuery = """
@@ -116,7 +116,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (:search IS NULL
       OR p.name ILIKE CONCAT('%', :search, '%')
       OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode LIKE CONCAT('%', :search, '%')
+      OR p.internalCode ILIKE CONCAT('%', :search, '%')
       OR p.sapCode ILIKE CONCAT('%', :search, '%'))
     """
   )
@@ -136,7 +136,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (:search IS NULL
       OR p.name ILIKE CONCAT('%', :search, '%')
       OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode LIKE CONCAT('%', :search, '%'))
+      OR p.internalCode ILIKE CONCAT('%', :search, '%'))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
@@ -144,7 +144,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     AND (:search IS NULL
       OR p.name ILIKE CONCAT('%', :search, '%')
       OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode LIKE CONCAT('%', :search, '%'))
+      OR p.internalCode ILIKE CONCAT('%', :search, '%'))
     """
   )
   Page<StockLevel> findAllStockByWarehouse(
