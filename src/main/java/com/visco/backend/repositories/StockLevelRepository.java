@@ -104,7 +104,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     value = """
     SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (CAST(:search AS string) IS NULL
+    AND (CAST(:search AS text) IS NULL
       OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%')
@@ -113,7 +113,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (CAST(:search AS string) IS NULL
+    AND (CAST(:search AS text) IS NULL
       OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%')
@@ -133,7 +133,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     LEFT JOIN FETCH p.category
     JOIN FETCH sl.warehouse
     WHERE sl.warehouse.id = :warehouseId
-    AND (CAST(:search AS string) IS NULL
+    AND (CAST(:search AS text) IS NULL
       OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
@@ -141,7 +141,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId
-    AND (CAST(:search AS string) IS NULL
+    AND (CAST(:search AS text) IS NULL
       OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
       OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))

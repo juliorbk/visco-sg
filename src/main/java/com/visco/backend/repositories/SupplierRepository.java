@@ -23,13 +23,13 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 	@Query(
 		value = """
 		SELECT s FROM Supplier s
-		WHERE (CAST(:search AS string) IS NULL
+		WHERE (CAST(:search AS text) IS NULL
 			OR LOWER(s.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
 			OR LOWER(s.email) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
 		""",
 		countQuery = """
 		SELECT COUNT(s) FROM Supplier s
-		WHERE (CAST(:search AS string) IS NULL
+		WHERE (CAST(:search AS text) IS NULL
 			OR LOWER(s.name) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
 			OR LOWER(s.email) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
 		"""

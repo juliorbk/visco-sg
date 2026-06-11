@@ -46,8 +46,8 @@ public interface InventoryMovementRepository
     LEFT JOIN FETCH m.fromWarehouse
     LEFT JOIN FETCH m.toWarehouse
     LEFT JOIN FETCH m.createdBy
-    WHERE (CAST(:productId AS long) IS NULL OR m.product.id = :productId)
-      AND (CAST(:warehouseId AS long) IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
+    WHERE (CAST(:productId AS bigint) IS NULL OR m.product.id = :productId)
+      AND (CAST(:warehouseId AS bigint) IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
       AND (CAST(:type AS string) IS NULL OR m.type = :type)
       AND (CAST(:startDate AS timestamp) IS NULL OR m.createdAt >= :startDate)
       AND (CAST(:endDate AS timestamp) IS NULL OR m.createdAt <= :endDate)
@@ -72,8 +72,8 @@ public interface InventoryMovementRepository
     LEFT JOIN FETCH m.fromWarehouse
     LEFT JOIN FETCH m.toWarehouse
     LEFT JOIN FETCH m.createdBy
-    WHERE (CAST(:productId AS long) IS NULL OR m.product.id = :productId)
-      AND (CAST(:warehouseId AS long) IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
+    WHERE (CAST(:productId AS bigint) IS NULL OR m.product.id = :productId)
+      AND (CAST(:warehouseId AS bigint) IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
       AND (CAST(:type AS string) IS NULL OR m.type = :type)
       AND (CAST(:startDate AS timestamp) IS NULL OR m.createdAt >= :startDate)
       AND (CAST(:endDate AS timestamp) IS NULL OR m.createdAt <= :endDate)

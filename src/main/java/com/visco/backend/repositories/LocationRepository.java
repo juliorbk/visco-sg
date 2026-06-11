@@ -38,9 +38,9 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
   @Query(
     value = "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId" +
-      " AND (CAST(:search AS string) IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
+      " AND (CAST(:search AS text) IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
     countQuery = "SELECT COUNT(l) FROM Location l WHERE l.warehouse.id = :warehouseId" +
-      " AND (CAST(:search AS string) IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
+      " AND (CAST(:search AS text) IS NULL OR LOWER(l.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
   )
   Page<Location> findByWarehouseIdWithSearch(
     @Param("warehouseId") Long warehouseId,
