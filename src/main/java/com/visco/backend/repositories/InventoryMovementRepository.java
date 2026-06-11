@@ -48,7 +48,7 @@ public interface InventoryMovementRepository
     LEFT JOIN FETCH m.createdBy
     WHERE (:productId IS NULL OR m.product.id = :productId)
       AND (:warehouseId IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
-      AND (:type IS NULL OR m.type = :type)
+      AND (m.type = :type OR :type IS NULL)
       AND (CAST(:startDate AS timestamp) IS NULL OR m.createdAt >= :startDate)
       AND (CAST(:endDate AS timestamp) IS NULL OR m.createdAt <= :endDate)
     ORDER BY m.createdAt ASC
@@ -74,7 +74,7 @@ public interface InventoryMovementRepository
     LEFT JOIN FETCH m.createdBy
     WHERE (:productId IS NULL OR m.product.id = :productId)
       AND (:warehouseId IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
-      AND (:type IS NULL OR m.type = :type)
+      AND (m.type = :type OR :type IS NULL)
       AND (CAST(:startDate AS timestamp) IS NULL OR m.createdAt >= :startDate)
       AND (CAST(:endDate AS timestamp) IS NULL OR m.createdAt <= :endDate)
     ORDER BY m.createdAt ASC
