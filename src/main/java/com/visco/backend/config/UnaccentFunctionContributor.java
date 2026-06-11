@@ -1,7 +1,7 @@
 package com.visco.backend.config;
 
-import org.hibernate.boot.model.function.FunctionContributions;
-import org.hibernate.boot.model.function.FunctionContributor;
+import org.hibernate.boot.model.function.spi.FunctionContributions;
+import org.hibernate.boot.model.function.spi.FunctionContributor;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.spi.TypeConfiguration;
 
