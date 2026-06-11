@@ -23,15 +23,15 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
     JOIN FETCH dn.withdrawnBy e
     LEFT JOIN FETCH e.costCenter
     JOIN FETCH dn.createdBy
-    WHERE (CAST(:search AS text) IS NULL
-      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
-      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    WHERE (:search IS NULL
+      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
     """,
     countQuery = """
     SELECT COUNT(dn) FROM DispatchNote dn
-    WHERE (CAST(:search AS text) IS NULL
-      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
-      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
+    WHERE (:search IS NULL
+      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
+      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
     """
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);

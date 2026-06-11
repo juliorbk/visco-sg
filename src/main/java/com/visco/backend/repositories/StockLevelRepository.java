@@ -104,20 +104,20 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     value = """
     SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (CAST(:search AS text) IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
+    AND (:search IS NULL
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (CAST(:search AS text) IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
+    AND (:search IS NULL
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
     """
   )
   Page<StockLevel> findStockWithProductByWarehouse(
@@ -133,18 +133,18 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     LEFT JOIN FETCH p.category
     JOIN FETCH sl.warehouse
     WHERE sl.warehouse.id = :warehouseId
-    AND (CAST(:search AS text) IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
+    AND (:search IS NULL
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId
-    AND (CAST(:search AS text) IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
+    AND (:search IS NULL
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
     """
   )
   Page<StockLevel> findAllStockByWarehouse(
