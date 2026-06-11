@@ -78,7 +78,7 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
 
     // Finds a single requisition with all details including items and products.
     @Query("""
-            SELECT r FROM Requisition r
+            SELECT DISTINCT r FROM Requisition r
             JOIN FETCH r.requestedBy
             JOIN FETCH r.costCenter
             LEFT JOIN FETCH r.approvedBy
