@@ -31,7 +31,7 @@ public interface GoodReceiptRepository
     JOIN FETCH gr.purchaseOrder po
     LEFT JOIN FETCH po.destinationWarehouse
     LEFT JOIN FETCH gr.receivedBy
-    WHERE (:search IS NULL
+    WHERE (CAST(:search AS string) IS NULL
       OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
@@ -39,7 +39,7 @@ public interface GoodReceiptRepository
     countQuery = """
     SELECT COUNT(gr) FROM GoodReceipt gr
     JOIN gr.purchaseOrder po
-    WHERE (:search IS NULL
+    WHERE (CAST(:search AS string) IS NULL
       OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))

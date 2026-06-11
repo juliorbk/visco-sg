@@ -34,13 +34,13 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         JOIN FETCH r.requestedBy
         JOIN FETCH r.costCenter
         LEFT JOIN FETCH r.approvedBy
-        WHERE (:search IS NULL
+        WHERE (CAST(:search AS string) IS NULL
             OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
             OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """,
         countQuery = """
         SELECT COUNT(r) FROM Requisition r
-        WHERE (:search IS NULL
+        WHERE (CAST(:search AS string) IS NULL
             OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
             OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """
@@ -54,14 +54,14 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         JOIN FETCH r.costCenter
         LEFT JOIN FETCH r.approvedBy
         WHERE r.status = :status
-          AND (:search IS NULL
+          AND (CAST(:search AS string) IS NULL
             OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
             OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """,
         countQuery = """
         SELECT COUNT(r) FROM Requisition r
         WHERE r.status = :status
-          AND (:search IS NULL
+          AND (CAST(:search AS string) IS NULL
             OR LOWER(r.requisitionNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
             OR LOWER(r.description) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
         """

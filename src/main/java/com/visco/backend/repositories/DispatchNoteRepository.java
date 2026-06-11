@@ -23,13 +23,13 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
     JOIN FETCH dn.withdrawnBy e
     LEFT JOIN FETCH e.costCenter
     JOIN FETCH dn.createdBy
-    WHERE (:search IS NULL
+    WHERE (CAST(:search AS string) IS NULL
       OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """,
     countQuery = """
     SELECT COUNT(dn) FROM DispatchNote dn
-    WHERE (:search IS NULL
+    WHERE (CAST(:search AS string) IS NULL
       OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%')
       OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(CAST(:search AS string)), '%'))
     """
