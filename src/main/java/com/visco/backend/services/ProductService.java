@@ -109,7 +109,7 @@ public class ProductService {
    */
   @Transactional
   public ProductDTO createProduct(CreateProductRequest dto) {
-    if (productRepository.findBySku(dto.sku()).isPresent()) {
+    if (productRepository.findFirstBySku(dto.sku()).isPresent()) {
       throw new IllegalArgumentException("The product is already registered");
     }
 
@@ -175,7 +175,7 @@ public class ProductService {
     if (
       dto.getSku() != null &&
       !dto.getSku().equals(existing.getSku()) &&
-      productRepository.findBySku(dto.getSku()).isPresent()
+      productRepository.findFirstBySku(dto.getSku()).isPresent()
     ) {
       throw new IllegalArgumentException("El SKU ya existe");
     }
@@ -252,7 +252,7 @@ public class ProductService {
   @Transactional(readOnly = true)
   public ProductDTO getProductByInternalCode(String internalCode) {
     Product product = productRepository
-      .findByInternalCode(internalCode)
+      .findFirstByInternalCode(internalCode)
       .orElseThrow(() ->
         new EntityNotFoundException(
           "Producto no encontrado con código interno: " + internalCode

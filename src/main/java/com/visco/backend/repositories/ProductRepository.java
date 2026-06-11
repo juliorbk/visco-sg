@@ -13,10 +13,10 @@ import org.springframework.data.repository.query.Param;
 // Repository for Product entities with stock-aware queries and inventory projections.
 public interface ProductRepository extends JpaRepository<Product, Long> {
   // Finds a product by its unique internal code.
-  Optional<Product> findByInternalCode(String internalCode);
+  Optional<Product> findFirstByInternalCode(String internalCode);
 
   // Finds a product by its unique SKU.
-  Optional<Product> findBySku(String sku);
+  Optional<Product> findFirstBySku(String sku);
 
   // Finds products by category with supplier and category eagerly loaded.
   @Query(
