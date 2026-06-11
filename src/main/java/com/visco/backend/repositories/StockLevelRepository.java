@@ -105,19 +105,19 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
     AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
     AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
     """
   )
   Page<StockLevel> findStockWithProductByWarehouse(
@@ -134,17 +134,17 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     JOIN FETCH sl.warehouse
     WHERE sl.warehouse.id = :warehouseId
     AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId
     AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%')))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CONCAT(:search, '%'))))
+      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
+      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
     """
   )
   Page<StockLevel> findAllStockByWarehouse(
