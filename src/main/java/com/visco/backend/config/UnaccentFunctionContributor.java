@@ -1,33 +1,26 @@
 package com.visco.backend.config;
 
-import org.hibernate.boot.model.function.spi.FunctionContributions;
-import org.hibernate.boot.model.function.spi.FunctionContributor;
+import org.hibernate.boot.MetadataBuilder;
+import org.hibernate.boot.spi.MetadataBuilderContributor;
+import org.hibernate.dialect.function.StandardSQLFunction;
 import org.hibernate.type.StandardBasicTypes;
-import org.hibernate.type.spi.TypeConfiguration;
 
 /**
- * Tells Hibernate's HQL parser that the PostgreSQL `unaccent()` function
- * returns a String, not an unknown Object.
+ * Registers the PostgreSQL `unaccent()` function as returning a String.
  *
  * <p>Without this, `FUNCTION('unaccent', p.name) ILIKE …` fails validation
  * at startup with `SemanticException: Operand of 'like' is of type
  * 'java.lang.Object' which is not a string` on Hibernate 6+/7+.
  *
- * <p>Loaded via {@code META-INF/services/org.hibernate.boot.model.function.spi.FunctionContributor}.
+ * <p>Loaded via {@code META-INF/services/org.hibernate.boot.spi.MetadataBuilderContributor}.
  */
-public class UnaccentFunctionContributor implements FunctionContributor {
+public class UnaccentFunctionContributor implements MetadataBuilderContributor {
 
   @Override
-  public void contributeFunctions(FunctionContributions functionContributions) {
-    TypeConfiguration typeConfiguration = functionContributions.getTypeConfiguration();
-    functionContributions
-      .getFunctionRegistry()
-      .registerPattern(
-        "unaccent",
-        "unaccent(?1)",
-        typeConfiguration
-          .getBasicTypeRegistry()
-          .resolve(StandardBasicTypes.STRING)
-      );
+  public void contribute(MetadataBuilder metadataBuilder) {
+    metadataBuilder.applySqlFunction(
+      "unaccent",
+      new StandardSQLFunction("unaccent", StandardBasicTypes.STRING)
+    );
   }
 }
