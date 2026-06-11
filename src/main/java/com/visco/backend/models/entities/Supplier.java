@@ -33,7 +33,14 @@ import org.springframework.data.annotation.LastModifiedDate;
 @EntityListeners(org.springframework.data.jpa.domain.support.AuditingEntityListener.class)
 @SQLDelete(sql = "UPDATE suppliers SET is_active = false, deleted_at = NOW() WHERE id = ?")
 @SQLRestriction("is_active = true")
-@Table(name = "suppliers")
+@Table(
+  name = "suppliers",
+  indexes = {
+    @Index(name = "idx_supplier_currency", columnList = "currency"),
+    @Index(name = "idx_supplier_category", columnList = "category_id"),
+    @Index(name = "idx_supplier_active", columnList = "is_active"),
+  }
+)
 @Getter
 @Setter
 @AllArgsConstructor

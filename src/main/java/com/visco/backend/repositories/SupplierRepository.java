@@ -49,14 +49,14 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 	// Finds suppliers by their currency.
 	Page<Supplier> findByCurrency(Currency currency, Pageable pageable);
 
-	// Finds suppliers by currency with phone numbers and representatives eagerly loaded.
-	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.currency = :currency",
-		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.currency = :currency")
+	// Finds suppliers by currency (collections loaded lazily via batch fetch).
+	@Query(value = "SELECT s FROM Supplier s WHERE s.currency = :currency",
+		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.currency = :currency")
 	Page<Supplier> findByCurrencyWithFetch(@Param("currency") Currency currency, Pageable pageable);
 
-	// Finds suppliers by category with phone numbers and representatives eagerly loaded.
-	@Query(value = "SELECT DISTINCT s FROM Supplier s LEFT JOIN FETCH s.phoneNumbers LEFT JOIN FETCH s.representatives WHERE s.category.id = :categoryId",
-		   countQuery = "SELECT COUNT(DISTINCT s) FROM Supplier s WHERE s.category.id = :categoryId")
+	// Finds suppliers by category (collections loaded lazily via batch fetch).
+	@Query(value = "SELECT s FROM Supplier s WHERE s.category.id = :categoryId",
+		   countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.category.id = :categoryId")
 	Page<Supplier> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
 
 	@Query("SELECT s.id as supplierId, s.name as supplierName, COUNT(o) as orderCount " +
