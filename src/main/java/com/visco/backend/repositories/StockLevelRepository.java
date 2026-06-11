@@ -105,19 +105,19 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
     AND (:search IS NULL
-      OR p.name ILIKE CONCAT('%', :search, '%')
-      OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode ILIKE CONCAT('%', :search, '%')
-      OR p.sapCode ILIKE CONCAT('%', :search, '%'))
+      OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sapCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
     AND (:search IS NULL
-      OR p.name ILIKE CONCAT('%', :search, '%')
-      OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode ILIKE CONCAT('%', :search, '%')
-      OR p.sapCode ILIKE CONCAT('%', :search, '%'))
+      OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sapCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
     """
   )
   Page<StockLevel> findStockWithProductByWarehouse(
@@ -134,17 +134,17 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     JOIN FETCH sl.warehouse
     WHERE sl.warehouse.id = :warehouseId
     AND (:search IS NULL
-      OR p.name ILIKE CONCAT('%', :search, '%')
-      OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+      OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
     """,
     countQuery = """
     SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
     WHERE sl.warehouse.id = :warehouseId
     AND (:search IS NULL
-      OR p.name ILIKE CONCAT('%', :search, '%')
-      OR p.sku ILIKE CONCAT('%', :search, '%')
-      OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+      OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+      OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
     """
   )
   Page<StockLevel> findAllStockByWarehouse(

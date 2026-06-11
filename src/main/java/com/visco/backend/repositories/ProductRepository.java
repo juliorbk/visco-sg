@@ -99,9 +99,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -126,9 +126,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
@@ -137,9 +137,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -157,9 +157,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
@@ -168,9 +168,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
     """
   )
@@ -210,9 +210,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """,
@@ -220,9 +220,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(p) FROM Product p
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -241,9 +241,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -253,9 +253,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -274,9 +274,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -286,9 +286,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(DISTINCT p.id) FROM Product p
     WHERE
       (:search IS NULL
-        OR p.name ILIKE CONCAT('%', :search, '%')
-        OR p.sku ILIKE CONCAT('%', :search, '%')
-        OR p.internalCode ILIKE CONCAT('%', :search, '%'))
+        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
+        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
       AND (:category IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
