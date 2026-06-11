@@ -102,7 +102,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategory(
@@ -129,7 +129,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
     """,
@@ -140,7 +140,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockAsc(
@@ -160,7 +160,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
     """,
@@ -171,7 +171,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     """
   )
   Page<Product> findBySearchAndCategoryOrderByStockDesc(
@@ -213,7 +213,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """,
     countQuery = """
@@ -223,7 +223,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )
@@ -244,7 +244,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
@@ -256,7 +256,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )
@@ -277,7 +277,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
@@ -289,7 +289,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
         OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
-      AND (CAST(:category AS bigint) IS NULL OR p.category.id = :category)
+      AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
   )

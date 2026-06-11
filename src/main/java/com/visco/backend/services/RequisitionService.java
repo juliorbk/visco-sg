@@ -1,5 +1,17 @@
 package com.visco.backend.services;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.visco.backend.models.dtos.CreateRequisitionRequest;
 import com.visco.backend.models.dtos.RequisitionItemRequest;
 import com.visco.backend.models.dtos.RequisitionItemResponse;
@@ -16,19 +28,10 @@ import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.RequisitionRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.UserRepository;
+
 import jakarta.persistence.EntityNotFoundException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Handles business logic for requisition management operations.
@@ -415,5 +418,4 @@ public class RequisitionService {
       itemResponses
     );
   }
-
 }
