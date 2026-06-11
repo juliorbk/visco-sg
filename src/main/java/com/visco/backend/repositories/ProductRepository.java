@@ -99,9 +99,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
     """
   )
@@ -126,9 +126,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
@@ -138,9 +138,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN p.category c
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
     """
   )
@@ -158,9 +158,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
     GROUP BY p.id
     ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
@@ -170,9 +170,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN p.category c
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
     """
   )
@@ -212,9 +212,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN FETCH p.category
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """,
@@ -222,9 +222,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     SELECT COUNT(p) FROM Product p
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR p.category.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -243,9 +243,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -256,9 +256,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN p.category c
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
@@ -277,9 +277,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN StockLevel sl ON sl.product.id = p.id
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     GROUP BY p.id
@@ -290,9 +290,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     LEFT JOIN p.category c
     WHERE
       (CAST(:search AS text) IS NULL
-        OR p.name ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.sku ILIKE CONCAT('%', CAST(:search AS string), '%')
-        OR p.internalCode ILIKE CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%'))
+        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', CAST(:search AS string), '%')))
       AND (CAST(:category AS long) IS NULL OR c.id = :category)
       AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
     """
