@@ -7,5 +7,6 @@ public record DispatchItemResponse(
   Long productId,
   String productName,
   String productSku,
+  String uom,
   BigDecimal quantity
 ) {}

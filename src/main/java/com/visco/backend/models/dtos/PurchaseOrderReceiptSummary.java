@@ -24,6 +24,7 @@ public class PurchaseOrderReceiptSummary {
     private Long productId;
     private String productName;
     private String productSku;
+    private String uom;
     private BigDecimal orderedQuantity;
     private BigDecimal receivedQuantity;
     private BigDecimal pendingQuantity;

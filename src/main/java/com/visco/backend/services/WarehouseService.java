@@ -370,6 +370,7 @@ public class WarehouseService {
                     .productId(poItem.getProduct().getId())
                     .productName(poItem.getProduct().getName())
                     .productSku(poItem.getProduct().getSku())
+                    .uom(poItem.getProduct().getUom().name())
                     .orderedQuantity(ordered)
                     .receivedQuantity(received)
                     .pendingQuantity(pending.max(BigDecimal.ZERO))
@@ -422,6 +423,7 @@ public class WarehouseService {
                     item.getProduct().getId(),
                     item.getProduct().getName(),
                     item.getProduct().getSku(),
+                    item.getProduct().getUom().name(),
                     item.getExpectedQuantity(),
                     item.getReceivedQuantity(),
                     item.getReceivedQuantity().subtract(item.getExpectedQuantity()),
@@ -795,6 +797,7 @@ public class WarehouseService {
                     item.getProduct().getId(),
                     item.getProduct().getName(),
                     item.getProduct().getSku(),
+                    item.getProduct().getUom().name(),
                     item.getExpectedQuantity(),
                     item.getReceivedQuantity(),
                     item.getReceivedQuantity().subtract(item.getExpectedQuantity()),
