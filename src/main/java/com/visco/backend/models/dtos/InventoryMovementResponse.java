@@ -12,7 +12,6 @@ public record InventoryMovementResponse(
     String type,
     BigDecimal quantity,
     BigDecimal entryUnitPrice,
-    BigDecimal exitUnitPrice,
     String fromWarehouseName,
     String toWarehouseName,
     String reason,

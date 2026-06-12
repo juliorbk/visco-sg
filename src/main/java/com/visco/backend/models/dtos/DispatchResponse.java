@@ -63,8 +63,7 @@ public record DispatchResponse(
                         item.getProduct().getId(),
                         item.getProduct().getName(),
                         item.getProduct().getSku(),
-                        item.getQuantity(),
-                        item.getExitUnitPrice()
+                        item.getQuantity()
                     )
                 )
                 .toList(),

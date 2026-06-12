@@ -776,7 +776,6 @@ public class WarehouseService {
             .type(MovementType.TRANSFER)
             .reason(request.reason() != null ? request.reason() : "Transfer to other warehouse")
             .entryUnitPrice(request.unitCost())
-            .exitUnitPrice(request.unitCost())
             .createdAt(LocalDateTime.now())
             .createdBy(createdBy)
             .build();
@@ -845,7 +844,6 @@ public class WarehouseService {
                 .dispatchNote(note)
                 .product(product)
                 .quantity(itemReq.quantity())
-                .exitUnitPrice(itemReq.exitUnitPrice())
                 .build();
 
             note.getItems().add(item);
@@ -859,7 +857,6 @@ public class WarehouseService {
                 .quantity(itemReq.quantity())
                 .type(MovementType.OUTPUT)
                 .reason("Dispatch: " + dispatchNumber)
-                .exitUnitPrice(itemReq.exitUnitPrice())
                 .createdAt(LocalDateTime.now())
                 .createdBy(createdBy)
                 .build();
@@ -1015,7 +1012,6 @@ public class WarehouseService {
                 m.getType().name(),
                 m.getQuantity(),
                 m.getEntryUnitPrice(),
-                m.getExitUnitPrice(),
                 m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
                 m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
                 m.getReason(),

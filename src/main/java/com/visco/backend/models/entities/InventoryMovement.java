@@ -74,9 +74,6 @@ public class InventoryMovement {
   @Column(name = "entry_unit_price", precision = 18, scale = 4)
   private BigDecimal entryUnitPrice;
 
-  @Column(name = "exit_unit_price", precision = 18, scale = 4)
-  private BigDecimal exitUnitPrice;
-
   @Column(nullable = false)
   private LocalDateTime createdAt;
 

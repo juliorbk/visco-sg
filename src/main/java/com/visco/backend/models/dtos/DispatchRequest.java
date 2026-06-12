@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -25,13 +24,6 @@ public record DispatchRequest(
         @NotNull(message = "El producto es obligatorio") Long productId,
         @NotNull(message = "La cantidad es obligatoria") @Positive(
             message = "La cantidad debe ser positiva"
-        ) BigDecimal quantity,
-        @PositiveOrZero(message = "El precio de salida debe ser cero o positivo") BigDecimal exitUnitPrice
-    ) {
-        public DispatchItem {
-            if (exitUnitPrice == null) {
-                exitUnitPrice = BigDecimal.ZERO;
-            }
-        }
-    }
+        ) BigDecimal quantity
+    ) {}
 }
