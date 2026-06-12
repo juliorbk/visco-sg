@@ -40,10 +40,18 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @Query("SELECT r.status, COUNT(r) FROM Report r WHERE r.active = true GROUP BY r.status")
     List<Object[]> countActiveByStatus();
 
-    @Query("SELECT FUNCTION('DATE_TRUNC', 'month', r.createdAt), COUNT(r) "
-            + "FROM Report r WHERE r.active = true AND r.createdAt >= :since "
-            + "GROUP BY FUNCTION('DATE_TRUNC', 'month', r.createdAt) "
-            + "ORDER BY FUNCTION('DATE_TRUNC', 'month', r.createdAt)")
+    @Query(
+        value = """
+        SELECT
+          DATE_TRUNC('month', r.created_at) AS month,
+          COUNT(r.id) AS count
+        FROM reports r
+        WHERE r.active = true AND r.created_at >= :since
+        GROUP BY DATE_TRUNC('month', r.created_at)
+        ORDER BY DATE_TRUNC('month', r.created_at) ASC
+        """,
+        nativeQuery = true
+    )
     List<Object[]> countByMonthSince(@Param("since") LocalDateTime since);
 
     @Query("SELECT COALESCE(SUM(r.recordCount), 0) FROM Report r WHERE r.status = 'COMPLETED' AND r.active = true")
