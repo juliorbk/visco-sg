@@ -25,7 +25,7 @@ public class UnaccentFunctionContributor implements MetadataBuilderContributor {
 
   @Override
   public void contribute(MetadataBuilder metadataBuilder) {
-    metadataBuilder.applyFunctionContributor(new FunctionContributor() {
+    metadataBuilder.applyFunctions(new FunctionContributor() {
       @Override
       public void contributeFunctions(FunctionContributions functionContributions) {
         TypeConfiguration typeConfiguration = functionContributions.getTypeConfiguration();
