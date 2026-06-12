@@ -27,7 +27,7 @@ public interface GoodReceiptRepository
     value = """
     SELECT gr.* FROM good_receipts gr
     JOIN purchase_orders po ON po.id = gr.purchase_order_id
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR gr.receipt_number ILIKE '%' || :search || '%'
       OR gr.notes ILIKE '%' || :search || '%'
       OR po.order_number ILIKE '%' || :search || '%'
@@ -35,7 +35,7 @@ public interface GoodReceiptRepository
     countQuery = """
     SELECT COUNT(*) FROM good_receipts gr
     JOIN purchase_orders po ON po.id = gr.purchase_order_id
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR gr.receipt_number ILIKE '%' || :search || '%'
       OR gr.notes ILIKE '%' || :search || '%'
       OR po.order_number ILIKE '%' || :search || '%'

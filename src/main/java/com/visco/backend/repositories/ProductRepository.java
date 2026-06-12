@@ -123,11 +123,11 @@ public interface ProductRepository
     SELECT p.* FROM products p
     LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
+      (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
-      AND (:category IS NULL OR p.category_id = :category)
+      AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     GROUP BY p.id
@@ -136,11 +136,11 @@ public interface ProductRepository
     countQuery = """
     SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
+      (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
-      AND (:category IS NULL OR p.category_id = :category)
+      AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     """,
@@ -158,11 +158,11 @@ public interface ProductRepository
     SELECT p.* FROM products p
     LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
+      (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
-      AND (:category IS NULL OR p.category_id = :category)
+      AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     GROUP BY p.id
@@ -171,11 +171,11 @@ public interface ProductRepository
     countQuery = """
     SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
+      (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
-      AND (:category IS NULL OR p.category_id = :category)
+      AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     """,

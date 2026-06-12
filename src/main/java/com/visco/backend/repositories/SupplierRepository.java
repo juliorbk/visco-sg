@@ -21,13 +21,13 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
   @Query(
     value = """
     SELECT s.* FROM suppliers s
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR s.name ILIKE '%' || :search || '%'
       OR s.email ILIKE '%' || :search || '%'
     """,
     countQuery = """
     SELECT COUNT(*) FROM suppliers s
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR s.name ILIKE '%' || :search || '%'
       OR s.email ILIKE '%' || :search || '%'
     """,

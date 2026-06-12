@@ -20,13 +20,13 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   @Query(
     value = """
     SELECT dn.* FROM dispatch_notes dn
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR dn.dispatch_number ILIKE '%' || :search || '%'
       OR dn.notes ILIKE '%' || :search || '%'
     """,
     countQuery = """
     SELECT COUNT(*) FROM dispatch_notes dn
-    WHERE :search IS NULL
+    WHERE CAST(:search AS text) IS NULL
       OR dn.dispatch_number ILIKE '%' || :search || '%'
       OR dn.notes ILIKE '%' || :search || '%'
     """,

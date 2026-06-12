@@ -34,13 +34,13 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     @Query(
         value = """
         SELECT r.* FROM requisitions r
-        WHERE :search IS NULL
+        WHERE CAST(:search AS text) IS NULL
           OR r.requisition_number ILIKE '%' || :search || '%'
           OR r.description ILIKE '%' || :search || '%'
         """,
         countQuery = """
         SELECT COUNT(*) FROM requisitions r
-        WHERE :search IS NULL
+        WHERE CAST(:search AS text) IS NULL
           OR r.requisition_number ILIKE '%' || :search || '%'
           OR r.description ILIKE '%' || :search || '%'
         """,
@@ -52,14 +52,14 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         value = """
         SELECT r.* FROM requisitions r
         WHERE r.status = :status
-          AND (:search IS NULL
+          AND (CAST(:search AS text) IS NULL
             OR r.requisition_number ILIKE '%' || :search || '%'
             OR r.description ILIKE '%' || :search || '%')
         """,
         countQuery = """
         SELECT COUNT(*) FROM requisitions r
         WHERE r.status = :status
-          AND (:search IS NULL
+          AND (CAST(:search AS text) IS NULL
             OR r.requisition_number ILIKE '%' || :search || '%'
             OR r.description ILIKE '%' || :search || '%')
         """,

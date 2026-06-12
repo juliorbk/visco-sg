@@ -36,12 +36,12 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     SELECT l.* FROM locations l
     JOIN warehouses w ON w.id = l.warehouse_id
     WHERE l.warehouse_id = :warehouseId
-      AND (:search IS NULL OR l.location_code ILIKE '%' || :search || '%')
+      AND (CAST(:search AS text) IS NULL OR l.location_code ILIKE '%' || :search || '%')
     """,
     countQuery = """
     SELECT COUNT(*) FROM locations l
     WHERE l.warehouse_id = :warehouseId
-      AND (:search IS NULL OR l.location_code ILIKE '%' || :search || '%')
+      AND (CAST(:search AS text) IS NULL OR l.location_code ILIKE '%' || :search || '%')
     """,
     nativeQuery = true
   )

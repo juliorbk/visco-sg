@@ -101,7 +101,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
       AND (:onlyWithStock = false OR sl.current_stock > 0)
-      AND (:search IS NULL
+      AND (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
@@ -112,7 +112,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
       AND (:onlyWithStock = false OR sl.current_stock > 0)
-      AND (:search IS NULL
+      AND (CAST(:search AS text) IS NULL
         OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
         OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
