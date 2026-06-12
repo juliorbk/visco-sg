@@ -10,7 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 // Repository for CostCenter entities with eager-fetch queries.
 public interface CostCenterRepository extends JpaRepository<CostCenter, Long> {
     // Finds all cost centers with their management hierarchy eagerly loaded, paginated.
-    @Query("SELECT cc FROM CostCenter cc LEFT JOIN FETCH cc.management mgmt LEFT JOIN FETCH mgmt.generalManagement ORDER BY cc.fullDescription ASC")
+    @Query(
+        value = "SELECT cc FROM CostCenter cc LEFT JOIN FETCH cc.management mgmt LEFT JOIN FETCH mgmt.generalManagement ORDER BY cc.fullDescription ASC",
+        countQuery = "SELECT COUNT(cc) FROM CostCenter cc"
+    )
     Page<CostCenter> findAllWithFetch(Pageable pageable);
 
     // Sin paginar — para dropdowns

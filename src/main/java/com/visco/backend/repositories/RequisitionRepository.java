@@ -21,11 +21,17 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     Page<Requisition> findByRequestedById(java.util.UUID requestedById, Pageable pageable);
 
     // Finds all requisitions with requester, cost center, and approver eagerly loaded.
-    @Query("SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy")
+    @Query(
+        value = "SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy",
+        countQuery = "SELECT COUNT(r) FROM Requisition r"
+    )
     Page<Requisition> findAllWithFetch(Pageable pageable);
 
     // Finds requisitions by status with related entities eagerly loaded.
-    @Query("SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.status = :status")
+    @Query(
+        value = "SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.status = :status",
+        countQuery = "SELECT COUNT(r) FROM Requisition r WHERE r.status = :status"
+    )
     Page<Requisition> findByStatusWithFetch(@Param("status") RequisitionStatus status, Pageable pageable);
 
     @Query(
@@ -73,7 +79,10 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     );
 
     // Finds requisitions requested by a specific user with related entities eagerly loaded.
-    @Query("SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.requestedBy.id = :requestedById")
+    @Query(
+        value = "SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.requestedBy.id = :requestedById",
+        countQuery = "SELECT COUNT(r) FROM Requisition r WHERE r.requestedBy.id = :requestedById"
+    )
     Page<Requisition> findByRequestedByIdWithFetch(@Param("requestedById") java.util.UUID requestedById, Pageable pageable);
 
     // Finds a single requisition with all details including items and products.

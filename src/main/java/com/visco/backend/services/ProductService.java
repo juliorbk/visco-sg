@@ -8,6 +8,7 @@ import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.models.entities.Uom;
 import com.visco.backend.repositories.CategoryRepository;
 import com.visco.backend.repositories.ProductRepository;
+import com.visco.backend.repositories.ProductSpecification;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.SupplierRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -307,46 +309,31 @@ public class ProductService {
   ) {
     Page<Product> products;
 
-    if (Boolean.TRUE.equals(hasStock)) {
-      if ("stock".equals(sortBy)) {
-        products = "desc".equalsIgnoreCase(sortDir)
-          ? productRepository.findBySearchAndCategoryWithStockOrderByStockDesc(
-              pageable,
-              search,
-              category
-            )
-          : productRepository.findBySearchAndCategoryWithStockOrderByStockAsc(
-              pageable,
-              search,
-              category
-            );
-      } else {
-        products = productRepository.findBySearchAndCategoryWithStock(
-          pageable,
-          search,
-          category
-        );
-      }
+    if ("stock".equals(sortBy)) {
+      products = "desc".equalsIgnoreCase(sortDir)
+        ? productRepository.findBySearchAndCategoryOrderByStockDesc(
+            pageable,
+            search,
+            category,
+            Boolean.TRUE.equals(hasStock)
+          )
+        : productRepository.findBySearchAndCategoryOrderByStockAsc(
+            pageable,
+            search,
+            category,
+            Boolean.TRUE.equals(hasStock)
+          );
     } else {
-      if ("stock".equals(sortBy)) {
-        products = "desc".equalsIgnoreCase(sortDir)
-          ? productRepository.findBySearchAndCategoryOrderByStockDesc(
-              pageable,
-              search,
-              category
-            )
-          : productRepository.findBySearchAndCategoryOrderByStockAsc(
-              pageable,
-              search,
-              category
-            );
-      } else {
-        products = productRepository.findBySearchAndCategory(
-          pageable,
-          search,
-          category
-        );
+      Specification<Product> spec = Specification.where(
+        ProductSpecification.search(search)
+      )
+      .and(ProductSpecification.hasCategory(category));
+
+      if (Boolean.TRUE.equals(hasStock)) {
+        spec = spec.and(ProductSpecification.hasStock());
       }
+
+      products = productRepository.findAll(spec, pageable);
     }
 
     return toProductDTOPage(products, pageable);

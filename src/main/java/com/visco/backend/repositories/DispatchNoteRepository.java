@@ -13,7 +13,10 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   Page<DispatchNote> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
   // Finds all dispatch notes with related warehouse, employee, and creator eagerly loaded.
-  @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy")
+  @Query(
+    value = "SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy",
+    countQuery = "SELECT COUNT(dn) FROM DispatchNote dn"
+  )
   Page<DispatchNote> findAllWithFetch(Pageable pageable);
 
   @Query(

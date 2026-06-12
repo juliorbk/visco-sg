@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 // Repository for warehouse entities with responsible user eager loading.
 public interface WarehouseRepository extends JpaRepository<Warehouse, Long> {
   // Finds all warehouses with their responsible user eagerly loaded.
-  @Query("SELECT w FROM Warehouse w JOIN FETCH w.responsibleUser")
+  @Query(
+    value = "SELECT w FROM Warehouse w JOIN FETCH w.responsibleUser",
+    countQuery = "SELECT COUNT(w) FROM Warehouse w"
+  )
   Page<Warehouse> findAllWithFetch(Pageable pageable);
 }

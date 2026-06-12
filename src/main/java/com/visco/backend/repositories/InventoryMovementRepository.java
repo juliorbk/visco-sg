@@ -38,9 +38,8 @@ public interface InventoryMovementRepository
     Pageable pageable
   );
 
-  // Paginated query with optional filters for product, warehouse, type, and date range.
   @Query(
-    """
+    value = """
     SELECT m FROM InventoryMovement m
     JOIN FETCH m.product
     LEFT JOIN FETCH m.fromWarehouse
@@ -52,6 +51,14 @@ public interface InventoryMovementRepository
       AND (:startDate IS NULL OR m.createdAt >= :startDate)
       AND (:endDate IS NULL OR m.createdAt <= :endDate)
     ORDER BY m.createdAt ASC
+    """,
+    countQuery = """
+    SELECT COUNT(m) FROM InventoryMovement m
+    WHERE (:productId IS NULL OR m.product.id = :productId)
+      AND (:warehouseId IS NULL OR m.fromWarehouse.id = :warehouseId OR m.toWarehouse.id = :warehouseId)
+      AND (:type IS NULL OR m.type = :type)
+      AND (:startDate IS NULL OR m.createdAt >= :startDate)
+      AND (:endDate IS NULL OR m.createdAt <= :endDate)
     """
   )
   Page<InventoryMovement> findMovementsWithFilters(
@@ -89,20 +96,20 @@ public interface InventoryMovementRepository
   );
 
   // Calculates the cumulative balance for a product up to a given date.
-  @Query(
-    """
-        SELECT COALESCE(SUM(
-          CASE
-            WHEN m.type = 'OUTPUT' THEN -m.quantity
-            WHEN m.type = 'TRANSFER' THEN 0
-            ELSE m.quantity
-          END
-        ), 0)
-        FROM InventoryMovement m
-        WHERE m.product.id = :productId
-          AND m.createdAt <= :untilDate
-    """
-  )
+    @Query(
+      """
+          SELECT COALESCE(SUM(
+            CASE
+              WHEN m.type = 'OUTPUT' OR m.type = 'DISPATCH' THEN -m.quantity
+              WHEN m.type = 'TRANSFER' THEN 0
+              ELSE m.quantity
+            END
+          ), 0)
+          FROM InventoryMovement m
+          WHERE m.product.id = :productId
+            AND m.createdAt <= :untilDate
+      """
+    )
   BigDecimal calculateRunningBalanceUntil(
     @Param("productId") Long productId,
     @Param("untilDate") LocalDateTime untilDate

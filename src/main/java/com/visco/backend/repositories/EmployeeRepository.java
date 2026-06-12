@@ -12,7 +12,8 @@ import org.springframework.data.repository.query.Param;
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
   // Finds all employees with their cost center eagerly loaded, sorted by name.
   @Query(
-    "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter ORDER BY e.fullName ASC"
+    value = "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter ORDER BY e.fullName ASC",
+    countQuery = "SELECT COUNT(e) FROM Employee e"
   )
   Page<Employee> findAllWithFetch(Pageable pageable);
 
@@ -21,7 +22,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
   // Finds employees belonging to a specific cost center with eager loading.
   @Query(
-    "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter WHERE e.costCenter.id = :costCenterId"
+    value = "SELECT e FROM Employee e LEFT JOIN FETCH e.costCenter WHERE e.costCenter.id = :costCenterId",
+    countQuery = "SELECT COUNT(e) FROM Employee e WHERE e.costCenter.id = :costCenterId"
   )
   Page<Employee> findByCostCenterIdWithFetch(
     @Param("costCenterId") Long costCenterId,

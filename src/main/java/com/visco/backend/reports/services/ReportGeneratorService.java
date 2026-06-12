@@ -14,6 +14,7 @@ import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistri
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.TopProductDTO;
 import com.visco.backend.repositories.InventoryMovementRepository;
 import com.visco.backend.repositories.ProductRepository;
+import com.visco.backend.repositories.ProductSpecification;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.WarehouseRepository;
 import java.math.BigDecimal;
@@ -27,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,10 +60,10 @@ public class ReportGeneratorService {
     String search
   ) {
     var pageable = PageRequest.ofSize(maxRecords);
-    var productPage = productRepository.findBySearchAndCategory(
-      pageable,
-      search,
-      categoryId
+    var productPage = productRepository.findAll(
+      Specification.where(ProductSpecification.search(search))
+        .and(ProductSpecification.hasCategory(categoryId)),
+      pageable
     );
     List<Product> products = productPage.getContent();
 
@@ -403,10 +405,11 @@ public class ReportGeneratorService {
     }
 
     for (Warehouse w : warehouses) {
-      var whPage = stockLevelRepository.findAllStockByWarehouse(
+      var whPage = stockLevelRepository.findByWarehouse(
         Pageable.ofSize(maxRecords),
         w.getId(),
-        null
+        null,
+        false
       );
       List<StockLevel> positiveStock = whPage
         .getContent()

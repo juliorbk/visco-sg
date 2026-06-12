@@ -23,11 +23,17 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByDueDateBeforeAndStatus(LocalDate date, InvoiceStatus status);
 
     // Finds all invoices with purchase order and supplier eagerly loaded.
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier")
+    @Query(
+        value = "SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier",
+        countQuery = "SELECT COUNT(i) FROM Invoice i"
+    )
     Page<Invoice> findAllWithFetch(Pageable pageable);
 
     // Finds invoices by status with purchase order and supplier eagerly loaded.
-    @Query("SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier WHERE i.status = :status")
+    @Query(
+        value = "SELECT i FROM Invoice i JOIN FETCH i.purchaseOrder JOIN FETCH i.supplier WHERE i.status = :status",
+        countQuery = "SELECT COUNT(i) FROM Invoice i WHERE i.status = :status"
+    )
     Page<Invoice> findByStatusWithFetch(@Param("status") InvoiceStatus status, Pageable pageable);
 
     // Finds a single invoice with all details including items and products.

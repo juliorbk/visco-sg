@@ -22,7 +22,10 @@ public interface GoodReceiptRepository
   Page<GoodReceipt> findAll(Pageable pageable);
 
   // Finds all good receipts with purchase order, warehouse, and receiver eagerly loaded.
-  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy")
+  @Query(
+    value = "SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy",
+    countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr"
+  )
   Page<GoodReceipt> findAllWithFetch(Pageable pageable);
 
   @Query(

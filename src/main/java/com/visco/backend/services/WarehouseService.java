@@ -612,11 +612,12 @@ public class WarehouseService {
         String search,
         Pageable pageable
     ) {
-        Page<StockLevel> stockPage = stockLevelRepository.findStockWithProductByWarehouse(
-            pageable,
-            warehouseId,
-            search
-        );
+    Page<StockLevel> stockPage = stockLevelRepository.findByWarehouse(
+        pageable,
+        warehouseId,
+        search,
+        true
+    );
 
         return stockPage.map((sl) -> {
             Product p = sl.getProduct();
@@ -653,11 +654,12 @@ public class WarehouseService {
             .findById(warehouseId)
             .orElseThrow(() -> new EntityNotFoundException("Warehouse not found: " + warehouseId));
 
-        Page<StockLevel> stockPage = stockLevelRepository.findAllStockByWarehouse(
-            pageable,
-            warehouseId,
-            search
-        );
+    Page<StockLevel> stockPage = stockLevelRepository.findByWarehouse(
+        pageable,
+        warehouseId,
+        search,
+        false
+    );
 
         return stockPage.map((sl) -> {
             Product p = sl.getProduct();

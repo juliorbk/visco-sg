@@ -13,9 +13,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-// Repository for stock level tracking with atomic update operations and aggregation queries.
 public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
-  // Returns stock entries for a product across different warehouses.
+
   List<StockLevel> findByProductId(Long productId, Pageable pageable);
 
   @Query(
@@ -31,25 +30,21 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("productIds") List<Long> productIds
   );
 
-  // Finds the stock level for a specific product in a specific warehouse.
   Optional<StockLevel> findByProductIdAndWarehouseId(
     Long productId,
     Long warehouseId
   );
 
-  // Finds stock levels for a product across multiple warehouses.
   List<StockLevel> findByProductIdAndWarehouseIdIn(
     Long productId,
     List<Long> warehouseIds
   );
 
-  // Sums current stock for a product across all warehouses.
   @Query(
     "SELECT COALESCE(SUM(s.currentStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
   )
   BigDecimal getTotalStockByProductId(@Param("productId") Long productId);
 
-  // Sums pending (in-transit) stock for a product across all warehouses.
   @Query(
     "SELECT COALESCE(SUM(s.pendingStock), 0) FROM StockLevel s WHERE s.product.id = :productId"
   )
@@ -104,64 +99,36 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     value = """
     SELECT sl.* FROM stock_levels sl
     JOIN products p ON p.id = sl.product_id
-    WHERE sl.warehouse_id = :warehouseId AND sl.current_stock > 0
-      AND p.is_active = true
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sap_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
-    """,
-    countQuery = """
-    SELECT COUNT(*) FROM stock_levels sl
-    JOIN products p ON p.id = sl.product_id
-    WHERE sl.warehouse_id = :warehouseId AND sl.current_stock > 0
-      AND p.is_active = true
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sap_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
-    """,
-    nativeQuery = true
-  )
-  Page<StockLevel> findStockWithProductByWarehouse(
-    Pageable pageable,
-    @Param("warehouseId") Long warehouseId,
-    @Param("search") String search
-  );
-
-  @Query(
-    value = """
-    SELECT sl.* FROM stock_levels sl
-    JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
-      AND p.is_active = true
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (:onlyWithStock = false OR sl.current_stock > 0)
+      AND (:search IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.sap_code) ILIKE unaccent('%' || :search || '%'))
     """,
     countQuery = """
     SELECT COUNT(*) FROM stock_levels sl
     JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
-      AND p.is_active = true
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (:onlyWithStock = false OR sl.current_stock > 0)
+      AND (:search IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
+        OR unaccent(p.sap_code) ILIKE unaccent('%' || :search || '%'))
     """,
     nativeQuery = true
   )
-  Page<StockLevel> findAllStockByWarehouse(
+  Page<StockLevel> findByWarehouse(
     Pageable pageable,
     @Param("warehouseId") Long warehouseId,
-    @Param("search") String search
+    @Param("search") String search,
+    @Param("onlyWithStock") boolean onlyWithStock
   );
 
   // ─────────────────────────────────────────────────────────────
-  // Atomic stock operations (sin optimistic locking)
+  // Atomic stock operations
   // ─────────────────────────────────────────────────────────────
 
   @Modifying
