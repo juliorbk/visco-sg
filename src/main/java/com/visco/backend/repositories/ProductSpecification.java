@@ -2,7 +2,6 @@ package com.visco.backend.repositories;
 
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.StockLevel;
-import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -17,9 +16,9 @@ public final class ProductSpecification {
       }
       String pattern = "%" + search.toLowerCase() + "%";
       return cb.or(
-        cb.like(cb.lower(root.get("name")), pattern),
-        cb.like(cb.lower(root.get("sku")), pattern),
-        cb.like(cb.lower(root.get("internalCode")), pattern)
+        cb.like(root.get("name"), pattern),
+        cb.like(root.get("sku"), pattern),
+        cb.like(root.get("internalCode"), pattern)
       );
     };
   }

@@ -10,18 +10,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-// Repository for goods receipt persistence with inventory queries.
 public interface GoodReceiptRepository
   extends JpaRepository<GoodReceipt, Long>
 {
-  // Busca todas las recepciones asociadas a una orden de compra
-  // Útil para acumular cantidades recibidas y determinar si la orden está
-  // completa
   List<GoodReceipt> findByPurchaseOrderId(Long purchaseOrderId);
 
   Page<GoodReceipt> findAll(Pageable pageable);
 
-  // Finds all good receipts with purchase order, warehouse, and receiver eagerly loaded.
   @Query(
     value = "SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy",
     countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr"
@@ -30,31 +25,28 @@ public interface GoodReceiptRepository
 
   @Query(
     value = """
-    SELECT gr FROM GoodReceipt gr
-    JOIN FETCH gr.purchaseOrder po
-    LEFT JOIN FETCH po.destinationWarehouse
-    LEFT JOIN FETCH gr.receivedBy
-    WHERE (:search IS NULL
-      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
+    SELECT gr.* FROM good_receipts gr
+    JOIN purchase_orders po ON po.id = gr.purchase_order_id
+    WHERE :search IS NULL
+      OR gr.receipt_number ILIKE '%' || :search || '%'
+      OR gr.notes ILIKE '%' || :search || '%'
+      OR po.order_number ILIKE '%' || :search || '%'
     """,
     countQuery = """
-    SELECT COUNT(gr) FROM GoodReceipt gr
-    JOIN gr.purchaseOrder po
-    WHERE (:search IS NULL
-      OR LOWER(gr.receiptNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(gr.notes) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(po.orderNumber) LIKE CONCAT('%', LOWER(:search), '%'))
-    """
+    SELECT COUNT(*) FROM good_receipts gr
+    JOIN purchase_orders po ON po.id = gr.purchase_order_id
+    WHERE :search IS NULL
+      OR gr.receipt_number ILIKE '%' || :search || '%'
+      OR gr.notes ILIKE '%' || :search || '%'
+      OR po.order_number ILIKE '%' || :search || '%'
+    """,
+    nativeQuery = true
   )
   Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  // Finds all receipts for a purchase order with items, products, and locations eagerly loaded.
   @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.purchaseOrder.id = :orderId")
   List<GoodReceipt> findByPurchaseOrderIdWithFetch(@Param("orderId") Long orderId);
 
-  // Finds a single good receipt by ID with all details including items and products.
   @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.id = :id")
   Optional<GoodReceipt> findByIdDetailed(@Param("id") Long id);
 
@@ -64,7 +56,6 @@ public interface GoodReceiptRepository
       + "GROUP BY gri.product.id")
   List<ReceivedQuantityProjection> getTotalReceivedByOrder(@Param("orderId") Long orderId);
 
-  // Gets the next value from the receipt sequence for generating receipt numbers.
   @Query(value = "SELECT nextval('receipt_seq')", nativeQuery = true)
   Long getNextReceiptSequence();
 

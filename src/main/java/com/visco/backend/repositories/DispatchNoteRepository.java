@@ -8,11 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-// Repository for dispatch note persistence with search and eager-fetch support.
 public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long> {
   Page<DispatchNote> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
-  // Finds all dispatch notes with related warehouse, employee, and creator eagerly loaded.
   @Query(
     value = "SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy",
     countQuery = "SELECT COUNT(dn) FROM DispatchNote dn"
@@ -21,25 +19,21 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
 
   @Query(
     value = """
-    SELECT dn FROM DispatchNote dn
-    JOIN FETCH dn.warehouse
-    JOIN FETCH dn.withdrawnBy e
-    LEFT JOIN FETCH e.costCenter
-    JOIN FETCH dn.createdBy
-    WHERE (:search IS NULL
-      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
+    SELECT dn.* FROM dispatch_notes dn
+    WHERE :search IS NULL
+      OR dn.dispatch_number ILIKE '%' || :search || '%'
+      OR dn.notes ILIKE '%' || :search || '%'
     """,
     countQuery = """
-    SELECT COUNT(dn) FROM DispatchNote dn
-    WHERE (:search IS NULL
-      OR LOWER(dn.dispatchNumber) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(dn.notes) LIKE CONCAT('%', LOWER(:search), '%'))
-    """
+    SELECT COUNT(*) FROM dispatch_notes dn
+    WHERE :search IS NULL
+      OR dn.dispatch_number ILIKE '%' || :search || '%'
+      OR dn.notes ILIKE '%' || :search || '%'
+    """,
+    nativeQuery = true
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  // Finds a single dispatch note by ID with all details including items and products.
   @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
   Optional<DispatchNote> findByIdDetailed(@Param("id") Long id);
 

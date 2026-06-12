@@ -11,9 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-// Repository for warehouse locations with code-based lookups.
 public interface LocationRepository extends JpaRepository<Location, Long> {
-  // Paginated locations for a warehouse with the warehouse eagerly loaded.
   @Query(
     value = "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId",
     countQuery = "SELECT COUNT(l) FROM Location l WHERE l.warehouse.id = :warehouseId"
@@ -23,7 +21,6 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     Pageable pageable
   );
 
-  // Returns all active locations for a warehouse (e.g. for dropdowns).
   @Query(
     "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId AND l.active = true"
   )
@@ -31,16 +28,22 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     @Param("warehouseId") Long warehouseId
   );
 
-  // Finds a location within a warehouse by its code.
   Optional<Location> findByWarehouseIdAndCode(Long warehouseId, String code);
-  // Checks whether a location code already exists within a warehouse.
   boolean existsByWarehouseIdAndCode(Long warehouseId, String code);
 
   @Query(
-    value = "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId" +
-      " AND (:search IS NULL OR LOWER(l.code) LIKE CONCAT('%', LOWER(:search), '%'))",
-    countQuery = "SELECT COUNT(l) FROM Location l WHERE l.warehouse.id = :warehouseId" +
-      " AND (:search IS NULL OR LOWER(l.code) LIKE CONCAT('%', LOWER(:search), '%'))"
+    value = """
+    SELECT l.* FROM locations l
+    JOIN warehouses w ON w.id = l.warehouse_id
+    WHERE l.warehouse_id = :warehouseId
+      AND (:search IS NULL OR l.location_code ILIKE '%' || :search || '%')
+    """,
+    countQuery = """
+    SELECT COUNT(*) FROM locations l
+    WHERE l.warehouse_id = :warehouseId
+      AND (:search IS NULL OR l.location_code ILIKE '%' || :search || '%')
+    """,
+    nativeQuery = true
   )
   Page<Location> findByWarehouseIdWithSearch(
     @Param("warehouseId") Long warehouseId,

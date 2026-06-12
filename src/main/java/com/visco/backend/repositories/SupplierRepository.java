@@ -1,5 +1,6 @@
 package com.visco.backend.repositories;
 
+import com.visco.backend.models.entities.Supplier;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -9,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.visco.backend.models.entities.Currency;
-import com.visco.backend.models.entities.Supplier;
 import org.springframework.data.repository.query.Param;
 
 @Repository
@@ -20,17 +20,18 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
   @Query(
     value = """
-    SELECT s FROM Supplier s
-    WHERE (:search IS NULL
-      OR LOWER(s.name) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(s.email) LIKE CONCAT('%', LOWER(:search), '%'))
+    SELECT s.* FROM suppliers s
+    WHERE :search IS NULL
+      OR s.name ILIKE '%' || :search || '%'
+      OR s.email ILIKE '%' || :search || '%'
     """,
     countQuery = """
-    SELECT COUNT(s) FROM Supplier s
-    WHERE (:search IS NULL
-      OR LOWER(s.name) LIKE CONCAT('%', LOWER(:search), '%')
-      OR LOWER(s.email) LIKE CONCAT('%', LOWER(:search), '%'))
-    """
+    SELECT COUNT(*) FROM suppliers s
+    WHERE :search IS NULL
+      OR s.name ILIKE '%' || :search || '%'
+      OR s.email ILIKE '%' || :search || '%'
+    """,
+    nativeQuery = true
   )
   Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
