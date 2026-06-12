@@ -114,8 +114,10 @@ public interface ProductRepository
   // aggregate ORDER BY). The @SQLRestriction on the entity does
   // NOT apply to native queries, so is_active is explicit.
   //
-  // unaccent + ILIKE are PostgreSQL-native and use the trigram
-  // GIN indexes from V10 for accent-insensitive search.
+  // Each filter is an independent WHERE clause so the planner
+  // can pick the best index per filter (B-tree for sapCode/sku,
+  // B-tree text_pattern_ops for name starts-with, GIN trigram
+  // for partial searches).
   // ─────────────────────────────────────────────────────────────
 
   @Query(
@@ -123,10 +125,10 @@ public interface ProductRepository
     SELECT p.* FROM products p
     LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
+      (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
       AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
@@ -136,19 +138,21 @@ public interface ProductRepository
     countQuery = """
     SELECT COUNT(*) FROM products p
     WHERE
-      (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
+      (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
       AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     """,
     nativeQuery = true
   )
-  Page<Product> findBySearchAndCategoryOrderByStockAsc(
+  Page<Product> findByFiltersOrderByStockAsc(
     Pageable pageable,
-    @Param("search") String search,
+    @Param("name") String name,
+    @Param("sapCode") String sapCode,
+    @Param("sku") String sku,
     @Param("category") Long category,
     @Param("hasStock") Boolean hasStock
   );
@@ -158,10 +162,10 @@ public interface ProductRepository
     SELECT p.* FROM products p
     LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
+      (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
       AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
@@ -171,19 +175,21 @@ public interface ProductRepository
     countQuery = """
     SELECT COUNT(*) FROM products p
     WHERE
-      (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%'))
+      (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
       AND (CAST(:category AS bigint) IS NULL OR p.category_id = :category)
       AND (:hasStock = false OR EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0))
       AND p.is_active = true
     """,
     nativeQuery = true
   )
-  Page<Product> findBySearchAndCategoryOrderByStockDesc(
+  Page<Product> findByFiltersOrderByStockDesc(
     Pageable pageable,
-    @Param("search") String search,
+    @Param("name") String name,
+    @Param("sapCode") String sapCode,
+    @Param("sku") String sku,
     @Param("category") Long category,
     @Param("hasStock") Boolean hasStock
   );

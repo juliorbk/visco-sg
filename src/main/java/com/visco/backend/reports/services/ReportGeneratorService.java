@@ -63,7 +63,7 @@ public class ReportGeneratorService {
   ) {
     var pageable = PageRequest.ofSize(maxRecords);
     var productPage = productRepository.findAll(
-      Specification.where(ProductSpecification.search(search))
+      Specification.where(ProductSpecification.freeSearchAcrossFields(search))
         .and(ProductSpecification.hasCategory(categoryId)),
       pageable
     );

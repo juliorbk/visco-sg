@@ -33,25 +33,31 @@ public class ProductController {
   @GetMapping("/products")
   @Operation(
     summary = "List products",
-    description = "Returns a paginated list of products with optional search, category, and stock sorting"
+    description = "Returns a paginated list of products with optional name, sapCode, sku, category, and stock sorting"
   )
   public ResponseEntity<Page<ProductDTO>> getProducts(
     @RequestParam(defaultValue = "0") int page,
     @RequestParam(defaultValue = "20") int size,
-    @RequestParam(required = false) String search,
+    @RequestParam(required = false) String name,
+    @RequestParam(required = false) String sapCode,
+    @RequestParam(required = false) String sku,
     @RequestParam(required = false) Long category,
     @RequestParam(required = false) String sortBy,
     @RequestParam(defaultValue = "asc") String sortDir,
     @RequestParam(required = false) Boolean hasStock
   ) {
-    if (search != null && search.trim().isEmpty()) search = null;
+    if (name != null && name.trim().isEmpty()) name = null;
+    if (sapCode != null && sapCode.trim().isEmpty()) sapCode = null;
+    if (sku != null && sku.trim().isEmpty()) sku = null;
     if (category != null && category == 0) category = null;
     if (sortBy != null && sortBy.trim().isEmpty()) sortBy = null;
 
     Pageable pageable = PageRequest.of(page, size);
     Page<ProductDTO> products = productService.getProducts(
       pageable,
-      search,
+      name,
+      sapCode,
+      sku,
       category,
       sortBy,
       sortDir,

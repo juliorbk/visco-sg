@@ -291,7 +291,9 @@ public class ProductService {
    * Retrieves a paginated, filterable, and sortable list of products.
    *
    * @param pageable pagination information
-   * @param search   optional search term
+   * @param name     optional name filter (starts with, accent-insensitive)
+   * @param sapCode  optional exact SAP code match
+   * @param sku      optional exact SKU match
    * @param category optional category filter
    * @param sortBy   optional sort field
    * @param sortDir  sort direction (asc/desc)
@@ -301,7 +303,9 @@ public class ProductService {
   @Transactional(readOnly = true)
   public Page<ProductDTO> getProducts(
     Pageable pageable,
-    String search,
+    String name,
+    String sapCode,
+    String sku,
     Long category,
     String sortBy,
     String sortDir,
@@ -311,22 +315,28 @@ public class ProductService {
 
     if ("stock".equals(sortBy)) {
       products = "desc".equalsIgnoreCase(sortDir)
-        ? productRepository.findBySearchAndCategoryOrderByStockDesc(
+        ? productRepository.findByFiltersOrderByStockDesc(
             pageable,
-            search,
+            name,
+            sapCode,
+            sku,
             category,
             Boolean.TRUE.equals(hasStock)
           )
-        : productRepository.findBySearchAndCategoryOrderByStockAsc(
+        : productRepository.findByFiltersOrderByStockAsc(
             pageable,
-            search,
+            name,
+            sapCode,
+            sku,
             category,
             Boolean.TRUE.equals(hasStock)
           );
     } else {
       Specification<Product> spec = Specification.where(
-        ProductSpecification.search(search)
+        ProductSpecification.byNameStartingWith(name)
       )
+      .and(ProductSpecification.bySapCode(sapCode))
+      .and(ProductSpecification.bySku(sku))
       .and(ProductSpecification.hasCategory(category));
 
       if (Boolean.TRUE.equals(hasStock)) {

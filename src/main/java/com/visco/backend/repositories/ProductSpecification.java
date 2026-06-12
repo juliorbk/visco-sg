@@ -2,6 +2,7 @@ package com.visco.backend.repositories;
 
 import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.StockLevel;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -9,17 +10,35 @@ public final class ProductSpecification {
 
   private ProductSpecification() {}
 
-  public static Specification<Product> search(String search) {
+  public static Specification<Product> byNameStartingWith(String name) {
     return (root, query, cb) -> {
-      if (search == null || search.isBlank()) {
+      if (name == null || name.isBlank()) {
         return cb.conjunction();
       }
-      String pattern = "%" + search.toLowerCase() + "%";
-      return cb.or(
-        cb.like(root.get("name"), pattern),
-        cb.like(root.get("sku"), pattern),
-        cb.like(root.get("internalCode"), pattern)
+      Expression<String> unaccented = cb.function(
+        "unaccent",
+        String.class,
+        root.get("name")
       );
+      return cb.like(cb.lower(unaccented), name.toLowerCase() + "%");
+    };
+  }
+
+  public static Specification<Product> bySapCode(String sapCode) {
+    return (root, query, cb) -> {
+      if (sapCode == null || sapCode.isBlank()) {
+        return cb.conjunction();
+      }
+      return cb.equal(root.get("sapCode"), sapCode);
+    };
+  }
+
+  public static Specification<Product> bySku(String sku) {
+    return (root, query, cb) -> {
+      if (sku == null || sku.isBlank()) {
+        return cb.conjunction();
+      }
+      return cb.equal(root.get("sku"), sku);
     };
   }
 
@@ -47,4 +66,42 @@ public final class ProductSpecification {
       return cb.exists(subquery);
     };
   }
+
+  /**
+   * Free-text search across name, sapCode and sku (accent-insensitive,
+   * partial match). Used by report filtering where the user types a
+   * generic term and the system matches it in any of the three fields.
+   * For the main product listing endpoint prefer the specific
+   * {@link #byNameStartingWith}, {@link #bySapCode} and
+   * {@link #bySku} methods, which target a single indexed column.
+   */
+  public static Specification<Product> freeSearchAcrossFields(String term) {
+    return (root, query, cb) -> {
+      if (term == null || term.isBlank()) {
+        return cb.conjunction();
+      }
+      String pattern = "%" + term.toLowerCase() + "%";
+      Expression<String> nameUnaccented = cb.function(
+        "unaccent",
+        String.class,
+        root.get("name")
+      );
+      Expression<String> sapUnaccented = cb.function(
+        "unaccent",
+        String.class,
+        root.get("sapCode")
+      );
+      Expression<String> skuUnaccented = cb.function(
+        "unaccent",
+        String.class,
+        root.get("sku")
+      );
+      return cb.or(
+        cb.like(cb.lower(nameUnaccented), pattern),
+        cb.like(cb.lower(sapUnaccented), pattern),
+        cb.like(cb.lower(skuUnaccented), pattern)
+      );
+    };
+  }
 }
+
