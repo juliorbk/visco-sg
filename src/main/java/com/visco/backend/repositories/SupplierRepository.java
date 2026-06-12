@@ -15,6 +15,7 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
+  @Query("SELECT s FROM Supplier s")
   Page<Supplier> findAllWithFetch(Pageable pageable);
 
   @Query(
@@ -33,8 +34,10 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
   )
   Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
+  @Query("SELECT s FROM Supplier s WHERE s.active = true")
   Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);
 
+  @Query("SELECT s FROM Supplier s WHERE s.active = false")
   Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
   Page<Supplier> findByCurrency(Currency currency, Pageable pageable);
