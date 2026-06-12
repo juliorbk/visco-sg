@@ -18,7 +18,7 @@ public record ReceiveGoodsRequest(
   @NotNull(message = "El ID del almacén destino es obligatorio")
   Long destinationWarehouseId,
 
-  @NotNull(message = "La ubicación destino es obligatoria") Long locationId,
+  Long locationId,
 
   UUID receivedById
 ) {
@@ -26,6 +26,7 @@ public record ReceiveGoodsRequest(
     @NotNull(message = "El ID del producto es obligatorio") Long productId,
     @NotNull(
       message = "La cantidad recibida es obligatoria"
-    ) BigDecimal receivedQuantity
+    ) BigDecimal receivedQuantity,
+    Long locationId
   ) {}
 }

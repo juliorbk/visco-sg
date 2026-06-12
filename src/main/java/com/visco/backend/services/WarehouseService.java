@@ -12,6 +12,7 @@ import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
+import com.visco.backend.models.dtos.UpdateReceiptItemLocationRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.DispatchNote;
@@ -152,16 +153,18 @@ public class WarehouseService {
                 )
             );
 
-        Location location = locationRepository
-            .findById(request.locationId())
-            .orElseThrow(() ->
-                new EntityNotFoundException("Location not found: " + request.locationId())
-            );
-
-        if (!location.getWarehouse().getId().equals(destWarehouse.getId())) {
-            throw new IllegalArgumentException(
-                "Location does not belong to the specified warehouse"
-            );
+        Long defaultLocationId = request.locationId();
+        if (defaultLocationId != null) {
+            Location defaultLocation = locationRepository
+                .findById(defaultLocationId)
+                .orElseThrow(() ->
+                    new EntityNotFoundException("Location not found: " + defaultLocationId)
+                );
+            if (!defaultLocation.getWarehouse().getId().equals(destWarehouse.getId())) {
+                throw new IllegalArgumentException(
+                    "Default location does not belong to the specified warehouse"
+                );
+            }
         }
 
         int currentYear = Year.now().getValue();
@@ -205,7 +208,15 @@ public class WarehouseService {
                     "Product not found in order: " + itemReq.productId()
                 );
             }
-            processReceiptItem(receipt, poItem, itemReq, destWarehouse, location, order, createdBy);
+            Long itemLocationId = itemReq.locationId() != null
+                ? itemReq.locationId()
+                : defaultLocationId;
+            Location itemLocation = resolveItemLocation(
+                itemLocationId,
+                destWarehouse,
+                itemReq.productId()
+            );
+            processReceiptItem(receipt, poItem, itemReq, destWarehouse, itemLocation, order, createdBy);
         }
 
         boolean allFullyReceived = determineIfFullyReceived(order, previousReceived, request);
@@ -247,6 +258,31 @@ public class WarehouseService {
             .orElseThrow(() ->
                 new EntityNotFoundException("User not found: " + request.receivedById())
             );
+    }
+
+    private Location resolveItemLocation(
+        Long locationId,
+        Warehouse destWarehouse,
+        Long productId
+    ) {
+        if (locationId == null) {
+            throw new IllegalArgumentException(
+                "Item for product " +
+                    productId +
+                    " has no location. Provide a locationId on the item or as the default for the receipt."
+            );
+        }
+        Location location = locationRepository
+            .findById(locationId)
+            .orElseThrow(() ->
+                new EntityNotFoundException("Location not found: " + locationId)
+            );
+        if (!location.getWarehouse().getId().equals(destWarehouse.getId())) {
+            throw new IllegalArgumentException(
+                "Location " + locationId + " does not belong to warehouse " + destWarehouse.getId()
+            );
+        }
+        return location;
     }
 
     private void processReceiptItem(
@@ -536,6 +572,62 @@ public class WarehouseService {
     }
 
     /**
+     * Updates the location assigned to a single receipt item. The new location
+     * must belong to the same warehouse as the receipt. Passing {@code null}
+     * clears the location on the item.
+     *
+     * @param receiptId the receipt ID
+     * @param itemId    the receipt item ID
+     * @param request   the request carrying the new location ID (nullable)
+     * @return the updated goods receipt response
+     */
+    @Transactional
+    public GoodReceiptResponse updateReceiptItemLocation(
+        Long receiptId,
+        Long itemId,
+        UpdateReceiptItemLocationRequest request
+    ) {
+        GoodReceipt receipt = goodReceiptRepository
+            .findByIdDetailed(receiptId)
+            .orElseThrow(() ->
+                new EntityNotFoundException("Receipt not found: " + receiptId)
+            );
+
+        GoodReceiptItem item = receipt
+            .getItems()
+            .stream()
+            .filter((i) -> i.getId().equals(itemId))
+            .findFirst()
+            .orElseThrow(() ->
+                new EntityNotFoundException(
+                    "Receipt item " + itemId + " not found in receipt " + receiptId
+                )
+            );
+
+        Long newLocationId = request == null ? null : request.locationId();
+        if (newLocationId == null) {
+            item.setLocation(null);
+        } else {
+            Location location = locationRepository
+                .findById(newLocationId)
+                .orElseThrow(() ->
+                    new EntityNotFoundException("Location not found: " + newLocationId)
+                );
+            if (!location.getWarehouse().getId().equals(receipt.getDestinationWarehouse().getId())) {
+                throw new IllegalArgumentException(
+                    "Location " +
+                        newLocationId +
+                        " does not belong to the receipt's destination warehouse"
+                );
+            }
+            item.setLocation(location);
+        }
+
+        goodReceiptRepository.save(receipt);
+        return toResponse(receipt);
+    }
+
+    /**
      * Retrieves stock breakdown for a product across all warehouses.
      *
      * @param productId the product ID
@@ -606,20 +698,26 @@ public class WarehouseService {
      * Retrieves products with stock levels for a specific warehouse.
      *
      * @param warehouseId the warehouse ID
-     * @param search      optional search term
+     * @param name        optional name filter (starts with, accent-insensitive)
+     * @param sapCode     optional exact SAP code filter
+     * @param sku         optional exact SKU filter
      * @param pageable    pagination information
      * @return page of products on stock
      */
     @Transactional(readOnly = true)
     public Page<ProductOnStock> getProductsOnStock(
         Long warehouseId,
-        String search,
+        String name,
+        String sapCode,
+        String sku,
         Pageable pageable
     ) {
     Page<StockLevel> stockPage = stockLevelRepository.findByWarehouse(
         pageable,
         warehouseId,
-        search,
+        name,
+        sapCode,
+        sku,
         true
     );
 
@@ -644,14 +742,18 @@ public class WarehouseService {
      * Retrieves all products (including zero-stock) for a warehouse.
      *
      * @param warehouseId the warehouse ID
-     * @param search      optional search term
+     * @param name        optional name filter (starts with, accent-insensitive)
+     * @param sapCode     optional exact SAP code filter
+     * @param sku         optional exact SKU filter
      * @param pageable    pagination information
      * @return page of products on stock
      */
     @Transactional(readOnly = true)
     public Page<ProductOnStock> getAllProductsInWarehouse(
         Long warehouseId,
-        String search,
+        String name,
+        String sapCode,
+        String sku,
         Pageable pageable
     ) {
         warehouseRepository
@@ -661,7 +763,9 @@ public class WarehouseService {
     Page<StockLevel> stockPage = stockLevelRepository.findByWarehouse(
         pageable,
         warehouseId,
-        search,
+        name,
+        sapCode,
+        sku,
         false
     );
 

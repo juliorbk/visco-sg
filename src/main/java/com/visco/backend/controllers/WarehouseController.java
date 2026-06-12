@@ -11,6 +11,7 @@ import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
+import com.visco.backend.models.dtos.UpdateReceiptItemLocationRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
 import com.visco.backend.models.dtos.WarehouseStockSummary;
 import com.visco.backend.models.entities.MovementType;
@@ -28,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -105,28 +107,40 @@ public class WarehouseController {
     @GetMapping("/{id}/products")
     @Operation(
         summary = "Get all products in a warehouse",
-        description = "Returns all products in the specified warehouse including those with zero stock, with optional search"
+        description = "Returns all products in the specified warehouse including those with zero stock, with optional field-specific search (name, sapCode, sku)"
     )
     public ResponseEntity<Page<ProductOnStock>> getAllProductsInWarehouse(
         @PathVariable Long id,
-        @RequestParam(required = false) String search,
+        @RequestParam(required = false) String name,
+        @RequestParam(required = false) String sapCode,
+        @RequestParam(required = false) String sku,
         Pageable pageable
     ) {
-        return ResponseEntity.ok(warehouseService.getAllProductsInWarehouse(id, search, pageable));
+        if (name != null && name.trim().isEmpty()) name = null;
+        if (sapCode != null && sapCode.trim().isEmpty()) sapCode = null;
+        if (sku != null && sku.trim().isEmpty()) sku = null;
+        return ResponseEntity.ok(
+            warehouseService.getAllProductsInWarehouse(id, name, sapCode, sku, pageable)
+        );
     }
 
     @GetMapping("/stock/on-stock")
     @Operation(
         summary = "Get products with stock in a warehouse",
-        description = "Returns paginated products that have stock (currentStock > 0) in the specified warehouse, with optional search"
+        description = "Returns paginated products that have stock (currentStock > 0) in the specified warehouse, with optional field-specific search (name, sapCode, sku)"
     )
     public ResponseEntity<Page<ProductOnStock>> getProductsOnStock(
         @RequestParam Long warehouseId,
-        @RequestParam(required = false) String search,
+        @RequestParam(required = false) String name,
+        @RequestParam(required = false) String sapCode,
+        @RequestParam(required = false) String sku,
         Pageable pageable
     ) {
+        if (name != null && name.trim().isEmpty()) name = null;
+        if (sapCode != null && sapCode.trim().isEmpty()) sapCode = null;
+        if (sku != null && sku.trim().isEmpty()) sku = null;
         return ResponseEntity.ok(
-            warehouseService.getProductsOnStock(warehouseId, search, pageable)
+            warehouseService.getProductsOnStock(warehouseId, name, sapCode, sku, pageable)
         );
     }
 
@@ -179,6 +193,25 @@ public class WarehouseController {
         @PathVariable Long orderId
     ) {
         return ResponseEntity.ok(warehouseService.getReceiptSummaryByOrder(orderId));
+    }
+
+    @PatchMapping("/receipts/{receiptId}/items/{itemId}/location")
+    @Operation(
+        summary = "Update receipt item location",
+        description = "Updates the storage location assigned to a single receipt item. Pass a null locationId to clear it."
+    )
+    public ResponseEntity<GoodReceiptResponse> updateReceiptItemLocation(
+        @PathVariable Long receiptId,
+        @PathVariable Long itemId,
+        @Valid @RequestBody(required = false) UpdateReceiptItemLocationRequest request
+    ) {
+        return ResponseEntity.ok(
+            warehouseService.updateReceiptItemLocation(
+                receiptId,
+                itemId,
+                request == null ? new UpdateReceiptItemLocationRequest(null) : request
+            )
+        );
     }
 
     @PostMapping("/dispatch")
