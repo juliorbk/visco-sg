@@ -66,7 +66,7 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
         nativeQuery = true
     )
     Page<Requisition> findByStatusWithSearch(
-        @Param("status") RequisitionStatus status,
+        @Param("status") String status,
         @Param("search") String search,
         Pageable pageable
     );
