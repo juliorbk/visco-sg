@@ -18,13 +18,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
     @Query(
-      value = "SELECT u.* FROM users u WHERE u.email ILIKE :email",
+      value = "SELECT u.* FROM app_user u WHERE u.email ILIKE :email",
       nativeQuery = true
     )
     Optional<User> findByEmailIgnoreCase(@Param("email") String email);
 
     @Query(
-      value = "SELECT u.* FROM users u LEFT JOIN cost_centers cc ON cc.id = u.cost_center_id WHERE u.email ILIKE :email",
+      value = "SELECT u.* FROM app_user u LEFT JOIN cost_centers cc ON cc.id = u.cost_center_id WHERE u.email ILIKE :email",
       nativeQuery = true
     )
     Optional<User> findByEmailWithCostCenter(@Param("email") String email);
