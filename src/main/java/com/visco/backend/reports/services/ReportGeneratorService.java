@@ -13,6 +13,7 @@ import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistributionDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.TopProductDTO;
 import com.visco.backend.repositories.InventoryMovementRepository;
+import com.visco.backend.repositories.InventoryMovementSpecification;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.ProductSpecification;
 import com.visco.backend.repositories.StockLevelRepository;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -185,18 +187,25 @@ public class ReportGeneratorService {
     MovementType typeFilter =
       movementType != null ? MovementType.valueOf(movementType) : null;
 
-    try (
-      var stream = movementRepository.streamMovementsWithFilters(
-        productId,
-        warehouseId,
-        typeFilter,
-        startDate,
-        endDate
+    Specification<InventoryMovement> spec = Specification.where(
+        InventoryMovementSpecification.withAssociations()
       )
-    ) {
-      return stream
-        .limit(maxRecords)
-        .map(m -> {
+      .and(InventoryMovementSpecification.hasProductId(productId))
+      .and(InventoryMovementSpecification.touchesWarehouse(warehouseId))
+      .and(InventoryMovementSpecification.hasType(typeFilter))
+      .and(
+        InventoryMovementSpecification.createdAtBetween(startDate, endDate)
+      );
+
+    List<InventoryMovement> movements = movementRepository.findAll(
+      spec,
+      Sort.by("createdAt").ascending()
+    );
+
+    return movements
+      .stream()
+      .limit(maxRecords)
+      .map(m -> {
           String wh =
             m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : "";
           String whDest =
@@ -228,7 +237,6 @@ public class ReportGeneratorService {
             .build();
         })
         .collect(Collectors.toList());
-    }
   }
 
   /**

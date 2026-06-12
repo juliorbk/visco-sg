@@ -33,6 +33,7 @@ import com.visco.backend.repositories.DispatchNoteRepository;
 import com.visco.backend.repositories.EmployeeRepository;
 import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.InventoryMovementRepository;
+import com.visco.backend.repositories.InventoryMovementSpecification;
 import com.visco.backend.repositories.LocationRepository;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.PurchaseOrderRepository;
@@ -51,7 +52,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -975,15 +979,26 @@ public class WarehouseService {
 
         final BigDecimal openingBalance = balanceBefore;
 
-        Page<InventoryMovement> movementsPage =
-            inventoryMovementRepository.findMovementsWithFilters(
-                productId,
-                warehouseId,
-                type,
-                startDate,
-                endDate,
-                pageable
+        Specification<InventoryMovement> spec = Specification.where(
+                InventoryMovementSpecification.withAssociations()
+            )
+            .and(InventoryMovementSpecification.hasProductId(productId))
+            .and(InventoryMovementSpecification.touchesWarehouse(warehouseId))
+            .and(InventoryMovementSpecification.hasType(type))
+            .and(
+                InventoryMovementSpecification.createdAtBetween(startDate, endDate)
             );
+
+        Pageable sortedPageable = pageable.getSort().isUnsorted()
+            ? PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by("createdAt").ascending()
+            )
+            : pageable;
+
+        Page<InventoryMovement> movementsPage =
+            inventoryMovementRepository.findAll(spec, sortedPageable);
 
         AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
 
