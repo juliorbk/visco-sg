@@ -163,7 +163,4 @@ public interface PurchaseOrderRepository
     Long getTotalOrders();
     Long getDeliveredOrders();
   }
-
-  @Query(value = "SELECT nextval('order_seq')", nativeQuery = true)
-  Long getNextOrderSequence();
 }
