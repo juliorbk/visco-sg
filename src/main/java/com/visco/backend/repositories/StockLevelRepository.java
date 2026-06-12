@@ -102,23 +102,28 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
 
   @Query(
     value = """
-    SELECT sl FROM StockLevel sl JOIN FETCH sl.product p
-    WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
+    SELECT sl.* FROM stock_levels sl
+    JOIN products p ON p.id = sl.product_id
+    WHERE sl.warehouse_id = :warehouseId AND sl.current_stock > 0
+      AND p.is_active = true
+      AND (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sap_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
     """,
     countQuery = """
-    SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
-    WHERE sl.warehouse.id = :warehouseId AND sl.currentStock > 0
-    AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sapCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-    """
+    SELECT COUNT(*) FROM stock_levels sl
+    JOIN products p ON p.id = sl.product_id
+    WHERE sl.warehouse_id = :warehouseId AND sl.current_stock > 0
+      AND p.is_active = true
+      AND (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sap_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+    """,
+    nativeQuery = true
   )
   Page<StockLevel> findStockWithProductByWarehouse(
     Pageable pageable,
@@ -128,24 +133,26 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
 
   @Query(
     value = """
-    SELECT sl FROM StockLevel sl
-    JOIN FETCH sl.product p
-    LEFT JOIN FETCH p.category
-    JOIN FETCH sl.warehouse
-    WHERE sl.warehouse.id = :warehouseId
-    AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
+    SELECT sl.* FROM stock_levels sl
+    JOIN products p ON p.id = sl.product_id
+    WHERE sl.warehouse_id = :warehouseId
+      AND p.is_active = true
+      AND (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
     """,
     countQuery = """
-    SELECT COUNT(sl) FROM StockLevel sl JOIN sl.product p
-    WHERE sl.warehouse.id = :warehouseId
-    AND (:search IS NULL
-      OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-      OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-    """
+    SELECT COUNT(*) FROM stock_levels sl
+    JOIN products p ON p.id = sl.product_id
+    WHERE sl.warehouse_id = :warehouseId
+      AND p.is_active = true
+      AND (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+    """,
+    nativeQuery = true
   )
   Page<StockLevel> findAllStockByWarehouse(
     Pageable pageable,

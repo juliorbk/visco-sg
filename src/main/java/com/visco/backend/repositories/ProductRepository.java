@@ -93,26 +93,45 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   Long getNextInternalCodeSequence();
 
   // ─────────────────────────────────────────────────────────────
-  // Search bar queries (used by /api/products, /api/warehouses/stock, etc.)
+  // Search bar queries (used by /api/products).
   //
-  // `FUNCTION('unaccent', …)` is registered as returning String by
-  // UnaccentFunctionContributor, so HQL validation no longer rejects
-  // the ILIKE. The `unaccent(col) gin_trgm_ops` GIN indexes from
-  // V10 let Postgres serve the ILIKE from the index.
+  // nativeQuery = true is REQUIRED: Hibernate 7.2's HQL parser
+  // refuses `FUNCTION('unaccent', …) ILIKE …` with
+  // `Operand of 'like' is of type 'java.lang.Object' which is
+  // not a string` because there is no reliable way to tell the
+  // SqmFunctionRegistry the return type. Native SQL bypasses the
+  // HQL validator entirely.
+  //
+  // Every native query must add `AND p.is_active = true` because
+  // the entity's @SQLRestriction only applies to JPQL/HQL.
+  //
+  // The `unaccent(col) gin_trgm_ops` GIN indexes from V10 let
+  // Postgres serve the ILIKE from the index.
   // ─────────────────────────────────────────────────────────────
 
   @Query(
-    """
-    SELECT p FROM Product p
-    LEFT JOIN FETCH p.supplier
-    LEFT JOIN FETCH p.category
+    value = """
+    SELECT p.* FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+    ORDER BY p.id DESC
+    """,
+    countQuery = """
+    SELECT COUNT(*) FROM products p
+    WHERE
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategory(
     Pageable pageable,
@@ -129,26 +148,29 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     value = """
-    SELECT p FROM Product p
-    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    SELECT p.* FROM products p
+    LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
     GROUP BY p.id
-    ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
+    ORDER BY COALESCE(SUM(sl.current_stock), 0) ASC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
+    SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategoryOrderByStockAsc(
     Pageable pageable,
@@ -158,26 +180,29 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     value = """
-    SELECT p FROM Product p
-    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    SELECT p.* FROM products p
+    LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
     GROUP BY p.id
-    ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
+    ORDER BY COALESCE(SUM(sl.current_stock), 0) DESC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
+    SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategoryOrderByStockDesc(
     Pageable pageable,
@@ -210,27 +235,28 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     value = """
-    SELECT p FROM Product p
-    LEFT JOIN FETCH p.supplier
-    LEFT JOIN FETCH p.category
+    SELECT p.* FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
+    SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategoryWithStock(
     Pageable pageable,
@@ -240,28 +266,31 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     value = """
-    SELECT p FROM Product p
-    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    SELECT p.* FROM products p
+    LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
     GROUP BY p.id
-    ORDER BY COALESCE(SUM(sl.currentStock), 0) ASC
+    ORDER BY COALESCE(SUM(sl.current_stock), 0) ASC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
+    SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategoryWithStockOrderByStockAsc(
     Pageable pageable,
@@ -271,28 +300,31 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query(
     value = """
-    SELECT p FROM Product p
-    LEFT JOIN StockLevel sl ON sl.product.id = p.id
+    SELECT p.* FROM products p
+    LEFT JOIN stock_levels sl ON sl.product_id = p.id
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
     GROUP BY p.id
-    ORDER BY COALESCE(SUM(sl.currentStock), 0) DESC
+    ORDER BY COALESCE(SUM(sl.current_stock), 0) DESC
     """,
     countQuery = """
-    SELECT COUNT(p) FROM Product p
+    SELECT COUNT(*) FROM products p
     WHERE
-      (:search IS NULL
-        OR FUNCTION('unaccent', p.name) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.sku) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%'))
-        OR FUNCTION('unaccent', p.internalCode) ILIKE FUNCTION('unaccent', CONCAT('%', :search, '%')))
-      AND (:category IS NULL OR p.category.id = :category)
-      AND EXISTS (SELECT 1 FROM StockLevel s WHERE s.product.id = p.id AND s.currentStock > 0)
-    """
+      (CAST(:search AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.sku) ILIKE unaccent('%' || CAST(:search AS text) || '%')
+        OR unaccent(p.internal_code) ILIKE unaccent('%' || CAST(:search AS text) || '%'))
+      AND (CAST(:category AS text) IS NULL OR p.category_id = CAST(:category AS bigint))
+      AND p.is_active = true
+      AND EXISTS (SELECT 1 FROM stock_levels s WHERE s.product_id = p.id AND s.current_stock > 0)
+    """,
+    nativeQuery = true
   )
   Page<Product> findBySearchAndCategoryWithStockOrderByStockDesc(
     Pageable pageable,
