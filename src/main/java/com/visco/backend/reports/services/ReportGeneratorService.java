@@ -417,6 +417,8 @@ public class ReportGeneratorService {
         Pageable.ofSize(maxRecords),
         w.getId(),
         null,
+        null,
+        null,
         false
       );
       List<StockLevel> positiveStock = whPage

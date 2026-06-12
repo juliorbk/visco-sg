@@ -101,29 +101,29 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
       AND (:onlyWithStock = false OR sl.current_stock > 0)
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sap_code) ILIKE unaccent('%' || :search || '%'))
+      AND (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
     """,
     countQuery = """
     SELECT COUNT(*) FROM stock_levels sl
     JOIN products p ON p.id = sl.product_id
     WHERE sl.warehouse_id = :warehouseId
       AND (:onlyWithStock = false OR sl.current_stock > 0)
-      AND (CAST(:search AS text) IS NULL
-        OR unaccent(p.name) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sku) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.internal_code) ILIKE unaccent('%' || :search || '%')
-        OR unaccent(p.sap_code) ILIKE unaccent('%' || :search || '%'))
+      AND (CAST(:name AS text) IS NULL
+        OR unaccent(p.name) ILIKE unaccent(:name || '%'))
+      AND (CAST(:sapCode AS text) IS NULL OR p.sap_code = :sapCode)
+      AND (CAST(:sku AS text) IS NULL OR p.sku = :sku)
     """,
     nativeQuery = true
   )
   Page<StockLevel> findByWarehouse(
     Pageable pageable,
     @Param("warehouseId") Long warehouseId,
-    @Param("search") String search,
+    @Param("name") String name,
+    @Param("sapCode") String sapCode,
+    @Param("sku") String sku,
     @Param("onlyWithStock") boolean onlyWithStock
   );
 
