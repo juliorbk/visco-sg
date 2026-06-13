@@ -25,6 +25,7 @@ public record CreatePurchaseOrderRequest(
   @NotNull(message = "Created by is required") UUID createdById,
   Long requisitionId,
   Integer leadTime, //Days
+  String shipConditions,
   @NotEmpty(message = "At least one item is required")
   @Valid
   List<PurchaseOrderItemRequest> items

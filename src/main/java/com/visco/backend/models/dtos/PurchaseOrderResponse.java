@@ -19,7 +19,7 @@ public record PurchaseOrderResponse(
     PaymentMethod paymentMethod,
     PurchaseOrderType type,
     String requisitionNumber,
-    String paymentTerms,
+    String shipConditions,
     String createdBy,
     LocalDateTime createdAt,
     String approvalNotes,
@@ -57,7 +57,8 @@ public record PurchaseOrderResponse(
         String physicalAddress,
         String description,
         String sapCenterCode,
-        String responsibleUserName
+        String responsibleUserName,
+        String responsibleUserEmail
     ) {
         public static WarehouseInfo fromEntity(Warehouse w) {
             if (w == null) return null;
@@ -66,7 +67,8 @@ public record PurchaseOrderResponse(
                 w.getPhysicalAddress(),
                 w.getDescription(),
                 w.getSapCenterCode(),
-                w.getResponsibleUser() != null ? w.getResponsibleUser().getName() : null
+                w.getResponsibleUser() != null ? w.getResponsibleUser().getName() : null,
+                w.getResponsibleUser() != null ? w.getResponsibleUser().getEmail() : null
             );
         }
     }

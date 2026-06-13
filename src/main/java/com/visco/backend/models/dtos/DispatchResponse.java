@@ -25,7 +25,8 @@ public record DispatchResponse(
         String physicalAddress,
         String description,
         String sapCenterCode,
-        String responsibleUserName
+        String responsibleUserName,
+        String responsibleUserEmail
     ) {
         public static WarehouseInfo fromEntity(Warehouse w) {
             if (w == null) return null;
@@ -34,7 +35,8 @@ public record DispatchResponse(
                 w.getPhysicalAddress(),
                 w.getDescription(),
                 w.getSapCenterCode(),
-                w.getResponsibleUser() != null ? w.getResponsibleUser().getName() : null
+                w.getResponsibleUser() != null ? w.getResponsibleUser().getName() : null,
+                w.getResponsibleUser() != null ? w.getResponsibleUser().getEmail() : null
             );
         }
     }

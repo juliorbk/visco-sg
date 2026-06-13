@@ -98,6 +98,7 @@ public class ProcurementService {
             .type(request.type())
             .supplier(supplier)
             .leadTime(request.leadTime())
+            .shipConditions(request.shipConditions())
             .createdAt(LocalDateTime.now())
             .build();
 
