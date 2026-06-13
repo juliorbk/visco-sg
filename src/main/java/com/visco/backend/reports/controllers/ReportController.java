@@ -6,22 +6,25 @@ import com.visco.backend.reports.models.dtos.ReportAnalyticsDTO;
 import com.visco.backend.reports.models.dtos.ReportDTO;
 import com.visco.backend.reports.models.dtos.ScheduledReportDTO;
 import com.visco.backend.reports.models.dtos.UpdateScheduledReportRequest;
+import com.visco.backend.reports.models.entities.Report;
 import com.visco.backend.reports.models.enums.ReportFormat;
 import com.visco.backend.reports.models.enums.ReportStatus;
 import com.visco.backend.reports.models.enums.ReportType;
+import com.visco.backend.reports.repositories.ReportRepository;
 import com.visco.backend.reports.services.ReportService;
+import com.visco.backend.reports.utils.DateUtils;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportController {
 
     private final ReportService reportService;
+    private final ReportRepository reportRepository;
 
     @GetMapping
     @Operation(summary = "Listar reportes generados", description = "Retorna una lista paginada de reportes")
@@ -75,49 +79,59 @@ public class ReportController {
     }
 
     @PostMapping("/generate")
-    @Operation(summary = "Generar nuevo reporte", description = "Genera un reporte y devuelve el archivo para descargar")
+    @Operation(summary = "Generar nuevo reporte",
+               description = "Genera el reporte en memoria y devuelve los metadatos (no el archivo). "
+                           + "Use /{id}/download para obtener el archivo.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Reporte generado y listo para descargar"),
         @ApiResponse(responseCode = "400", description = "Datos inválidos")
     })
-    public ResponseEntity<Resource> generateReport(
+    public ResponseEntity<ReportDTO> generateReport(
             @Valid @RequestBody CreateReportRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         String username = userDetails != null ? userDetails.getUsername() : "anonymous";
         ReportDTO report = reportService.generateReport(request, username);
-
-        Resource resource = reportService.downloadReport(report.getId());
-
-        String contentDisposition = "attachment; filename=\"" + report.getName() + "\"";
-        MediaType mediaType = report.getFormat() == ReportFormat.PDF
-                ? MediaType.APPLICATION_PDF
-                : MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
-                .body(resource);
+        return ResponseEntity.ok(report);
     }
 
     @GetMapping("/{id}/download")
-    @Operation(summary = "Descargar archivo del reporte", description = "Descarga el archivo PDF o Excel generado")
-    public ResponseEntity<Resource> downloadReport(@PathVariable Long id) {
-        ReportDTO report = reportService.getReportById(id);
-        Resource resource = reportService.downloadReport(id);
+    @Operation(summary = "Descargar archivo del reporte",
+               description = "Regenera el archivo PDF/Excel en memoria y lo devuelve como attachment. "
+                           + "No se persiste ningún archivo en disco.")
+    public ResponseEntity<byte[]> downloadReport(@PathVariable Long id) {
+        Report report = reportRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Reporte no encontrado: " + id));
 
-        String contentDisposition = "attachment; filename=\"" + report.getName() + "\"";
-        MediaType mediaType = report.getFormat() == ReportFormat.PDF
-                ? MediaType.APPLICATION_PDF
-                : MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        if (report.getStatus() != ReportStatus.COMPLETED) {
+            throw new IllegalStateException("El reporte aún no está listo (estado: " + report.getStatus() + ")");
+        }
+
+        byte[] content = reportService.buildReportBytes(report);
+
+        String safeName = report.getName() == null
+                ? "reporte-" + report.getId()
+                : report.getName().replaceAll("[^a-zA-Z0-9-_]+", "_");
+        String extension = report.getFormat().name().toLowerCase(Locale.ROOT);
+        String filename = "%s-%s.%s".formatted(
+                safeName, DateUtils.formatDate(report.getGeneratedAt()), extension);
+
+        MediaType mediaType = switch (report.getFormat()) {
+            case PDF -> MediaType.APPLICATION_PDF;
+            case EXCEL -> MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            case JSON -> MediaType.APPLICATION_JSON;
+        };
 
         return ResponseEntity.ok()
                 .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
-                .body(resource);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .contentLength(content.length)
+                .body(content);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar reporte", description = "Elimina (soft delete) un reporte y su archivo asociado")
+    @Operation(summary = "Eliminar reporte", description = "Elimina (soft delete) el reporte")
     public ResponseEntity<Void> deleteReport(@PathVariable Long id) {
         reportService.deleteReport(id);
         return ResponseEntity.noContent().build();
