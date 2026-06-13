@@ -53,6 +53,7 @@ public class ReportGeneratorService {
 
   /**
    * Builds a list of StockReportDTO with current stock, pending stock, and status classification.
+   * Capped at {@code maxRecords} via SQL pagination.
    */
   public List<StockReportDTO> generateStockReport(
     LocalDateTime startDate,
@@ -68,6 +69,14 @@ public class ReportGeneratorService {
       pageable
     );
     List<Product> products = productPage.getContent();
+
+    if (products.size() == maxRecords && productPage.getTotalElements() > maxRecords) {
+      log.warn(
+        "Stock report hit maxRecords cap ({} of {} total). "
+          + "Consider narrowing category/warehouse filters to see all data.",
+        maxRecords, productPage.getTotalElements()
+      );
+    }
 
     List<Long> productIds = products.stream().map(Product::getId).toList();
     Map<Long, BigDecimal[]> stockMap = stockLevelRepository
@@ -175,6 +184,8 @@ public class ReportGeneratorService {
 
   /**
    * Builds a list of MovementReportDTO from inventory movements using a streaming query.
+   * The result is capped at {@code maxRecords} via SQL pagination (LIMIT) so we don't
+   * pull millions of rows into memory.
    */
   public List<MovementReportDTO> generateMovementReport(
     LocalDateTime startDate,
@@ -199,12 +210,19 @@ public class ReportGeneratorService {
 
     List<InventoryMovement> movements = movementRepository.findAll(
       spec,
-      Sort.by("createdAt").ascending()
-    );
+      PageRequest.of(0, maxRecords, Sort.by("createdAt").ascending())
+    ).getContent();
+
+    if (movements.size() == maxRecords) {
+      log.warn(
+        "Movement report hit maxRecords cap ({}). Results may be truncated; "
+          + "consider narrowing date range or filters.",
+        maxRecords
+      );
+    }
 
     return movements
       .stream()
-      .limit(maxRecords)
       .map(m -> {
           String wh =
             m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : "";
@@ -241,6 +259,8 @@ public class ReportGeneratorService {
 
   /**
    * Builds a list of AlertReportDTO by evaluating products below reorder point and overstock.
+   * Capped at min(maxRecords, 2000) per source (below-reorder, overstock) to keep the
+   * export bounded even with 260k+ products in the catalog.
    */
   public List<AlertReportDTO> generateAlertReport(
     String severity,
@@ -256,6 +276,14 @@ public class ReportGeneratorService {
     var overstock = productRepository.findOverstockInventory(
       PageRequest.of(0, maxAlerts)
     );
+
+    if (belowReorder.size() == maxAlerts || overstock.size() == maxAlerts) {
+      log.warn(
+        "Alert report hit per-source cap ({}). Some alerts may not appear; "
+          + "filter by warehouse for a tighter result set.",
+        maxAlerts
+      );
+    }
 
     List<Long> allProductIds = new ArrayList<>();
     for (var p : belowReorder) allProductIds.add(p.getProductId());
