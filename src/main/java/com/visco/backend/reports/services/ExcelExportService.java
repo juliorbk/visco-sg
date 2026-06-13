@@ -21,134 +21,90 @@ import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+/**
+ * Exports report data to Excel (.xlsx) files using Apache POI.
+ *
+ * <p>Uses plain {@link XSSFWorkbook} (not SXSSF) because the streaming wrapper
+ * leaks temp-file handling classes into Metaspace, which over time throws
+ * {@code OutOfMemoryError: Metaspace} when many reports are generated
+ * sequentially. The data set is bounded by
+ * {@code app.reports.max-records-per-export} (default 50_000), which fits
+ * comfortably in heap.
+ */
 @Slf4j
 @Service
-/**
- * Exports report data to Excel (.xlsx) files using Apache POI SXSSF streaming.
- */
 public class ExcelExportService {
 
-  private static final XSSFColor PRIMARY = new XSSFColor(
-    new Color(92, 18, 18),
-    null
-  );
-  private static final XSSFColor HEADER_BG = new XSSFColor(
-    new Color(229, 229, 229),
-    null
-  );
-  private static final XSSFColor ALT_ROW = new XSSFColor(
-    new Color(245, 245, 247),
-    null
-  );
+  private static final XSSFColor PRIMARY = new XSSFColor(new Color(92, 18, 18), null);
+  private static final XSSFColor ALT_ROW = new XSSFColor(new Color(245, 245, 247), null);
+  private static final XSSFColor MUTED_TEXT = new XSSFColor(new Color(107, 114, 128), null);
+  private static final XSSFColor WHITE = new XSSFColor(new Color(255, 255, 255), null);
 
-  /**
-   * Writes a stock inventory report as an Excel workbook to the given output stream.
-   */
   public void exportStockReportToExcel(
     List<StockReportDTO> data,
     String title,
     Map<String, String> metadata,
     OutputStream outputStream
   ) {
-    try (SXSSFWorkbook wb = new SXSSFWorkbook(100)) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Stock");
       int rowNum = 0;
       rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
       rowNum = buildStockTable(wb, sheet, rowNum, data);
-
-      // Usando setColumnWidth porque autoSizeColumn no funciona bien con SXSSF (filas en disco)
-      sheet.setColumnWidth(0, 5000);
-      sheet.setColumnWidth(1, 4000);
-      sheet.setColumnWidth(2, 3000);
-      sheet.setColumnWidth(3, 3000);
-      sheet.setColumnWidth(4, 3000);
-      sheet.setColumnWidth(5, 3000);
-      sheet.setColumnWidth(6, 3000);
-      sheet.setColumnWidth(7, 3000);
-
-      wb.write(outputStream);
-      wb.dispose(); // Importante: elimina los archivos temporales del disco
+      writeStockOutput(wb, sheet, outputStream);
     } catch (Exception e) {
       throw new RuntimeException("Error generating Excel stock report", e);
     }
   }
 
-  /**
-   * Writes a movement history report as an Excel workbook to the given output stream.
-   */
   public void exportMovementReportToExcel(
     List<MovementReportDTO> data,
     String title,
     Map<String, String> metadata,
     OutputStream outputStream
   ) {
-    try (SXSSFWorkbook wb = new SXSSFWorkbook(100)) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Movements");
       int rowNum = 0;
       rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
       rowNum = buildMovementTable(wb, sheet, rowNum, data);
-
-      sheet.setColumnWidth(0, 4000);
-      sheet.setColumnWidth(1, 3000);
-      sheet.setColumnWidth(2, 5000);
-      sheet.setColumnWidth(3, 3000);
-      sheet.setColumnWidth(4, 3000);
-      sheet.setColumnWidth(5, 4000);
-      sheet.setColumnWidth(6, 3000);
-      sheet.setColumnWidth(7, 3000);
-
-      wb.write(outputStream);
-      wb.dispose();
+      writeStockOutput(wb, sheet, outputStream);
     } catch (Exception e) {
       throw new RuntimeException("Error generating Excel movement report", e);
     }
   }
 
-  /**
-   * Writes an inventory alert report as an Excel workbook to the given output stream.
-   */
   public void exportAlertReportToExcel(
     List<AlertReportDTO> data,
     String title,
     Map<String, String> metadata,
     OutputStream outputStream
   ) {
-    try (SXSSFWorkbook wb = new SXSSFWorkbook(100)) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet sheet = wb.createSheet("Warnings");
       int rowNum = 0;
       rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
-      rowNum = buildAlertTable(wb, sheet, rowNum, data);
-
-      sheet.setColumnWidth(0, 5000);
-      sheet.setColumnWidth(1, 3000);
-      sheet.setColumnWidth(2, 3000);
-      sheet.setColumnWidth(3, 3000);
-      sheet.setColumnWidth(4, 3000);
-      sheet.setColumnWidth(5, 4000);
-
-      wb.write(outputStream);
-      wb.dispose();
+      buildAlertTable(wb, sheet, rowNum, data);
+      writeStockOutput(wb, sheet, outputStream);
     } catch (Exception e) {
       throw new RuntimeException("Error generating Excel alert report", e);
     }
   }
 
-  /**
-   * Writes a warehouse analysis report (summary + per-warehouse sheets) to the given output stream.
-   */
   public void exportWarehouseAnalysisToExcel(
     List<WarehouseAnalysisDTO> data,
     String title,
     Map<String, String> metadata,
     OutputStream outputStream
   ) {
-    try (SXSSFWorkbook wb = new SXSSFWorkbook(100)) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
       Sheet summarySheet = wb.createSheet("Summary");
       buildHeader(wb, summarySheet, 0, title, metadata);
       buildWarehouseSummaryTable(wb, summarySheet, 1, data);
@@ -157,9 +113,7 @@ public class ExcelExportService {
         Sheet whSheet = wb.createSheet(wh.getWarehouseName());
         buildWarehouseDetailSheet(wb, whSheet, wh);
       }
-
-      wb.write(outputStream);
-      wb.dispose();
+      writeStockOutput(wb, summarySheet, outputStream);
     } catch (Exception e) {
       throw new RuntimeException(
         "Error generating Excel warehouse analysis report",
@@ -168,18 +122,22 @@ public class ExcelExportService {
     }
   }
 
+  private void writeStockOutput(Workbook wb, Sheet sheet, OutputStream outputStream) throws java.io.IOException {
+    for (int i = 0; i < 8; i++) {
+      sheet.autoSizeColumn(i);
+    }
+    wb.write(outputStream);
+  }
+
   private int buildHeader(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     int rowNum,
     String title,
     Map<String, String> metadata
   ) {
-    // Obtenemos el XSSFWorkbook base para poder usar estilos y fuentes XSSF
-    XSSFCellStyle titleStyle = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont titleFont = wb.getXSSFWorkbook().createFont();
+    XSSFCellStyle titleStyle = wb.createCellStyle();
+    XSSFFont titleFont = wb.createFont();
     titleFont.setFontHeightInPoints((short) 16);
     titleFont.setBold(true);
     titleFont.setColor(PRIMARY);
@@ -192,12 +150,10 @@ public class ExcelExportService {
     titleCell.setCellStyle(titleStyle);
 
     if (metadata != null) {
-      XSSFCellStyle metaStyle = (XSSFCellStyle) wb
-        .getXSSFWorkbook()
-        .createCellStyle();
-      XSSFFont metaFont = wb.getXSSFWorkbook().createFont();
+      XSSFCellStyle metaStyle = wb.createCellStyle();
+      XSSFFont metaFont = wb.createFont();
       metaFont.setFontHeightInPoints((short) 9);
-      metaFont.setColor(new XSSFColor(new Color(107, 114, 128), null));
+      metaFont.setColor(MUTED_TEXT);
       metaStyle.setFont(metaFont);
 
       StringBuilder metaText = new StringBuilder();
@@ -216,7 +172,7 @@ public class ExcelExportService {
   }
 
   private int buildStockTable(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     int rowNum,
     List<StockReportDTO> data
@@ -224,14 +180,8 @@ public class ExcelExportService {
     XSSFCellStyle headerStyle = createHeaderStyle(wb);
 
     String[] headers = {
-      "Product",
-      "SKU",
-      "Code",
-      "Current Stock",
-      "Pending Stock",
-      "Reorder Point",
-      "Status",
-      "Category",
+      "Product", "SKU", "Code", "Current Stock", "Pending Stock",
+      "Reorder Point", "Status", "Category",
     };
     Row headerRow = sheet.createRow(rowNum++);
     for (int i = 0; i < headers.length; i++) {
@@ -241,7 +191,7 @@ public class ExcelExportService {
     }
 
     XSSFCellStyle dataStyle = createDataStyle(wb);
-    XSSFCellStyle altStyle = createAltDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
 
     int count = 0;
     for (StockReportDTO item : data) {
@@ -250,24 +200,9 @@ public class ExcelExportService {
       setCellValue(row, 0, item.getProductName(), style);
       setCellValue(row, 1, item.getSku(), style);
       setCellValue(row, 2, item.getInternalCode(), style);
-      setCellValue(
-        row,
-        3,
-        NumberFormatter.formatNumber(item.getCurrentStock()),
-        style
-      );
-      setCellValue(
-        row,
-        4,
-        NumberFormatter.formatNumber(item.getPendingStock()),
-        style
-      );
-      setCellValue(
-        row,
-        5,
-        NumberFormatter.formatNumber(item.getReorderPoint()),
-        style
-      );
+      setCellValue(row, 3, NumberFormatter.formatNumber(item.getCurrentStock()), style);
+      setCellValue(row, 4, NumberFormatter.formatNumber(item.getPendingStock()), style);
+      setCellValue(row, 5, NumberFormatter.formatNumber(item.getReorderPoint()), style);
       setCellValue(row, 6, item.getStatus(), style);
       setCellValue(row, 7, item.getCategory(), style);
     }
@@ -277,7 +212,7 @@ public class ExcelExportService {
   }
 
   private int buildMovementTable(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     int rowNum,
     List<MovementReportDTO> data
@@ -285,14 +220,7 @@ public class ExcelExportService {
     XSSFCellStyle headerStyle = createHeaderStyle(wb);
 
     String[] headers = {
-      "Date",
-      "Type",
-      "Product",
-      "SKU",
-      "Quantity",
-      "Warehouse",
-      "User",
-      "Reference",
+      "Date", "Type", "Product", "SKU", "Quantity", "Warehouse", "User", "Reference",
     };
     Row headerRow = sheet.createRow(rowNum++);
     for (int i = 0; i < headers.length; i++) {
@@ -302,7 +230,7 @@ public class ExcelExportService {
     }
 
     XSSFCellStyle dataStyle = createDataStyle(wb);
-    XSSFCellStyle altStyle = createAltDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
 
     int count = 0;
     for (MovementReportDTO item : data) {
@@ -312,12 +240,7 @@ public class ExcelExportService {
       setCellValue(row, 1, item.getMovementType(), style);
       setCellValue(row, 2, item.getProductName(), style);
       setCellValue(row, 3, item.getSku(), style);
-      setCellValue(
-        row,
-        4,
-        NumberFormatter.formatNumber(item.getQuantity()),
-        style
-      );
+      setCellValue(row, 4, NumberFormatter.formatNumber(item.getQuantity()), style);
       setCellValue(row, 5, item.getWarehouseName(), style);
       setCellValue(row, 6, item.getUserName(), style);
       setCellValue(row, 7, item.getReference(), style);
@@ -328,7 +251,7 @@ public class ExcelExportService {
   }
 
   private int buildAlertTable(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     int rowNum,
     List<AlertReportDTO> data
@@ -336,13 +259,7 @@ public class ExcelExportService {
     XSSFCellStyle headerStyle = createHeaderStyle(wb);
 
     String[] headers = {
-      "Product",
-      "SKU",
-      "Stock",
-      "Reorder Point",
-      "Alert Type",
-      "Severity",
-      "Action",
+      "Product", "SKU", "Stock", "Reorder Point", "Alert Type", "Severity", "Action",
     };
     Row headerRow = sheet.createRow(rowNum++);
     for (int i = 0; i < headers.length; i++) {
@@ -351,10 +268,7 @@ public class ExcelExportService {
       cell.setCellStyle(headerStyle);
     }
 
-    XSSFCellStyle criticalStyle = createAlertStyle(
-      wb,
-      new Color(254, 242, 242)
-    );
+    XSSFCellStyle criticalStyle = createAlertStyle(wb, new Color(254, 242, 242));
     XSSFCellStyle warningStyle = createAlertStyle(wb, new Color(255, 248, 235));
     XSSFCellStyle infoStyle = createAlertStyle(wb, new Color(240, 253, 244));
 
@@ -367,18 +281,8 @@ public class ExcelExportService {
       };
       setCellValue(row, 0, item.getProductName(), style);
       setCellValue(row, 1, item.getSku(), style);
-      setCellValue(
-        row,
-        2,
-        NumberFormatter.formatNumber(item.getCurrentStock()),
-        style
-      );
-      setCellValue(
-        row,
-        3,
-        NumberFormatter.formatNumber(item.getReorderPoint()),
-        style
-      );
+      setCellValue(row, 2, NumberFormatter.formatNumber(item.getCurrentStock()), style);
+      setCellValue(row, 3, NumberFormatter.formatNumber(item.getReorderPoint()), style);
       setCellValue(row, 4, item.getAlertType(), style);
       setCellValue(row, 5, item.getSeverity(), style);
       setCellValue(row, 6, item.getRecommendedAction(), style);
@@ -388,7 +292,7 @@ public class ExcelExportService {
   }
 
   private int buildWarehouseSummaryTable(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     int rowNum,
     List<WarehouseAnalysisDTO> data
@@ -396,12 +300,7 @@ public class ExcelExportService {
     XSSFCellStyle headerStyle = createHeaderStyle(wb);
 
     String[] headers = {
-      "Warehouse",
-      "Products",
-      "Total Values",
-      "Utilization",
-      "Critical Stock",
-      "Low Stock",
+      "Warehouse", "Products", "Total Values", "Utilization", "Critical Stock", "Low Stock",
     };
     Row headerRow = sheet.createRow(rowNum++);
     for (int i = 0; i < headers.length; i++) {
@@ -411,65 +310,32 @@ public class ExcelExportService {
     }
 
     XSSFCellStyle dataStyle = createDataStyle(wb);
-    XSSFCellStyle altStyle = createAltDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
 
     int count = 0;
     for (WarehouseAnalysisDTO item : data) {
       Row row = sheet.createRow(rowNum++);
       CellStyle style = (count++ % 2 == 0) ? dataStyle : altStyle;
       setCellValue(row, 0, item.getWarehouseName(), style);
-      setCellValue(
-        row,
-        1,
-        NumberFormatter.formatNumber(item.getProductCount()),
-        style
-      );
-      setCellValue(
-        row,
-        2,
-        NumberFormatter.formatCurrency(item.getTotalValue()),
-        style
-      );
-      setCellValue(
-        row,
-        3,
-        NumberFormatter.formatPercent(item.getCapacityUtilization()),
-        style
-      );
-      setCellValue(
-        row,
-        4,
-        NumberFormatter.formatNumber(item.getCriticalProducts()),
-        style
-      );
-      setCellValue(
-        row,
-        5,
-        NumberFormatter.formatNumber(item.getLowStockProducts()),
-        style
-      );
+      setCellValue(row, 1, NumberFormatter.formatNumber(item.getProductCount()), style);
+      setCellValue(row, 2, NumberFormatter.formatCurrency(item.getTotalValue()), style);
+      setCellValue(row, 3, NumberFormatter.formatPercent(item.getCapacityUtilization()), style);
+      setCellValue(row, 4, NumberFormatter.formatNumber(item.getCriticalProducts()), style);
+      setCellValue(row, 5, NumberFormatter.formatNumber(item.getLowStockProducts()), style);
     }
 
-    sheet.setColumnWidth(0, 4000);
-    sheet.setColumnWidth(1, 3000);
-    sheet.setColumnWidth(2, 3000);
-    sheet.setColumnWidth(3, 3000);
-    sheet.setColumnWidth(4, 3000);
-    sheet.setColumnWidth(5, 3000);
     return rowNum + 1;
   }
 
   private int buildWarehouseDetailSheet(
-    SXSSFWorkbook wb,
+    XSSFWorkbook wb,
     Sheet sheet,
     WarehouseAnalysisDTO wh
   ) {
     int rowNum = 0;
 
-    XSSFCellStyle titleStyle = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont titleFont = wb.getXSSFWorkbook().createFont();
+    XSSFCellStyle titleStyle = wb.createCellStyle();
+    XSSFFont titleFont = wb.createFont();
     titleFont.setFontHeightInPoints((short) 14);
     titleFont.setBold(true);
     titleFont.setColor(PRIMARY);
@@ -481,10 +347,8 @@ public class ExcelExportService {
     titleCell.setCellStyle(titleStyle);
     rowNum++;
 
-    XSSFCellStyle labelStyle = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont labelFont = wb.getXSSFWorkbook().createFont();
+    XSSFCellStyle labelStyle = wb.createCellStyle();
+    XSSFFont labelFont = wb.createFont();
     labelFont.setBold(true);
     labelFont.setFontHeightInPoints((short) 10);
     labelStyle.setFont(labelFont);
@@ -492,14 +356,8 @@ public class ExcelExportService {
     String[][] infoData = {
       { "Products", NumberFormatter.formatNumber(wh.getProductCount()) },
       { "Total Value", NumberFormatter.formatCurrency(wh.getTotalValue()) },
-      {
-        "Utilization",
-        NumberFormatter.formatPercent(wh.getCapacityUtilization()),
-      },
-      {
-        "Critical Stock",
-        NumberFormatter.formatNumber(wh.getCriticalProducts()),
-      },
+      { "Utilization", NumberFormatter.formatPercent(wh.getCapacityUtilization()) },
+      { "Critical Stock", NumberFormatter.formatNumber(wh.getCriticalProducts()) },
       { "Low Stock", NumberFormatter.formatNumber(wh.getLowStockProducts()) },
     };
 
@@ -515,10 +373,8 @@ public class ExcelExportService {
     rowNum++;
 
     if (wh.getTopByQuantity() != null && !wh.getTopByQuantity().isEmpty()) {
-      XSSFCellStyle sectionStyle = (XSSFCellStyle) wb
-        .getXSSFWorkbook()
-        .createCellStyle();
-      XSSFFont sectionFont = wb.getXSSFWorkbook().createFont();
+      XSSFCellStyle sectionStyle = wb.createCellStyle();
+      XSSFFont sectionFont = wb.createFont();
       sectionFont.setBold(true);
       sectionFont.setFontHeightInPoints((short) 11);
       sectionStyle.setFont(sectionFont);
@@ -541,24 +397,14 @@ public class ExcelExportService {
       for (TopProductDTO top : wh.getTopByQuantity()) {
         Row r = sheet.createRow(rowNum++);
         setCellValue(r, 0, top.getProductName(), dStyle);
-        setCellValue(
-          r,
-          1,
-          NumberFormatter.formatNumber(top.getValue()),
-          dStyle
-        );
+        setCellValue(r, 1, NumberFormatter.formatNumber(top.getValue()), dStyle);
       }
     }
 
-    if (
-      wh.getCategoryDistribution() != null &&
-      !wh.getCategoryDistribution().isEmpty()
-    ) {
+    if (wh.getCategoryDistribution() != null && !wh.getCategoryDistribution().isEmpty()) {
       rowNum++;
-      XSSFCellStyle sectionStyle = (XSSFCellStyle) wb
-        .getXSSFWorkbook()
-        .createCellStyle();
-      XSSFFont sectionFont = wb.getXSSFWorkbook().createFont();
+      XSSFCellStyle sectionStyle = wb.createCellStyle();
+      XSSFFont sectionFont = wb.createFont();
       sectionFont.setBold(true);
       sectionFont.setFontHeightInPoints((short) 11);
       sectionStyle.setFont(sectionFont);
@@ -584,36 +430,21 @@ public class ExcelExportService {
       for (CategoryDistributionDTO cat : wh.getCategoryDistribution()) {
         Row r = sheet.createRow(rowNum++);
         setCellValue(r, 0, cat.getCategoryName(), dStyle);
-        setCellValue(
-          r,
-          1,
-          NumberFormatter.formatNumber(cat.getQuantity()),
-          dStyle
-        );
-        setCellValue(
-          r,
-          2,
-          NumberFormatter.formatPercent(cat.getPercentage()),
-          dStyle
-        );
+        setCellValue(r, 1, NumberFormatter.formatNumber(cat.getQuantity()), dStyle);
+        setCellValue(r, 2, NumberFormatter.formatPercent(cat.getPercentage()), dStyle);
       }
     }
 
-    sheet.setColumnWidth(0, 5000);
-    sheet.setColumnWidth(1, 4000);
-    sheet.setColumnWidth(2, 3000);
     sheet.createFreezePane(0, 1);
     return rowNum;
   }
 
-  private XSSFCellStyle createHeaderStyle(SXSSFWorkbook wb) {
-    XSSFCellStyle style = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont font = wb.getXSSFWorkbook().createFont();
+  private XSSFCellStyle createHeaderStyle(XSSFWorkbook wb) {
+    XSSFCellStyle style = wb.createCellStyle();
+    XSSFFont font = wb.createFont();
     font.setBold(true);
     font.setFontHeightInPoints((short) 10);
-    font.setColor(new XSSFColor(new Color(255, 255, 255), null));
+    font.setColor(WHITE);
     style.setFont(font);
     style.setFillForegroundColor(PRIMARY);
     style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
@@ -623,11 +454,9 @@ public class ExcelExportService {
     return style;
   }
 
-  private XSSFCellStyle createDataStyle(SXSSFWorkbook wb) {
-    XSSFCellStyle style = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont font = wb.getXSSFWorkbook().createFont();
+  private XSSFCellStyle createDataStyle(XSSFWorkbook wb) {
+    XSSFCellStyle style = wb.createCellStyle();
+    XSSFFont font = wb.createFont();
     font.setFontHeightInPoints((short) 9);
     style.setFont(font);
     style.setAlignment(HorizontalAlignment.LEFT);
@@ -635,18 +464,17 @@ public class ExcelExportService {
     return style;
   }
 
-  private XSSFCellStyle createAltDataStyle(SXSSFWorkbook wb) {
-    XSSFCellStyle style = createDataStyle(wb);
+  private XSSFCellStyle createAltDataStyle(XSSFWorkbook wb, XSSFCellStyle base) {
+    XSSFCellStyle style = wb.createCellStyle();
+    style.cloneStyleFrom(base);
     style.setFillForegroundColor(ALT_ROW);
     style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
     return style;
   }
 
-  private XSSFCellStyle createAlertStyle(SXSSFWorkbook wb, Color bgColor) {
-    XSSFCellStyle style = (XSSFCellStyle) wb
-      .getXSSFWorkbook()
-      .createCellStyle();
-    XSSFFont font = wb.getXSSFWorkbook().createFont();
+  private XSSFCellStyle createAlertStyle(XSSFWorkbook wb, Color bgColor) {
+    XSSFCellStyle style = wb.createCellStyle();
+    XSSFFont font = wb.createFont();
     font.setFontHeightInPoints((short) 9);
     style.setFont(font);
     style.setFillForegroundColor(new XSSFColor(bgColor, null));
