@@ -1,6 +1,7 @@
 package com.visco.backend.services;
 
 import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
+import com.visco.backend.models.dtos.ProductPurchaseOrderSummary;
 import com.visco.backend.models.dtos.PurchaseOrderItemRequest;
 import com.visco.backend.models.dtos.PurchaseOrderItemResponse;
 import com.visco.backend.models.dtos.PurchaseOrderResponse;
