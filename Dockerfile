@@ -27,4 +27,12 @@ COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8080
 
 # Arrancar la app
-ENTRYPOINT ["java", "-XX:+UseSerialGC", "-Xmx300m", "-Xss512k", "-jar", "app.jar"]
+ENTRYPOINT ["java", \
+  "-XX:+UseG1GC", \
+  "-Xmx300m", \
+  "-Xss512k", \
+  "-XX:MaxMetaspaceSize=128m", \
+  "-XX:+ExitOnOutOfMemoryError", \
+  "-XX:+HeapDumpOnOutOfMemoryError", \
+  "-XX:HeapDumpPath=/tmp", \
+  "-jar", "app.jar"]
