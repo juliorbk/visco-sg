@@ -8,6 +8,8 @@ public record GoodReceiptItemResponse(
     Long productId,
     String productName,
     String productSku,
+    String productInternalCode,
+    String productSapCode,
     String uom,
     BigDecimal expectedQuantity, // Cantidad que se ordenó
     BigDecimal receivedQuantity, // Cantidad que llegó

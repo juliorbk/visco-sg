@@ -397,6 +397,8 @@ public class RequisitionService {
           item.getProduct().getId(),
           item.getProduct().getName(),
           item.getProduct().getSku(),
+          item.getProduct().getInternalCode(),
+          item.getProduct().getSapCode(),
           item.getProduct().getUom().name(),
           item.getQuantity(),
           item.getNotes()

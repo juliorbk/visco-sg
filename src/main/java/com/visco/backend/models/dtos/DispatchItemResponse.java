@@ -7,6 +7,8 @@ public record DispatchItemResponse(
   Long productId,
   String productName,
   String productSku,
+  String productInternalCode,
+  String productSapCode,
   String uom,
   BigDecimal quantity
 ) {}

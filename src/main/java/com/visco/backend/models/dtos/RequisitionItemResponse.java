@@ -7,6 +7,8 @@ public record RequisitionItemResponse(
     Long productId,
     String productName,
     String productSku,
+    String productInternalCode,
+    String productSapCode,
     String uom,
     BigDecimal quantity,
     String notes
