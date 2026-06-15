@@ -31,6 +31,7 @@ import lombok.ToString;
   indexes = {
     @Index(name = "idx_dn_warehouse", columnList = "warehouse_id"),
     @Index(name = "idx_dn_employee", columnList = "withdrawn_by_id"),
+    @Index(name = "idx_dn_cost_center", columnList = "cost_center_id"),
     @Index(name = "idx_dn_created_by", columnList = "created_by_id"),
   }
 )
@@ -63,6 +64,12 @@ public class DispatchNote {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Employee withdrawnBy;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "cost_center_id", nullable = false) // FK to CostCenter
+  @EqualsAndHashCode.Exclude
+  @ToString.Exclude
+  private CostCenter costCenter;
 
   @Column(length = 1000)
   private String notes;

@@ -12,7 +12,7 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   Page<DispatchNote> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
   @Query(
-    value = "SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy",
+    value = "SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy JOIN FETCH dn.costCenter JOIN FETCH dn.createdBy",
     countQuery = "SELECT COUNT(dn) FROM DispatchNote dn"
   )
   Page<DispatchNote> findAllWithFetch(Pageable pageable);
@@ -34,7 +34,7 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy e LEFT JOIN FETCH e.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
+  @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy JOIN FETCH dn.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
   Optional<DispatchNote> findByIdDetailed(@Param("id") Long id);
 
   @Query(value = "SELECT nextval('dispatch_seq')", nativeQuery = true)

@@ -48,12 +48,8 @@ public record DispatchResponse(
             note.getWarehouse().getName(),
             note.getWithdrawnBy() != null ? note.getWithdrawnBy().getFullName() : null,
             note.getWithdrawnBy() != null ? note.getWithdrawnBy().getDocumentNumber() : null,
-            note.getWithdrawnBy() != null && note.getWithdrawnBy().getCostCenter() != null
-                ? note.getWithdrawnBy().getCostCenter().getCode()
-                : null,
-            note.getWithdrawnBy() != null && note.getWithdrawnBy().getCostCenter() != null
-                ? note.getWithdrawnBy().getCostCenter().getFullDescription()
-                : null,
+            note.getCostCenter() != null ? note.getCostCenter().getCode() : null,
+            note.getCostCenter() != null ? note.getCostCenter().getFullDescription() : null,
             note.getCreatedAt(),
             note.getCreatedBy() != null ? note.getCreatedBy().getName() : null,
             note.getNotes(),
