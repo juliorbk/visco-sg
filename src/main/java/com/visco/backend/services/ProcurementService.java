@@ -336,6 +336,22 @@ public class ProcurementService {
     }
 
     /**
+     * Retrieves a paginated list of purchase orders that include the given
+     * product in their line items, ordered by creation date desc.
+     *
+     * @param productId the product ID
+     * @param pageable  pagination information
+     * @return page of lightweight PO summaries scoped to that product
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductPurchaseOrderSummary> getOrdersByProduct(
+        Long productId,
+        Pageable pageable
+    ) {
+        return purchaseOrderRepository.findProductPurchaseOrders(productId, pageable);
+    }
+
+    /**
      * Retrieves a purchase order by its ID.
      *
      * @param id the purchase order ID

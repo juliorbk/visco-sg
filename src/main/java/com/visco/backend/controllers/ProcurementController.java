@@ -1,6 +1,7 @@
 package com.visco.backend.controllers;
 
 import com.visco.backend.models.dtos.CreatePurchaseOrderRequest;
+import com.visco.backend.models.dtos.ProductPurchaseOrderSummary;
 import com.visco.backend.models.dtos.PurchaseOrderResponse;
 import com.visco.backend.services.ProcurementService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -58,6 +59,21 @@ public class ProcurementController {
     )
     public ResponseEntity<PurchaseOrderResponse> getOrder(@PathVariable Long id) {
         return ResponseEntity.ok(procurementService.getOrderById(id));
+    }
+
+    @GetMapping("/orders/by-product/{productId}")
+    @Operation(
+        summary = "List purchase orders containing a product",
+        description = "Returns a paginated list of purchase orders that include the given product, " +
+            "with the line quantity and unit price for that product."
+    )
+    public ResponseEntity<Page<ProductPurchaseOrderSummary>> getOrdersByProduct(
+        @PathVariable Long productId,
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(
+            procurementService.getOrdersByProduct(productId, pageable)
+        );
     }
 
     @PatchMapping("/orders/{id}/submit-for-approval")

@@ -1,5 +1,6 @@
 package com.visco.backend.repositories;
 
+import com.visco.backend.models.dtos.ProductPurchaseOrderSummary;
 import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
 import java.math.BigDecimal;
@@ -19,6 +20,28 @@ public interface PurchaseOrderRepository
     "SELECT o FROM PurchaseOrder o JOIN FETCH o.supplier JOIN FETCH o.createdBy LEFT JOIN FETCH o.approvedBy LEFT JOIN FETCH o.destinationWarehouse LEFT JOIN FETCH o.requisition"
   )
   Page<PurchaseOrder> findAllWithFetch(Pageable pageable);
+
+  @Query(
+    value = """
+    SELECT new com.visco.backend.models.dtos.ProductPurchaseOrderSummary(
+      o.id, o.orderNumber, o.supplier.name, o.createdAt, i.quantity, i.unitPrice
+    )
+    FROM PurchaseOrder o
+    JOIN o.items i
+    WHERE i.product.id = :productId
+    ORDER BY o.createdAt DESC
+    """,
+    countQuery = """
+    SELECT COUNT(o)
+    FROM PurchaseOrder o
+    JOIN o.items i
+    WHERE i.product.id = :productId
+    """
+  )
+  Page<ProductPurchaseOrderSummary> findProductPurchaseOrders(
+    @Param("productId") Long productId,
+    Pageable pageable
+  );
 
   @Query(
     "SELECT o FROM PurchaseOrder o " +
