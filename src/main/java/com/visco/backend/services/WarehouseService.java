@@ -493,6 +493,52 @@ public class WarehouseService {
   }
 
   /**
+   * Adds pending stock for a product in a specific warehouse.
+   *
+   * @param productId   the product ID
+   * @param warehouseId the warehouse ID
+   * @param quantity    the quantity to add
+   */
+  public void addPendingStockByWarehouse(
+    Long productId,
+    Long warehouseId,
+    BigDecimal quantity
+  ) {
+    warehouseRepository
+      .findById(warehouseId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Warehouse not found: " + warehouseId)
+      );
+
+    productRepository
+      .findById(productId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Product not found: " + productId)
+      );
+
+    stockLevelRepository.addPendingStockAtomic(productId, warehouseId, quantity);
+  }
+
+  /**
+   * Subtracts pending stock for a product in a warehouse.
+   *
+   * @param productId   the product ID
+   * @param warehouseId the warehouse ID
+   * @param quantity    the quantity to subtract
+   */
+  public void substractPendingStock(
+    Long productId,
+    Long warehouseId,
+    BigDecimal quantity
+  ) {
+    stockLevelRepository.subtractPendingStockAtomic(
+      productId,
+      warehouseId,
+      quantity
+    );
+  }
+
+  /**
    * Subtracts current stock for a product in a warehouse atomically.
    *
    * @param productId   the product ID
