@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -71,6 +72,7 @@ public class ProcurementController {
     public record ApproveOrderRequest(String notes) {}
 
     @PatchMapping("/orders/{id}/approve")
+    @PreAuthorize("hasRole('MANAGER')")
     @Operation(summary = "Approve purchase order", description = "Approves a purchase order")
     public ResponseEntity<PurchaseOrderResponse> markApproved(
         @PathVariable Long id,
@@ -88,6 +90,7 @@ public class ProcurementController {
     public record RejectOrderRequest(String reason) {}
 
     @PatchMapping("/orders/{id}/reject")
+    @PreAuthorize("hasRole('MANAGER')")
     @Operation(
         summary = "Reject purchase order",
         description = "Rejects a purchase order with a reason"

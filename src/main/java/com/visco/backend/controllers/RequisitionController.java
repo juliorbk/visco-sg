@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -98,6 +99,7 @@ public class RequisitionController {
   }
 
   @PatchMapping("/{id}/approve")
+  @PreAuthorize("hasRole('MANAGER')")
   @Operation(
     summary = "Approve requisition",
     description = "Approves a requisition"
@@ -117,6 +119,7 @@ public class RequisitionController {
   }
 
   @PatchMapping("/{id}/reject")
+  @PreAuthorize("hasRole('MANAGER')")
   @Operation(
     summary = "Reject requisition",
     description = "Rejects a requisition with a reason"
