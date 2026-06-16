@@ -46,6 +46,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProcurementService {
 
+    private static final java.math.BigDecimal TAX_RATE = new java.math.BigDecimal("0.16");
+
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final WarehouseRepository warehouseRepository;
     private final SupplierRepository supplierRepository;
@@ -487,6 +489,9 @@ public class ProcurementService {
             .map(PurchaseOrderItemResponse::subtotal)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        BigDecimal taxAmount = subtotal.multiply(TAX_RATE).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal totalAmount = subtotal.add(taxAmount).setScale(2, java.math.RoundingMode.HALF_UP);
+
         Warehouse wh = order.getDestinationWarehouse();
         return new PurchaseOrderResponse(
             order.getId(),
@@ -509,6 +514,8 @@ public class ProcurementService {
             wh != null ? wh.getName() : null,
             order.getLeadTime() != null ? order.getLeadTime() : null,
             subtotal,
+            taxAmount,
+            totalAmount,
             PurchaseOrderResponse.SupplierInfo.fromEntity(order.getSupplier()),
             PurchaseOrderResponse.WarehouseInfo.fromEntity(wh),
             itemResponses

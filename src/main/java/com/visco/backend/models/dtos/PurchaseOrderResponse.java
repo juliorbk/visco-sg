@@ -31,6 +31,8 @@ public record PurchaseOrderResponse(
     String destinationWarehouseName,
     Integer leadTime,
     BigDecimal subtotal,
+    BigDecimal taxAmount,
+    BigDecimal totalAmount,
     SupplierInfo supplier,
     WarehouseInfo destinationWarehouse,
     List<PurchaseOrderItemResponse> items
