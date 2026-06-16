@@ -2,6 +2,7 @@ package com.visco.backend.repositories;
 
 import com.visco.backend.models.entities.GoodReceipt;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -58,6 +59,24 @@ public interface GoodReceiptRepository
 
   @Query(value = "SELECT nextval('receipt_seq')", nativeQuery = true)
   Long getNextReceiptSequence();
+
+  @Query("""
+    SELECT gr FROM GoodReceipt gr
+      JOIN FETCH gr.purchaseOrder po
+      JOIN FETCH po.supplier
+      JOIN FETCH gr.destinationWarehouse
+      LEFT JOIN FETCH gr.receivedBy
+      LEFT JOIN FETCH gr.items i
+      LEFT JOIN FETCH i.product
+    WHERE gr.destinationWarehouse.id = :warehouseId
+      AND gr.receivedAt >= :start
+      AND gr.receivedAt <  :end
+    ORDER BY gr.receivedAt ASC
+  """)
+  List<GoodReceipt> findForDailyReport(
+    @Param("warehouseId") Long warehouseId,
+    @Param("start") LocalDateTime start,
+    @Param("end") LocalDateTime end);
 
   interface ReceivedQuantityProjection {
     Long getProductId();

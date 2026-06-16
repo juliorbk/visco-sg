@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.visco.backend.reports.models.dtos.CreateReportRequest;
 import com.visco.backend.reports.models.dtos.CreateScheduledReportRequest;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
 import com.visco.backend.reports.models.dtos.ReportAnalyticsDTO;
 import com.visco.backend.reports.models.dtos.ReportDTO;
 import com.visco.backend.reports.models.dtos.ScheduledReportDTO;
@@ -82,6 +84,10 @@ public class ReportService {
         if (request.getStartDate() != null && request.getEndDate() != null
                 && request.getStartDate().isAfter(request.getEndDate())) {
             throw new IllegalArgumentException("La fecha de inicio debe ser anterior a la fecha de fin");
+        }
+
+        if (request.getType() == ReportType.DAILY_RECEIPTS && request.getWarehouseId() == null) {
+            throw new IllegalArgumentException("El almacén es obligatorio para el reporte de Recepciones Diarias");
         }
 
         Report report = Report.builder()
@@ -198,6 +204,14 @@ public class ReportService {
                     writeWarehouseAnalysis(baos, request, data, metadata);
                     yield data.size();
                 }
+                case DAILY_RECEIPTS -> {
+                    var kpis = reportGeneratorService.generateDailyReceiptReport(
+                            request.getWarehouseId(), request.getStartDate(), request.getEndDate());
+                    var data = kpis.getRows();
+                    if (data.size() > maxRecords) data = data.subList(0, maxRecords);
+                    writeDailyReceiptReport(baos, request, data, kpis, metadata);
+                    yield data.size();
+                }
                 default -> throw new IllegalArgumentException("Tipo de reporte no soportado: " + request.getType());
             };
             return new GeneratedReport(baos.toByteArray(), recordCount);
@@ -253,6 +267,19 @@ public class ReportService {
             pdfExportService.exportWarehouseAnalysisToPdf(data, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
             excelExportService.exportWarehouseAnalysisToExcel(data, request.getName(), metadata, out);
+        } else {
+            throw new IllegalArgumentException("Formato no soportado: " + request.getFormat());
+        }
+    }
+
+    private void writeDailyReceiptReport(ByteArrayOutputStream out, CreateReportRequest request,
+                                          List<DailyReceiptReportDTO> data,
+                                          DailyReceiptReportKPIs kpis,
+                                          Map<String, String> metadata) {
+        if (request.getFormat() == ReportFormat.PDF) {
+            pdfExportService.exportDailyReceiptReportToPdf(data, kpis, request.getName(), metadata, out);
+        } else if (request.getFormat() == ReportFormat.EXCEL) {
+            excelExportService.exportDailyReceiptReportToExcel(data, kpis, request.getName(), metadata, out);
         } else {
             throw new IllegalArgumentException("Formato no soportado: " + request.getFormat());
         }

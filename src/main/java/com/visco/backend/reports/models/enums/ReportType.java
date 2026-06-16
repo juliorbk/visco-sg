@@ -5,7 +5,8 @@ public enum ReportType {
     STOCK_INVENTORY("Reporte de Stock"),
     STOCK_MOVEMENTS("Reporte de Movimientos"),
     CRITICAL_ALERTS("Alertas Críticas"),
-    WAREHOUSE_ANALYSIS("Análisis por Almacén");
+    WAREHOUSE_ANALYSIS("Análisis por Almacén"),
+    DAILY_RECEIPTS("Recepciones Diarias");
 
     private final String displayName;
 

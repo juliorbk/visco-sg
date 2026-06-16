@@ -7,7 +7,6 @@ import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
-import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
@@ -19,7 +18,6 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
-import com.visco.backend.reports.models.dtos.StockReportDTO.WarehouseStockInfo;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistributionDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.TopProductDTO;
@@ -41,6 +39,11 @@ import org.springframework.stereotype.Service;
 @Service
 /**
  * Exports report data to PDF documents using iText 7.
+ *
+ * <p>All iText resources (PdfWriter, PdfDocument, Document) are managed in a
+ * single try-with-resources chain so they are released even if a header /
+ * table / chart builder throws. The chart ByteArrayOutputStream is also
+ * closed explicitly to be consistent with the rest of the codebase.
  */
 public class PdfExportService {
 
@@ -54,7 +57,10 @@ public class PdfExportService {
      */
     public void exportStockReportToPdf(List<StockReportDTO> data, String title,
                                         Map<String, String> metadata, OutputStream outputStream) {
-        try (Document document = createDocument(outputStream)) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
             addHeader(document, title, metadata);
             addStockTable(document, data);
             addFooter(document);
@@ -68,7 +74,10 @@ public class PdfExportService {
      */
     public void exportMovementReportToPdf(List<MovementReportDTO> data, String title,
                                            Map<String, String> metadata, OutputStream outputStream) {
-        try (Document document = createDocument(outputStream)) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
             addHeader(document, title, metadata);
             addMovementTable(document, data);
             addFooter(document);
@@ -82,7 +91,10 @@ public class PdfExportService {
      */
     public void exportAlertReportToPdf(List<AlertReportDTO> data, String title,
                                         Map<String, String> metadata, OutputStream outputStream) {
-        try (Document document = createDocument(outputStream)) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
             addHeader(document, title, metadata);
             addAlertTable(document, data);
             addFooter(document);
@@ -96,7 +108,10 @@ public class PdfExportService {
      */
     public void exportWarehouseAnalysisToPdf(List<WarehouseAnalysisDTO> data, String title,
                                               Map<String, String> metadata, OutputStream outputStream) {
-        try (Document document = createDocument(outputStream)) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
             addHeader(document, title, metadata);
             for (WarehouseAnalysisDTO wh : data) {
                 addWarehouseSection(document, wh);
@@ -105,14 +120,6 @@ public class PdfExportService {
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF warehouse analysis report", e);
         }
-    }
-
-    private Document createDocument(OutputStream outputStream) throws IOException {
-        PdfWriter writer = new PdfWriter(outputStream);
-        PdfDocument pdf = new PdfDocument(writer);
-        Document document = new Document(pdf, PageSize.A4.rotate());
-        document.setMargins(20, 20, 20, 20);
-        return document;
     }
 
     private void addHeader(Document document, String title, Map<String, String> metadata) throws IOException {
@@ -264,12 +271,13 @@ public class PdfExportService {
             try {
                 BufferedImage chart = ChartGenerator.createPieChart(
                         "Distribución por Categoría", wh.getCategoryDistribution(), 400, 300);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ImageIO.write(chart, "png", baos);
-                Image img = new Image(com.itextpdf.io.image.ImageDataFactory.create(baos.toByteArray()));
-                img.setHorizontalAlignment(HorizontalAlignment.CENTER);
-                img.setMaxWidth(400);
-                document.add(img);
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    ImageIO.write(chart, "png", baos);
+                    Image img = new Image(com.itextpdf.io.image.ImageDataFactory.create(baos.toByteArray()));
+                    img.setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    img.setMaxWidth(400);
+                    document.add(img);
+                }
             } catch (Exception e) {
                 log.warn("Could not generate pie chart for warehouse {}", wh.getWarehouseName(), e);
             }
@@ -279,12 +287,13 @@ public class PdfExportService {
             try {
                 BufferedImage chart = ChartGenerator.createBarChart(
                         "Top Productos", "Producto", "Stock", wh.getTopByQuantity(), 400, 300);
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ImageIO.write(chart, "png", baos);
-                Image img = new Image(com.itextpdf.io.image.ImageDataFactory.create(baos.toByteArray()));
-                img.setHorizontalAlignment(HorizontalAlignment.CENTER);
-                img.setMaxWidth(400);
-                document.add(img);
+                try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                    ImageIO.write(chart, "png", baos);
+                    Image img = new Image(com.itextpdf.io.image.ImageDataFactory.create(baos.toByteArray()));
+                    img.setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    img.setMaxWidth(400);
+                    document.add(img);
+                }
             } catch (Exception e) {
                 log.warn("Could not generate bar chart for warehouse {}", wh.getWarehouseName(), e);
             }

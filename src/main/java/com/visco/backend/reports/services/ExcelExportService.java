@@ -1,6 +1,8 @@
 package com.visco.backend.reports.services;
 
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
@@ -127,6 +129,124 @@ public class ExcelExportService {
       sheet.autoSizeColumn(i);
     }
     wb.write(outputStream);
+  }
+
+  public void exportDailyReceiptReportToExcel(
+    List<DailyReceiptReportDTO> data,
+    DailyReceiptReportKPIs kpis,
+    String title,
+    Map<String, String> metadata,
+    OutputStream outputStream
+  ) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Recepciones Diarias");
+      int rowNum = 0;
+      rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
+      rowNum = buildDailyReceiptKpiBlock(wb, sheet, rowNum, kpis);
+      rowNum = buildDailyReceiptTable(wb, sheet, rowNum, data);
+      for (int i = 0; i < 12; i++) sheet.autoSizeColumn(i);
+      wb.write(outputStream);
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating Excel daily receipt report", e);
+    }
+  }
+
+  private int buildDailyReceiptKpiBlock(
+    XSSFWorkbook wb, Sheet sheet, int rowNum, DailyReceiptReportKPIs kpis
+  ) {
+    XSSFFont kpiFont = wb.createFont();
+    kpiFont.setBold(true);
+    kpiFont.setFontHeightInPoints((short) 10);
+    kpiFont.setColor(PRIMARY);
+
+    XSSFFont valFont = wb.createFont();
+    valFont.setFontHeightInPoints((short) 10);
+
+    String[][] kpiData = {
+      { "Total Recepciones", String.valueOf(kpis.getTotalReceipts()) },
+      { "Completadas", String.valueOf(kpis.getTotalCompleted()) },
+      { "Parciales", String.valueOf(kpis.getTotalPartial()) },
+      { "% Cumplimiento", NumberFormatter.formatPercent(kpis.getOverallCompletenessPct()) },
+      { "Items Recibidos", String.valueOf(kpis.getTotalItemsReceived()) },
+      { "Items Esperados", String.valueOf(kpis.getTotalItemsExpected()) },
+    };
+
+    for (String[] pair : kpiData) {
+      Row row = sheet.createRow(rowNum++);
+      Cell labelCell = row.createCell(0);
+      labelCell.setCellValue(pair[0]);
+      XSSFCellStyle labelStyle = wb.createCellStyle();
+      labelStyle.setFont(kpiFont);
+      labelCell.setCellStyle(labelStyle);
+      Cell valCell = row.createCell(1);
+      valCell.setCellValue(pair[1]);
+      XSSFCellStyle valStyle = wb.createCellStyle();
+      valStyle.setFont(valFont);
+      valCell.setCellStyle(valStyle);
+    }
+
+    if (kpis.getTopSupplier() != null && !kpis.getTopSupplier().isEmpty()) {
+      Row row = sheet.createRow(rowNum++);
+      Cell l = row.createCell(0);
+      l.setCellValue("Proveedor Top");
+      XSSFCellStyle ls = wb.createCellStyle(); ls.setFont(kpiFont); l.setCellStyle(ls);
+      Cell v = row.createCell(1);
+      v.setCellValue(kpis.getTopSupplier());
+      XSSFCellStyle vs = wb.createCellStyle(); vs.setFont(valFont); v.setCellStyle(vs);
+    }
+    if (kpis.getTopProduct() != null && !kpis.getTopProduct().isEmpty()) {
+      Row row = sheet.createRow(rowNum++);
+      Cell l = row.createCell(0);
+      l.setCellValue("Producto Top");
+      XSSFCellStyle ls = wb.createCellStyle(); ls.setFont(kpiFont); l.setCellStyle(ls);
+      Cell v = row.createCell(1);
+      v.setCellValue(kpis.getTopProduct());
+      XSSFCellStyle vs = wb.createCellStyle(); vs.setFont(valFont); v.setCellStyle(vs);
+    }
+
+    rowNum++;
+    return rowNum;
+  }
+
+  private int buildDailyReceiptTable(
+    XSSFWorkbook wb, Sheet sheet, int rowNum, List<DailyReceiptReportDTO> data
+  ) {
+    XSSFCellStyle headerStyle = createHeaderStyle(wb);
+
+    String[] headers = {
+      "# Recepción", "Hora", "OC", "Proveedor", "RIF", "Estado",
+      "Items", "Cant. Esperada", "Cant. Recibida", "%", "Recibido por", "Notas"
+    };
+    Row headerRow = sheet.createRow(rowNum++);
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
+    }
+
+    XSSFCellStyle dataStyle = createDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
+
+    int count = 0;
+    for (DailyReceiptReportDTO item : data) {
+      Row row = sheet.createRow(rowNum++);
+      CellStyle style = (count++ % 2 == 0) ? dataStyle : altStyle;
+      setCellValue(row, 0, item.getReceiptNumber(), style);
+      setCellValue(row, 1, DateUtils.formatDateTime(item.getReceivedAt()), style);
+      setCellValue(row, 2, item.getPurchaseOrderNumber(), style);
+      setCellValue(row, 3, item.getSupplierName(), style);
+      setCellValue(row, 4, item.getSupplierRif() != null ? item.getSupplierRif() : "", style);
+      setCellValue(row, 5, item.getStatus(), style);
+      setCellValue(row, 6, String.valueOf(item.getItemCount()), style);
+      setCellValue(row, 7, NumberFormatter.formatNumber(item.getTotalExpectedQty()), style);
+      setCellValue(row, 8, NumberFormatter.formatNumber(item.getTotalReceivedQty()), style);
+      setCellValue(row, 9, NumberFormatter.formatPercent(item.getCompletenessPct().doubleValue()), style);
+      setCellValue(row, 10, item.getReceivedBy(), style);
+      setCellValue(row, 11, item.getNotes(), style);
+    }
+
+    sheet.createFreezePane(0, rowNum - data.size());
+    return rowNum + 1;
   }
 
   private int buildHeader(

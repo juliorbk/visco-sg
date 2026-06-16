@@ -6,12 +6,15 @@ import com.visco.backend.models.entities.Product;
 import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO.WarehouseStockInfo;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistributionDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.TopProductDTO;
+import com.visco.backend.repositories.GoodReceiptRepository;
 import com.visco.backend.repositories.InventoryMovementRepository;
 import com.visco.backend.repositories.InventoryMovementSpecification;
 import com.visco.backend.repositories.ProductRepository;
@@ -47,6 +50,7 @@ public class ReportGeneratorService {
   private final StockLevelRepository stockLevelRepository;
   private final InventoryMovementRepository movementRepository;
   private final WarehouseRepository warehouseRepository;
+  private final GoodReceiptRepository goodReceiptRepository;
 
   @Value("${app.reports.max-records-per-export:50000}")
   private int maxRecords;
@@ -541,5 +545,103 @@ public class ReportGeneratorService {
     }
 
     return result;
+  }
+
+  public DailyReceiptReportKPIs generateDailyReceiptReport(
+    Long warehouseId,
+    LocalDateTime start,
+    LocalDateTime end
+  ) {
+    var receipts = goodReceiptRepository.findForDailyReport(warehouseId, start, end);
+
+    List<DailyReceiptReportDTO> rows = receipts.stream().map(gr -> {
+      var po = gr.getPurchaseOrder();
+      var supplier = po != null ? po.getSupplier() : null;
+      var items = gr.getItems();
+
+      BigDecimal totalExpected = items.stream()
+        .map(i -> i.getExpectedQuantity() != null ? i.getExpectedQuantity() : BigDecimal.ZERO)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+      BigDecimal totalReceived = items.stream()
+        .map(i -> i.getReceivedQuantity() != null ? i.getReceivedQuantity() : BigDecimal.ZERO)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      BigDecimal completenessPct = totalExpected.compareTo(BigDecimal.ZERO) > 0
+        ? totalReceived.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 1, java.math.RoundingMode.HALF_UP)
+        : BigDecimal.ZERO;
+
+      boolean isComplete = items.stream()
+        .allMatch(i -> i.getReceivedQuantity() != null && i.getExpectedQuantity() != null
+          && i.getReceivedQuantity().compareTo(i.getExpectedQuantity()) >= 0);
+
+      return DailyReceiptReportDTO.builder()
+        .receiptNumber(gr.getReceiptNumber())
+        .receivedAt(gr.getReceivedAt())
+        .purchaseOrderNumber(po != null ? po.getOrderNumber() : "")
+        .supplierName(supplier != null ? supplier.getName() : "")
+        .supplierRif(supplier != null ? supplier.getTaxId() : null)
+        .supplierTaxId(supplier != null ? supplier.getTaxId() : null)
+        .status(isComplete ? "COMPLETADA" : "PARCIAL")
+        .itemCount(items.size())
+        .totalExpectedQty(totalExpected)
+        .totalReceivedQty(totalReceived)
+        .completenessPct(completenessPct)
+        .receivedBy(gr.getReceivedBy() != null ? gr.getReceivedBy().getName() : "")
+        .notes(gr.getNotes())
+        .build();
+    }).collect(Collectors.toList());
+
+    int totalReceipts = rows.size();
+    int totalPartial = (int) rows.stream().filter(r -> "PARCIAL".equals(r.getStatus())).count();
+    int totalCompleted = totalReceipts - totalPartial;
+    int totalItemsReceived = rows.stream().mapToInt(DailyReceiptReportDTO::getItemCount).sum();
+    BigDecimal allExpected = rows.stream()
+      .map(DailyReceiptReportDTO::getTotalExpectedQty)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal allReceived = rows.stream()
+      .map(DailyReceiptReportDTO::getTotalReceivedQty)
+      .reduce(BigDecimal.ZERO, BigDecimal::add);
+    int totalItemsExpected = allExpected.intValue();
+    double overallCompleteness = allExpected.compareTo(BigDecimal.ZERO) > 0
+      ? allReceived.multiply(BigDecimal.valueOf(100)).divide(allExpected, 1, java.math.RoundingMode.HALF_UP).doubleValue()
+      : 0.0;
+
+    Map<String, Long> supplierCounts = rows.stream()
+      .filter(r -> r.getSupplierName() != null && !r.getSupplierName().isEmpty())
+      .collect(Collectors.groupingBy(DailyReceiptReportDTO::getSupplierName, Collectors.counting()));
+    String topSupplier = supplierCounts.entrySet().stream()
+      .max(Map.Entry.comparingByValue())
+      .map(Map.Entry::getKey).orElse("");
+
+    Map<String, Long> productCounts = new java.util.LinkedHashMap<>();
+    for (var gr : receipts) {
+      for (var item : gr.getItems()) {
+        String pname = item.getProduct() != null ? item.getProduct().getName() : "";
+        productCounts.merge(pname, item.getReceivedQuantity().longValue(), Long::sum);
+      }
+    }
+    String topProduct = productCounts.entrySet().stream()
+      .max(Map.Entry.comparingByValue())
+      .map(Map.Entry::getKey).orElse("");
+
+    String warehouseName = receipts.isEmpty()
+      ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
+      : receipts.get(0).getDestinationWarehouse().getName();
+
+    DailyReceiptReportKPIs kpis = DailyReceiptReportKPIs.builder()
+      .totalReceipts(totalReceipts)
+      .totalPartial(totalPartial)
+      .totalCompleted(totalCompleted)
+      .totalItemsReceived(totalItemsReceived)
+      .totalItemsExpected(totalItemsExpected)
+      .overallCompletenessPct(overallCompleteness)
+      .topSupplier(topSupplier)
+      .topProduct(topProduct)
+      .generatedAt(LocalDateTime.now())
+      .warehouseName(warehouseName)
+      .build();
+
+    kpis.setRows(rows);
+    return kpis;
   }
 }
