@@ -16,6 +16,7 @@ public record PurchaseOrderResponse(
     String description,
     PurchaseOrderStatus status,
     String supplierName,
+    String supplierRif,
     PaymentMethod paymentMethod,
     PurchaseOrderType type,
     String requisitionNumber,
@@ -41,6 +42,7 @@ public record PurchaseOrderResponse(
         String name,
         String address,
         String email,
+        String taxId,
         List<String> phoneNumbers
     ) {
         public static SupplierInfo fromEntity(Supplier s) {
@@ -49,6 +51,7 @@ public record PurchaseOrderResponse(
                 s.getName(),
                 s.getAddress(),
                 s.getEmail(),
+                s.getTaxId(),
                 s.getPhoneNumbers() == null ? List.of() : List.copyOf(s.getPhoneNumbers())
             );
         }

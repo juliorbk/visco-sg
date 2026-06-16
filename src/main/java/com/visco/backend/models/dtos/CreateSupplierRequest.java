@@ -12,6 +12,7 @@ public record CreateSupplierRequest(
   @NotBlank String name,
   @NotBlank String address,
   @Email @NotBlank String email,
+  @Size(max = 20) String taxId,
   @Size(min = 1) Set<String> phoneNumbers,
   @NotBlank String description,
   @NotNull Currency currency,

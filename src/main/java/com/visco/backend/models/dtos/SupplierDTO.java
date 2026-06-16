@@ -21,6 +21,7 @@ public class SupplierDTO {
   private String address;
   private String currency;
   private String contactEmail;
+  private String taxId;
   private List<String> phoneNumbers;
   private boolean active;
   private List<RepresentativeInfo> representatives;
@@ -74,6 +75,7 @@ public class SupplierDTO {
         supplier.getCurrency() != null ? supplier.getCurrency().name() : null
       )
       .contactEmail(supplier.getEmail())
+      .taxId(supplier.getTaxId())
       .phoneNumbers(phones)
       .active(Boolean.TRUE.equals(supplier.getActive()))
       .representatives(reps)

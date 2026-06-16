@@ -62,6 +62,9 @@ public class Supplier {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(name = "tax_id", length = 20)
+    private String taxId;
+
     // Colección para manejar múltiples teléfonos (sin problemas de equals/hashCode)
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "supplier_phones", joinColumns = @JoinColumn(name = "supplier_id"))

@@ -499,6 +499,7 @@ public class ProcurementService {
             order.getDescription(),
             order.getStatus(),
             order.getSupplier() != null ? order.getSupplier().getName() : "Unknown",
+            order.getSupplier() != null ? order.getSupplier().getTaxId() : null,
             order.getPaymentMethod(),
             order.getType(),
             order.getRequisition() != null ? order.getRequisition().getRequisitionNumber() : null,

@@ -17,6 +17,8 @@ public record UpdateSupplierRequest(
   @NotBlank(message = "El email es obligatorio")
   String email,
 
+  @Size(max = 20) String taxId,
+
   @Size(min = 1, message = "Debe incluir al menos un teléfono")
   Set<String> phoneNumbers,
 

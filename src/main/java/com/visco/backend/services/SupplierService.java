@@ -75,6 +75,7 @@ public class SupplierService {
       .name(request.name())
       .address(request.address())
       .email(request.email())
+      .taxId(request.taxId())
       .phoneNumbers(request.phoneNumbers())
       .description(request.description())
       .currency(request.currency())
@@ -139,6 +140,7 @@ public class SupplierService {
 
     existing.setName(request.name());
     existing.setEmail(request.email());
+    existing.setTaxId(request.taxId());
     existing.setPhoneNumbers(request.phoneNumbers());
     existing.setDescription(request.description());
     existing.setAddress(request.address());
