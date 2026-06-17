@@ -1,5 +1,7 @@
 package com.visco.backend.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
@@ -8,8 +10,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
@@ -22,18 +22,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * throttle requests per IP address on a per-route basis. Limits are
  * configured through {@code rate-limit.*} application properties. Applied
  * before Spring Security's authentication filter.
+ *
+ * <p>Buckets are stored in a bounded Caffeine cache with {@code expireAfterAccess}
+ * so that idle (IP, route) entries are evicted automatically without the
+ * periodic sweep a plain {@code ConcurrentHashMap} would otherwise need.
+ * A {@code maximumSize} cap protects the JVM from attackers who keep
+ * generating new source IPs to inflate the map.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
-    private final Map<String, Long> lastAccessTime = new ConcurrentHashMap<>();
+    private final Cache<String, Bucket> buckets = Caffeine.newBuilder()
+        .expireAfterAccess(Duration.ofMinutes(10))
+        .maximumSize(50_000)
+        .build();
 
-    private static final long CLEANUP_INTERVAL_MS = 300000;
-    private static final long STALE_THRESHOLD_MS = 600000;
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
-    private long lastCleanup = System.currentTimeMillis();
-    private final Object cleanupLock = new Object();
 
     private enum RateLimitedRoute {
         LOGIN("/api/auth/login", "rate-limit.login"),
@@ -178,22 +182,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             .build();
     }
 
-    private void cleanupOldBuckets() {
-        long now = System.currentTimeMillis();
-        if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
-            synchronized (cleanupLock) {
-                buckets
-                    .keySet()
-                    .removeIf((key) -> {
-                        Long lastAccess = lastAccessTime.get(key);
-                        return (lastAccess != null && (now - lastAccess > STALE_THRESHOLD_MS));
-                    });
-                lastAccessTime.keySet().removeIf((key) -> !buckets.containsKey(key));
-                lastCleanup = now;
-            }
-        }
-    }
-
     private String resolveIp(HttpServletRequest request) {
         // Solo se confía en X-Forwarded-For si está explícitamente activado
         // (típicamente cuando hay un proxy reverso confiable como Render/Cloudflare).
@@ -233,13 +221,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        cleanupOldBuckets();
-
         String ip = resolveIp(request);
         String bucketKey = ip + ":" + matchedRoute.name();
-        lastAccessTime.put(bucketKey, System.currentTimeMillis());
         RateLimitedRoute finalRoute = matchedRoute;
-        Bucket bucket = buckets.computeIfAbsent(bucketKey, (k) -> createBucket(finalRoute));
+        Bucket bucket = buckets.get(bucketKey, k -> createBucket(finalRoute));
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);

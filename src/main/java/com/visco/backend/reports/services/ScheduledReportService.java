@@ -2,20 +2,18 @@ package com.visco.backend.reports.services;
 
 import com.visco.backend.reports.models.dtos.ReportDTO;
 import com.visco.backend.reports.models.entities.ScheduledReport;
-import com.visco.backend.reports.models.enums.ReportFormat;
 import com.visco.backend.reports.models.enums.ReportStatus;
 import com.visco.backend.reports.repositories.ScheduledReportRepository;
 import com.visco.backend.reports.utils.DateUtils;
 import com.visco.backend.services.ResendEmailService;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +29,9 @@ public class ScheduledReportService {
   private final ScheduledReportRepository scheduledReportRepository;
   private final ReportService reportService;
   private final ResendEmailService resendEmailService;
+
+  @Value("${app.reports.email-link-base-url:https://viscoorinocosia.vercel.app}")
+  private String reportsPublicUrl;
 
   /**
    * Runs every hour, checks for due scheduled reports, generates them, and emails recipients.
@@ -92,64 +93,26 @@ public class ScheduledReportService {
   }
 
   private void sendReportByEmail(ReportDTO reportDTO, List<String> emails) {
+    String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    String subject = "Reporte: " + reportDTO.getName() + " - " + today;
+
+    String inAppLink = reportsPublicUrl + "/reports/" + reportDTO.getId();
+    String text = String.format(
+      "Adjunto encontrara el reporte '%s' generado automaticamente.%n%n" +
+      "Tipo: %s%nRegistros: %s%nFecha: %s%n%n" +
+      "Descarguelo desde la aplicacion: %s",
+      reportDTO.getName(),
+      reportDTO.getType().getDisplayName(),
+      reportDTO.getRecordCount() != null ? reportDTO.getRecordCount() : "N/A",
+      today,
+      inAppLink
+    );
+
     for (String email : emails) {
       email = email.trim();
       if (email.isBlank()) continue;
-
-      String subject =
-        "Reporte: " +
-        reportDTO.getName() +
-        " - " +
-        java.time.LocalDate.now()
-          .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-
-      String text = String.format(
-        "Adjunto encontrara el reporte '%s' generado automaticamente.\n\n" +
-        "Tipo: %s\nRegistros: %s\nFecha: %s",
-        reportDTO.getName(),
-        reportDTO.getType().getDisplayName(),
-        reportDTO.getRecordCount() != null
-          ? reportDTO.getRecordCount()
-          : "N/A",
-        java.time.LocalDate.now()
-          .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-      );
-
-      if (reportDTO.getFilePath() != null) {
-        File file = Path.of(reportDTO.getFilePath()).toFile();
-        if (file.exists()) {
-          try {
-            byte[] fileBytes = Files.readAllBytes(file.toPath());
-            String ext = reportDTO.getFormat() == ReportFormat.PDF
-              ? ".pdf"
-              : ".xlsx";
-            String filename =
-              reportDTO.getName().replaceAll("[^a-zA-Z0-9\\-_]", "_") + ext;
-            resendEmailService.sendEmailWithAttachment(
-              email,
-              subject,
-              text,
-              filename,
-              fileBytes,
-              ext.equals(".pdf")
-                ? "application/pdf"
-                : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            log.info("Report sent to {}", email);
-          } catch (IOException e) {
-            log.error(
-              "Failed to read attachment file {}: {}",
-              file.getPath(),
-              e.getMessage()
-            );
-            resendEmailService.sendHtmlEmail(email, subject, text);
-          }
-        } else {
-          resendEmailService.sendHtmlEmail(email, subject, text);
-        }
-      } else {
-        resendEmailService.sendHtmlEmail(email, subject, text);
-      }
+      resendEmailService.sendHtmlEmail(email, subject, text);
+      log.info("Report {} link sent to {}", reportDTO.getId(), email);
     }
   }
 }
