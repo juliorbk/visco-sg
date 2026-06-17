@@ -32,6 +32,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
     @Index(name = "idx_reports_status", columnList = "status"),
     @Index(name = "idx_reports_created_at", columnList = "created_at DESC"),
     @Index(name = "idx_reports_generated_at", columnList = "generated_at DESC"),
+    @Index(name = "idx_reports_warehouse_id", columnList = "warehouse_id"),
 })
 @Getter
 @Setter
@@ -71,6 +72,19 @@ public class Report {
 
     @Column(name = "end_date")
     private LocalDateTime endDate;
+
+    // Dedicated columns for the filter scope that used to be jammed
+    // into the JSON `filters` payload. Keeping them as first-class
+    // columns makes the download path trivial: we just copy the values
+    // back onto a CreateReportRequest without re-parsing JSON.
+    @Column(name = "warehouse_id")
+    private Long warehouseId;
+
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    @Column(length = 255)
+    private String search;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

@@ -37,4 +37,8 @@ build/
 
 backups/
 *.sql.gz
+# Only ignore .sql files at the project root (manual SQL dumps) and in
+# backups/; Flyway migrations under src/main/resources/db/migration/
+# must remain trackable.
 *.sql
+!src/main/resources/db/migration/*.sql

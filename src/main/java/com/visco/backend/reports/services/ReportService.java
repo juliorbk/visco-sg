@@ -22,7 +22,6 @@ import jakarta.persistence.EntityNotFoundException;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -98,31 +97,16 @@ public class ReportService {
                 .format(request.getFormat())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .warehouseId(request.getWarehouseId())
+                .categoryId(request.getCategoryId())
+                .search(request.getSearch())
                 .createdBy(username)
                 .active(true)
                 .build();
 
-        if (
-            (request.getAdditionalFilters() != null && !request.getAdditionalFilters().isEmpty()) ||
-            request.getWarehouseId() != null ||
-            request.getCategoryId() != null ||
-            request.getSearch() != null
-        ) {
+        if (request.getAdditionalFilters() != null && !request.getAdditionalFilters().isEmpty()) {
             try {
-                Map<String, Object> filters = new LinkedHashMap<>();
-                if (request.getAdditionalFilters() != null) {
-                    filters.putAll(request.getAdditionalFilters());
-                }
-                if (request.getWarehouseId() != null) {
-                    filters.put("_warehouseId", request.getWarehouseId());
-                }
-                if (request.getCategoryId() != null) {
-                    filters.put("_categoryId", request.getCategoryId());
-                }
-                if (request.getSearch() != null && !request.getSearch().isBlank()) {
-                    filters.put("_search", request.getSearch());
-                }
-                report.setFilters(objectMapper.writeValueAsString(filters));
+                report.setFilters(objectMapper.writeValueAsString(request.getAdditionalFilters()));
             } catch (JsonProcessingException e) {
                 log.warn("Could not serialize filters", e);
             }
@@ -174,21 +158,16 @@ public class ReportService {
         request.setFormat(report.getFormat());
         request.setStartDate(report.getStartDate());
         request.setEndDate(report.getEndDate());
+        // The top-level filter scope is stored in dedicated columns on the
+        // Report entity, so we can rebuild the request without touching
+        // the user-supplied additionalFilters JSON at all.
+        request.setWarehouseId(report.getWarehouseId());
+        request.setCategoryId(report.getCategoryId());
+        request.setSearch(report.getSearch());
         if (report.getFilters() != null) {
             try {
                 Map<String, Object> filters = objectMapper.readValue(report.getFilters(), Map.class);
                 request.setAdditionalFilters(filters);
-                // Restore the top-level filter fields (warehouseId, categoryId,
-                // search) that were serialised alongside the user's
-                // additionalFilters when the report was first generated.
-                // Without this, regenerated reports lose their scope and the
-                // DAILY_RECEIPTS path ends up calling findById(null).
-                Object w = filters.get("_warehouseId");
-                if (w instanceof Number wn) request.setWarehouseId(wn.longValue());
-                Object c = filters.get("_categoryId");
-                if (c instanceof Number cn) request.setCategoryId(cn.longValue());
-                Object s = filters.get("_search");
-                if (s instanceof String ss) request.setSearch(ss);
             } catch (Exception e) {
                 log.warn("Could not parse stored filters for report {}", report.getId(), e);
             }
@@ -484,6 +463,9 @@ public class ReportService {
                 .generatedAt(report.getGeneratedAt())
                 .startDate(report.getStartDate())
                 .endDate(report.getEndDate())
+                .warehouseId(report.getWarehouseId())
+                .categoryId(report.getCategoryId())
+                .search(report.getSearch())
                 .recordCount(report.getRecordCount())
                 .fileSize(report.getFileSize())
                 .filePath(report.getFilePath())
