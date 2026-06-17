@@ -144,7 +144,6 @@ public class PdfExportService {
     }
 
 private void addHeader(Document document, String title, Map<String, String> metadata) throws IOException {
-    private void addHeader(Document document, String title, Map<String, String> metadata) throws IOException {
         PdfFont boldFont = PdfFontFactory.createFont();
         PdfFont regularFont = PdfFontFactory.createFont();
 
