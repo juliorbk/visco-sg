@@ -625,7 +625,9 @@ public class ReportGeneratorService {
       .map(Map.Entry::getKey).orElse("");
 
     String warehouseName = receipts.isEmpty()
-      ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
+      ? (warehouseId != null
+          ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
+          : "")
       : receipts.get(0).getDestinationWarehouse().getName();
 
     DailyReceiptReportKPIs kpis = DailyReceiptReportKPIs.builder()
