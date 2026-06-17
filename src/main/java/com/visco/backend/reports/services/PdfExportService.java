@@ -16,6 +16,8 @@ import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
+import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
@@ -120,6 +122,100 @@ public class PdfExportService {
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF warehouse analysis report", e);
         }
+    }
+
+    public void exportDailyReceiptReportToPdf(
+            List<DailyReceiptReportDTO> data, DailyReceiptReportKPIs kpis,
+            String title, Map<String, String> metadata, OutputStream outputStream) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
+            addHeader(document, title, metadata);
+            addDailyReceiptKpiBlock(document, kpis);
+            addDailyReceiptTable(document, data);
+            addFooter(document);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF daily receipt report", e);
+        }
+    }
+
+    private void addDailyReceiptKpiBlock(Document document, DailyReceiptReportKPIs kpis) throws IOException {
+        PdfFont boldFont = PdfFontFactory.createFont();
+        PdfFont regularFont = PdfFontFactory.createFont();
+
+        document.add(new Paragraph("KPIs de Recepciones")
+                .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
+
+        Table kpiTable = new Table(UnitValue.createPercentArray(new float[]{3, 7}))
+                .useAllAvailableWidth();
+
+        String[][] kpiData = {
+            {"Total Recepciones", String.valueOf(kpis.getTotalReceipts())},
+            {"Completadas", String.valueOf(kpis.getTotalCompleted())},
+            {"Parciales", String.valueOf(kpis.getTotalPartial())},
+            {"% Cumplimiento", NumberFormatter.formatPercent(kpis.getOverallCompletenessPct())},
+            {"Items Recibidos", String.valueOf(kpis.getTotalItemsReceived())},
+            {"Items Esperados", String.valueOf(kpis.getTotalItemsExpected())},
+        };
+
+        for (String[] pair : kpiData) {
+            kpiTable.addCell(new Cell().add(new Paragraph(pair[0]))
+                    .setFont(boldFont).setFontSize(8).setPadding(4));
+            kpiTable.addCell(new Cell().add(new Paragraph(pair[1]))
+                    .setFont(regularFont).setFontSize(8).setPadding(4));
+        }
+
+        if (kpis.getTopSupplier() != null && !kpis.getTopSupplier().isEmpty()) {
+            kpiTable.addCell(new Cell().add(new Paragraph("Proveedor Top"))
+                    .setFont(boldFont).setFontSize(8).setPadding(4));
+            kpiTable.addCell(new Cell().add(new Paragraph(kpis.getTopSupplier()))
+                    .setFont(regularFont).setFontSize(8).setPadding(4));
+        }
+        if (kpis.getTopProduct() != null && !kpis.getTopProduct().isEmpty()) {
+            kpiTable.addCell(new Cell().add(new Paragraph("Producto Top"))
+                    .setFont(boldFont).setFontSize(8).setPadding(4));
+            kpiTable.addCell(new Cell().add(new Paragraph(kpis.getTopProduct()))
+                    .setFont(regularFont).setFontSize(8).setPadding(4));
+        }
+
+        document.add(kpiTable);
+    }
+
+    private void addDailyReceiptTable(Document document, List<DailyReceiptReportDTO> data) throws IOException {
+        PdfFont boldFont = PdfFontFactory.createFont();
+        PdfFont regularFont = PdfFontFactory.createFont();
+
+        document.add(new Paragraph("Detalle de Recepciones")
+                .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
+
+        Table table = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1}))
+                .useAllAvailableWidth();
+
+        String[] headers = {
+            "# Recepción", "Hora", "OC", "Proveedor", "RIF", "Estado",
+            "Items", "Cant. Esperada", "Cant. Recibida", "%", "Recibido por", "Notas"
+        };
+        for (String h : headers) {
+            addHeaderCell(table, h);
+        }
+
+        for (DailyReceiptReportDTO item : data) {
+            addCell(table, item.getReceiptNumber(), regularFont);
+            addCell(table, DateUtils.formatDateTime(item.getReceivedAt()), regularFont);
+            addCell(table, item.getPurchaseOrderNumber(), regularFont);
+            addCell(table, item.getSupplierName(), regularFont);
+            addCell(table, item.getSupplierRif() != null ? item.getSupplierRif() : "", regularFont);
+            addCell(table, item.getStatus(), regularFont);
+            addCell(table, String.valueOf(item.getItemCount()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(item.getTotalExpectedQty()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(item.getTotalReceivedQty()), regularFont);
+            addCell(table, NumberFormatter.formatPercent(item.getCompletenessPct().doubleValue()), regularFont);
+            addCell(table, item.getReceivedBy(), regularFont);
+            addCell(table, item.getNotes(), regularFont);
+        }
+
+        document.add(table);
     }
 
     private void addHeader(Document document, String title, Map<String, String> metadata) throws IOException {
