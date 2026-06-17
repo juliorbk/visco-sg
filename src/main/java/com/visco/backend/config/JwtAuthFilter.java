@@ -11,6 +11,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+  private static final List<String> PUBLIC_PATHS = List.of(
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+    "/health",
+    "/swagger-ui",
+    "/v3/api-docs",
+    "/swagger-ui.html"
+  );
 
   @Value("${jwt.cookie.name:visco_auth_token}")
   private String jwtCookieName;
@@ -133,6 +145,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  @Override
+  protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getRequestURI();
+    return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
   }
 
   /** Extrae el JWT del header Authorization o del cookie HttpOnly */
