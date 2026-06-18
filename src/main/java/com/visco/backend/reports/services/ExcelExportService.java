@@ -144,7 +144,7 @@ public class ExcelExportService {
       rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
       rowNum = buildDailyReceiptKpiBlock(wb, sheet, rowNum, kpis);
       rowNum = buildDailyReceiptTable(wb, sheet, rowNum, data);
-      for (int i = 0; i < 12; i++) sheet.autoSizeColumn(i);
+      for (int i = 0; i < 13; i++) sheet.autoSizeColumn(i);
       wb.write(outputStream);
     } catch (Exception e) {
       throw new RuntimeException("Error generating Excel daily receipt report", e);
@@ -164,6 +164,7 @@ public class ExcelExportService {
 
     String[][] kpiData = {
       { "Total Recepciones", String.valueOf(kpis.getTotalReceipts()) },
+      { "Total Ordenes", String.valueOf(kpis.getTotalOrders()) },
       { "Completadas", String.valueOf(kpis.getTotalCompleted()) },
       { "Parciales", String.valueOf(kpis.getTotalPartial()) },
       { "% Cumplimiento", NumberFormatter.formatPercent(kpis.getOverallCompletenessPct()) },
@@ -215,7 +216,8 @@ public class ExcelExportService {
 
     String[] headers = {
       "# Recepción", "Hora", "OC", "Proveedor", "RIF", "Estado",
-      "Items", "Cant. Esperada", "Cant. Recibida", "%", "Recibido por", "Notas"
+      "Items", "Cant. Recibida", "Cant. Ordenada", "Cant. Acum.", "% Acum.",
+      "Recibido por", "Notas"
     };
     Row headerRow = sheet.createRow(rowNum++);
     for (int i = 0; i < headers.length; i++) {
@@ -238,11 +240,15 @@ public class ExcelExportService {
       setCellValue(row, 4, item.getSupplierRif() != null ? item.getSupplierRif() : "", style);
       setCellValue(row, 5, item.getStatus(), style);
       setCellValue(row, 6, String.valueOf(item.getItemCount()), style);
-      setCellValue(row, 7, NumberFormatter.formatNumber(item.getTotalExpectedQty()), style);
-      setCellValue(row, 8, NumberFormatter.formatNumber(item.getTotalReceivedQty()), style);
-      setCellValue(row, 9, NumberFormatter.formatPercent(item.getCompletenessPct().doubleValue()), style);
-      setCellValue(row, 10, item.getReceivedBy(), style);
-      setCellValue(row, 11, item.getNotes(), style);
+      setCellValue(row, 7, NumberFormatter.formatNumber(item.getTotalReceivedQty()), style);
+      setCellValue(row, 8, NumberFormatter.formatNumber(item.getTotalOrderedQty()), style);
+      setCellValue(row, 9, NumberFormatter.formatNumber(item.getCumulativeReceivedQty()), style);
+      setCellValue(row, 10, NumberFormatter.formatPercent(
+        item.getCumulativeCompletenessPct() == null
+          ? 0.0
+          : item.getCumulativeCompletenessPct().doubleValue()), style);
+      setCellValue(row, 11, item.getReceivedBy(), style);
+      setCellValue(row, 12, item.getNotes(), style);
     }
 
     sheet.createFreezePane(0, rowNum - data.size());

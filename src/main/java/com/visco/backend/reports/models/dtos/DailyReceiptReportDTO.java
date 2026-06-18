@@ -14,11 +14,17 @@ public class DailyReceiptReportDTO {
     private String supplierName;
     private String supplierRif;
     private String supplierTaxId;
-    private String status;
+    // Per-reception fields (what happened in this single event).
     private int itemCount;
-    private BigDecimal totalExpectedQty;
     private BigDecimal totalReceivedQty;
-    private BigDecimal completenessPct;
+    // PO-level cumulative fields (state of the underlying purchase order
+    // taking into account ALL receptions for it, not just this event).
+    // Required to correctly classify a PO that was received in several
+    // partial deliveries — the last partial can complete the PO.
+    private BigDecimal totalOrderedQty;
+    private BigDecimal cumulativeReceivedQty;
+    private BigDecimal cumulativeCompletenessPct;
+    private String status; // PO-level: COMPLETADA if cumulative >= ordered, else PARCIAL.
     private String receivedBy;
     private String notes;
 }

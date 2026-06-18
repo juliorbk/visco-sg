@@ -8,7 +8,11 @@ import lombok.Data;
 @Data
 @Builder
 public class DailyReceiptReportKPIs {
+    // KPIs are now PO-based (distinct purchase orders touched in the
+    // report period), not receipt-based, so that partial deliveries of
+    // the same PO are not double-counted.
     private int totalReceipts;
+    private int totalOrders;
     private int totalPartial;
     private int totalCompleted;
     private int totalItemsReceived;

@@ -349,8 +349,7 @@ class WarehouseServiceStockTest {
       otherWarehouse.getId(),
       BigDecimal.valueOf(5),
       "move",
-      createdBy.getId(),
-      null
+      createdBy.getId()
     );
 
     when(warehouseRepository.findById(destWarehouse.getId()))
@@ -375,8 +374,7 @@ class WarehouseServiceStockTest {
       otherWarehouse.getId(),
       BigDecimal.valueOf(50),
       "move",
-      createdBy.getId(),
-      null
+      createdBy.getId()
     );
 
     when(warehouseRepository.findById(destWarehouse.getId()))
@@ -403,8 +401,7 @@ class WarehouseServiceStockTest {
       otherWarehouse.getId(),
       BigDecimal.valueOf(5),
       "move",
-      createdBy.getId(),
-      null
+      createdBy.getId()
     );
 
     when(warehouseRepository.findById(destWarehouse.getId()))

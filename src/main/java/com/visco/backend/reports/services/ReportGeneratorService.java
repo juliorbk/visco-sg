@@ -1,5 +1,6 @@
 package com.visco.backend.reports.services;
 
+import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.InventoryMovement;
 import com.visco.backend.models.entities.MovementType;
 import com.visco.backend.models.entities.Product;
@@ -554,61 +555,149 @@ public class ReportGeneratorService {
   ) {
     var receipts = goodReceiptRepository.findForDailyReport(warehouseId, start, end);
 
-    List<DailyReceiptReportDTO> rows = receipts.stream().map(gr -> {
+    if (receipts.isEmpty()) {
+      return buildEmptyKpis(warehouseId);
+    }
+
+    // Ordered quantity per PO (sum of PO item quantities, all products).
+    Map<Long, BigDecimal> orderedByPo = new java.util.HashMap<>();
+    for (var gr : receipts) {
+      var po = gr.getPurchaseOrder();
+      if (po == null) continue;
+      BigDecimal poOrdered = po.getItems().stream()
+        .map(it -> it.getQuantity() != null ? it.getQuantity() : BigDecimal.ZERO)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+      orderedByPo.merge(po.getId(), poOrdered, (a, b) -> a.signum() != 0 ? a : b);
+    }
+
+    // All-time cumulative received per PO, fetched in a single query
+    // so we can seed the running total with the amount that arrived
+    // BEFORE the report period.
+    List<Long> poIds = receipts.stream()
+      .map(gr -> gr.getPurchaseOrder().getId())
+      .distinct()
+      .toList();
+    Map<Long, BigDecimal> totalReceivedAllTimeByPo = new java.util.HashMap<>();
+    var cumulativeRows = goodReceiptRepository.getCumulativeReceivedForOrders(poIds);
+    for (var row : cumulativeRows) {
+      totalReceivedAllTimeByPo.merge(row.getOrderId(),
+        row.getTotalReceived() != null ? row.getTotalReceived() : BigDecimal.ZERO,
+        BigDecimal::add);
+    }
+
+    // Sort by receivedAt so we can walk the chronological order of
+    // partial deliveries and compute the running cumulative state at
+    // each reception. The running counter is seeded with the
+    // pre-period total so receptions that happened before the report
+    // window are not forgotten.
+    var sortedReceipts = receipts.stream()
+      .sorted(java.util.Comparator.comparing(GoodReceipt::getReceivedAt))
+      .toList();
+
+    // Map of PO ID → running cumulative received in chronological order,
+    // seeded with the PRE-PERIOD amount (= all-time total minus what we
+    // are about to replay from the report window). The all-time total
+    // is the final state after every receipt, including those in this
+    // report; subtracting the window sum gives us the seed so that
+    // after replaying every report-row receipt the running total again
+    // equals the all-time total.
+    Map<Long, BigDecimal> inWindowReceivedByPo = new java.util.HashMap<>();
+    for (var gr : sortedReceipts) {
+      if (gr.getPurchaseOrder() == null) continue;
+      BigDecimal rec = gr.getItems().stream()
+        .map(i -> i.getReceivedQuantity() != null ? i.getReceivedQuantity() : BigDecimal.ZERO)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+      inWindowReceivedByPo.merge(gr.getPurchaseOrder().getId(), rec, BigDecimal::add);
+    }
+    Map<Long, BigDecimal> runningCumulativeByPo = new java.util.HashMap<>();
+    for (Long poId : poIds) {
+      BigDecimal allTime = totalReceivedAllTimeByPo.getOrDefault(poId, BigDecimal.ZERO);
+      BigDecimal inWindow = inWindowReceivedByPo.getOrDefault(poId, BigDecimal.ZERO);
+      runningCumulativeByPo.put(poId, allTime.subtract(inWindow).max(BigDecimal.ZERO));
+    }
+
+    // We also need the sum of the report-window receipts per PO, so we
+    // can subtract it from the all-time total and recover the
+    // pre-period seed (already done above), AND so we can know exactly
+    // which receipts to "replay" when re-deriving the per-row
+    // cumulative. The running counter above does that implicitly.
+
+    List<DailyReceiptReportDTO> rows = new ArrayList<>();
+    for (var gr : sortedReceipts) {
       var po = gr.getPurchaseOrder();
       var supplier = po != null ? po.getSupplier() : null;
       var items = gr.getItems();
 
-      BigDecimal totalExpected = items.stream()
-        .map(i -> i.getExpectedQuantity() != null ? i.getExpectedQuantity() : BigDecimal.ZERO)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-      BigDecimal totalReceived = items.stream()
+      BigDecimal totalReceivedThisEvent = items.stream()
         .map(i -> i.getReceivedQuantity() != null ? i.getReceivedQuantity() : BigDecimal.ZERO)
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-      BigDecimal completenessPct = totalExpected.compareTo(BigDecimal.ZERO) > 0
-        ? totalReceived.multiply(BigDecimal.valueOf(100)).divide(totalExpected, 1, java.math.RoundingMode.HALF_UP)
+      // Update running cumulative (state AFTER this reception).
+      BigDecimal cumulativeAtThis = runningCumulativeByPo.merge(
+        po.getId(), totalReceivedThisEvent, BigDecimal::add);
+
+      BigDecimal poOrdered = orderedByPo.getOrDefault(po.getId(), BigDecimal.ZERO);
+      BigDecimal poCompletenessPct = poOrdered.compareTo(BigDecimal.ZERO) > 0
+        ? cumulativeAtThis.multiply(BigDecimal.valueOf(100))
+          .divide(poOrdered, 1, java.math.RoundingMode.HALF_UP)
         : BigDecimal.ZERO;
+      String poStatus = poOrdered.compareTo(BigDecimal.ZERO) > 0
+        && cumulativeAtThis.compareTo(poOrdered) >= 0
+          ? "COMPLETADA" : "PARCIAL";
 
-      boolean isComplete = items.stream()
-        .allMatch(i -> i.getReceivedQuantity() != null && i.getExpectedQuantity() != null
-          && i.getReceivedQuantity().compareTo(i.getExpectedQuantity()) >= 0);
-
-      return DailyReceiptReportDTO.builder()
+      rows.add(DailyReceiptReportDTO.builder()
         .receiptNumber(gr.getReceiptNumber())
         .receivedAt(gr.getReceivedAt())
         .purchaseOrderNumber(po != null ? po.getOrderNumber() : "")
         .supplierName(supplier != null ? supplier.getName() : "")
         .supplierRif(supplier != null ? supplier.getTaxId() : null)
         .supplierTaxId(supplier != null ? supplier.getTaxId() : null)
-        .status(isComplete ? "COMPLETADA" : "PARCIAL")
+        .status(poStatus)
         .itemCount(items.size())
-        .totalExpectedQty(totalExpected)
-        .totalReceivedQty(totalReceived)
-        .completenessPct(completenessPct)
+        .totalReceivedQty(totalReceivedThisEvent)
+        .totalOrderedQty(poOrdered)
+        .cumulativeReceivedQty(cumulativeAtThis)
+        .cumulativeCompletenessPct(poCompletenessPct)
         .receivedBy(gr.getReceivedBy() != null ? gr.getReceivedBy().getName() : "")
         .notes(gr.getNotes())
-        .build();
-    }).collect(Collectors.toList());
+        .build());
+    }
 
     int totalReceipts = rows.size();
-    int totalPartial = (int) rows.stream().filter(r -> "PARCIAL".equals(r.getStatus())).count();
-    int totalCompleted = totalReceipts - totalPartial;
-    int totalItemsReceived = rows.stream().mapToInt(DailyReceiptReportDTO::getItemCount).sum();
-    BigDecimal allExpected = rows.stream()
-      .map(DailyReceiptReportDTO::getTotalExpectedQty)
+    // PO-level KPIs: count each PO at most once regardless of how many
+    // partials it has. The receipt count is still per-reception.
+    int totalOrders = poIds.size();
+    int totalCompleted = (int) poIds.stream()
+      .filter(id -> {
+        BigDecimal ord = orderedByPo.getOrDefault(id, BigDecimal.ZERO);
+        BigDecimal rec = totalReceivedAllTimeByPo.getOrDefault(id, BigDecimal.ZERO);
+        return ord.signum() > 0 && rec.compareTo(ord) >= 0;
+      })
+      .count();
+    int totalPartial = totalOrders - totalCompleted;
+
+    // Items-received and items-expected are PO-based: each PO's ordered
+    // and all-time-received quantities, summed across distinct POs (so
+    // a 3-partial PO contributes its PO quantity once, not 3x).
+    BigDecimal poTotalReceived = totalReceivedAllTimeByPo.values().stream()
       .reduce(BigDecimal.ZERO, BigDecimal::add);
-    BigDecimal allReceived = rows.stream()
-      .map(DailyReceiptReportDTO::getTotalReceivedQty)
+    BigDecimal poTotalOrdered = orderedByPo.values().stream()
+      .filter(v -> v.signum() > 0)
       .reduce(BigDecimal.ZERO, BigDecimal::add);
-    int totalItemsExpected = allExpected.intValue();
-    double overallCompleteness = allExpected.compareTo(BigDecimal.ZERO) > 0
-      ? allReceived.multiply(BigDecimal.valueOf(100)).divide(allExpected, 1, java.math.RoundingMode.HALF_UP).doubleValue()
+    int totalItemsReceived = poTotalReceived.intValue();
+    int totalItemsExpected = poTotalOrdered.intValue();
+    double overallCompleteness = poTotalOrdered.compareTo(BigDecimal.ZERO) > 0
+      ? poTotalReceived.multiply(BigDecimal.valueOf(100))
+          .divide(poTotalOrdered, 1, java.math.RoundingMode.HALF_UP)
+          .doubleValue()
       : 0.0;
 
-    Map<String, Long> supplierCounts = rows.stream()
-      .filter(r -> r.getSupplierName() != null && !r.getSupplierName().isEmpty())
-      .collect(Collectors.groupingBy(DailyReceiptReportDTO::getSupplierName, Collectors.counting()));
+    Map<String, Long> supplierCounts = receipts.stream()
+      .map(gr -> gr.getPurchaseOrder() != null
+        && gr.getPurchaseOrder().getSupplier() != null
+          ? gr.getPurchaseOrder().getSupplier().getName() : "")
+      .filter(name -> name != null && !name.isEmpty())
+      .collect(Collectors.groupingBy(name -> name, Collectors.counting()));
     String topSupplier = supplierCounts.entrySet().stream()
       .max(Map.Entry.comparingByValue())
       .map(Map.Entry::getKey).orElse("");
@@ -624,14 +713,11 @@ public class ReportGeneratorService {
       .max(Map.Entry.comparingByValue())
       .map(Map.Entry::getKey).orElse("");
 
-    String warehouseName = receipts.isEmpty()
-      ? (warehouseId != null
-          ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
-          : "")
-      : receipts.get(0).getDestinationWarehouse().getName();
+    String warehouseName = receipts.get(0).getDestinationWarehouse().getName();
 
     DailyReceiptReportKPIs kpis = DailyReceiptReportKPIs.builder()
       .totalReceipts(totalReceipts)
+      .totalOrders(totalOrders)
       .totalPartial(totalPartial)
       .totalCompleted(totalCompleted)
       .totalItemsReceived(totalItemsReceived)
@@ -645,5 +731,22 @@ public class ReportGeneratorService {
 
     kpis.setRows(rows);
     return kpis;
+  }
+
+  private DailyReceiptReportKPIs buildEmptyKpis(Long warehouseId) {
+    String warehouseName = warehouseId != null
+      ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
+      : "";
+    return DailyReceiptReportKPIs.builder()
+      .totalReceipts(0)
+      .totalOrders(0)
+      .totalPartial(0)
+      .totalCompleted(0)
+      .totalItemsReceived(0)
+      .totalItemsExpected(0)
+      .overallCompletenessPct(0.0)
+      .generatedAt(LocalDateTime.now())
+      .warehouseName(warehouseName)
+      .build();
   }
 }

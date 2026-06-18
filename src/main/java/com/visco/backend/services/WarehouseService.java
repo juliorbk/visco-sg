@@ -979,7 +979,6 @@ public class WarehouseService {
           ? request.reason()
           : "Transfer to other warehouse"
       )
-      .entryUnitPrice(request.unitCost())
       .createdAt(LocalDateTime.now())
       .createdBy(createdBy)
       .build();

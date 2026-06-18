@@ -351,6 +351,7 @@ private void addHeader(Document document, String title, Map<String, String> meta
                 .useAllAvailableWidth();
 
         addKpiRow(table, "Total Recepciones", String.valueOf(kpis.getTotalReceipts()), boldFont, regularFont);
+        addKpiRow(table, "Total Ordenes", String.valueOf(kpis.getTotalOrders()), boldFont, regularFont);
         addKpiRow(table, "Completadas", String.valueOf(kpis.getTotalCompleted()), boldFont, regularFont);
         addKpiRow(table, "Parciales", String.valueOf(kpis.getTotalPartial()), boldFont, regularFont);
         addKpiRow(table, "% Cumplimiento", NumberFormatter.formatPercent(kpis.getOverallCompletenessPct()), boldFont, regularFont);
@@ -384,7 +385,7 @@ private void addHeader(Document document, String title, Map<String, String> meta
         document.add(new Paragraph("Recepciones del Dia")
                 .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
 
-        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 2, 2, 3, 2, 1, 1, 2, 2, 1, 2, 3}))
+        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 2, 2, 3, 2, 1, 1, 1, 1, 1, 1, 2, 3}))
                 .useAllAvailableWidth();
         addHeaderCell(table, "# Recepcion");
         addHeaderCell(table, "Hora");
@@ -393,9 +394,10 @@ private void addHeader(Document document, String title, Map<String, String> meta
         addHeaderCell(table, "RIF");
         addHeaderCell(table, "Estado");
         addHeaderCell(table, "Items");
-        addHeaderCell(table, "Esperada");
         addHeaderCell(table, "Recibida");
-        addHeaderCell(table, "%");
+        addHeaderCell(table, "Ordenada");
+        addHeaderCell(table, "Acum.");
+        addHeaderCell(table, "% Acum.");
         addHeaderCell(table, "Recibido por");
         addHeaderCell(table, "Notas");
 
@@ -407,9 +409,13 @@ private void addHeader(Document document, String title, Map<String, String> meta
             addCell(table, item.getSupplierRif() != null ? item.getSupplierRif() : "", regularFont);
             addCell(table, item.getStatus(), regularFont);
             addCell(table, String.valueOf(item.getItemCount()), regularFont);
-            addCell(table, NumberFormatter.formatNumber(item.getTotalExpectedQty()), regularFont);
             addCell(table, NumberFormatter.formatNumber(item.getTotalReceivedQty()), regularFont);
-            addCell(table, NumberFormatter.formatPercent(item.getCompletenessPct().doubleValue()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(item.getTotalOrderedQty()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(item.getCumulativeReceivedQty()), regularFont);
+            addCell(table, NumberFormatter.formatPercent(
+                item.getCumulativeCompletenessPct() == null
+                    ? 0.0
+                    : item.getCumulativeCompletenessPct().doubleValue()), regularFont);
             addCell(table, item.getReceivedBy(), regularFont);
             addCell(table, item.getNotes(), regularFont);
         }
