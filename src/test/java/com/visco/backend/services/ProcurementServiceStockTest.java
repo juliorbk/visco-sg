@@ -261,7 +261,7 @@ class ProcurementServiceStockTest {
       null, // leadTime
       null, // shipConditions
       List.of(new com.visco.backend.models.dtos.PurchaseOrderItemRequest(
-        product.getId(), BigDecimal.valueOf(7), BigDecimal.valueOf(2)
+        product.getId(), BigDecimal.valueOf(7), BigDecimal.valueOf(2), null
       ))
     );
 
