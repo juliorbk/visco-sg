@@ -265,25 +265,12 @@ public class ProcurementService {
                         );
                     }
                 }
-
-                if (receivedQty.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal currentStock = stockLevelRepository.getCurrentStock(
-                        item.getProduct().getId(),
-                        orderWarehouse.getId()
-                    );
-                    if (currentStock != null && currentStock.compareTo(receivedQty) < 0) {
-                        throw new IllegalStateException(
-                            "Insufficient current stock for product " +
-                                item.getProduct().getId() +
-                                ". Available: " +
-                                currentStock +
-                                ", Required: " +
-                                receivedQty
-                        );
-                    }
-                }
             }
 
+            // Una cancelación solo revierte lo NO recibido. La mercancía ya
+            // recibida sigue físicamente en el almacén, por lo que NO se
+            // debe tocar current_stock (eso se hace vía Return/Disposal, no
+            // aquí). Solo se resta el pending restante.
             for (PurchaseOrderItem item : order.getItems()) {
                 BigDecimal orderedQty = item.getQuantity();
                 BigDecimal receivedQty = receivedQtys.getOrDefault(
@@ -296,13 +283,6 @@ public class ProcurementService {
                         item.getProduct().getId(),
                         orderWarehouse.getId(),
                         pendingQty
-                    );
-                }
-                if (receivedQty.compareTo(BigDecimal.ZERO) > 0) {
-                    warehouseService.substractCurrentStock(
-                        item.getProduct().getId(),
-                        orderWarehouse.getId(),
-                        receivedQty
                     );
                 }
             }

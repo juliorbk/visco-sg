@@ -340,12 +340,16 @@ public class WarehouseService {
       .build();
     receipt.getItems().add(item);
 
-    stockLevelRepository.addCurrentStockAtomic(
+    // Restar pending ANTES de acreditar current. Si la fila no existiera
+    // (dato huérfano), el UPSERT crearía la fila con pending_stock=0 y
+    // la resta de pending no encontraría la fila; hacerlo en este orden
+    // preserva el pending existente si la fila ya estaba.
+    stockLevelRepository.subtractPendingStockAtomic(
       poItem.getProduct().getId(),
       destWarehouse.getId(),
       received
     );
-    stockLevelRepository.subtractPendingStockAtomic(
+    stockLevelRepository.addCurrentStockAtomic(
       poItem.getProduct().getId(),
       destWarehouse.getId(),
       received
@@ -925,6 +929,18 @@ public class WarehouseService {
         new EntityNotFoundException("Destination warehouse not found")
       );
 
+    // Validar producto existente ANTES de mover stock para no dejar
+    // stock debitado del origen sin acreditar al destino si la validación falla.
+    Product product = productRepository
+      .findById(request.productId())
+      .orElseThrow(() ->
+        new EntityNotFoundException("Product not found: " + request.productId())
+      );
+
+    User createdBy = userRepository
+      .findById(request.createdById())
+      .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
     // Validar stock suficiente antes de transferir
     BigDecimal currentStock =
       stockLevelRepository.getStockByProductAndWarehouse(
@@ -951,14 +967,6 @@ public class WarehouseService {
       request.toWarehouseId(),
       request.quantity()
     );
-
-    Product product = productRepository
-      .findById(request.productId())
-      .orElseThrow(() -> new EntityNotFoundException("Product not found"));
-
-    User createdBy = userRepository
-      .findById(request.createdById())
-      .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
     InventoryMovement movement = InventoryMovement.builder()
       .product(product)
