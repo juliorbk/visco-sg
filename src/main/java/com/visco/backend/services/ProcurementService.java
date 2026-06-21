@@ -10,6 +10,7 @@ import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.PurchaseOrderItem;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
 import com.visco.backend.models.entities.Requisition;
+import com.visco.backend.models.entities.RequisitionItem;
 import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.models.entities.Supplier;
 import com.visco.backend.models.entities.User;
@@ -25,6 +26,7 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,6 +66,19 @@ public class ProcurementService {
 
     /**
      * Creates a purchase order from a request with items and optional requisition.
+     *
+     * <p>When {@code request.requisitionId()} is provided, each item must
+     * include the {@code requisitionItemId} it is fulfilling. The service
+     * validates that the sum of already-awarded quantities across previous
+     * POs (excluding CANCELLED / REJECTED) plus the new quantity does not
+     * exceed the requisition item's requested quantity. After persisting the
+     * PO, the source requisition's status is recomputed:
+     *
+     * <ul>
+     *   <li>Every item fully awarded → {@link RequisitionStatus#CONVERTED}</li>
+     *   <li>Some items awarded, others pending → {@link RequisitionStatus#PARTIALLY_CONVERTED}</li>
+     *   <li>No items awarded (defensive) → kept as {@link RequisitionStatus#APPROVED}</li>
+     * </ul>
      *
      * @param request the purchase order creation request
      * @return the created purchase order response
@@ -105,20 +120,23 @@ public class ProcurementService {
             .createdAt(LocalDateTime.now())
             .build();
 
+        Requisition requisition = null;
         if (request.requisitionId() != null) {
-            Requisition requisition = requisitionRepository
+            requisition = requisitionRepository
                 .findById(request.requisitionId())
                 .orElseThrow(() ->
                     new EntityNotFoundException("Requisition not found: " + request.requisitionId())
                 );
-            if (requisition.getStatus() != RequisitionStatus.APPROVED) {
+            if (
+                requisition.getStatus() != RequisitionStatus.APPROVED &&
+                requisition.getStatus() != RequisitionStatus.PARTIALLY_CONVERTED
+            ) {
                 throw new IllegalStateException(
-                    "Only approved requisitions can be converted to PO"
+                    "Only APPROVED or PARTIALLY_CONVERTED requisitions can receive new POs. " +
+                    "Current status: " + requisition.getStatus()
                 );
             }
             order.setRequisition(requisition);
-            requisition.setStatus(RequisitionStatus.CONVERTED);
-            requisitionRepository.save(requisition);
         }
 
         List<Long> productIds = request
@@ -132,15 +150,64 @@ public class ProcurementService {
             .stream()
             .collect(Collectors.toMap(Product::getId, (p) -> p));
 
+        // Build an index of the requisition's items for fast lookups when
+        // validating award quantities.
+        Map<Long, RequisitionItem> requisitionItemIndex = new HashMap<>();
+        if (requisition != null) {
+            for (RequisitionItem ri : requisition.getItems()) {
+                requisitionItemIndex.put(ri.getId(), ri);
+            }
+        }
+
         for (PurchaseOrderItemRequest itemReq : request.items()) {
             Product product = productMap.get(itemReq.productId());
             if (product == null) {
                 throw new EntityNotFoundException("Product not found: " + itemReq.productId());
             }
 
+            RequisitionItem requisitionItem = null;
+            if (requisition != null) {
+                if (itemReq.requisitionItemId() == null) {
+                    throw new IllegalArgumentException(
+                        "requisitionItemId is required on every item when the PO is " +
+                        "linked to a requisition"
+                    );
+                }
+                requisitionItem = requisitionItemIndex.get(itemReq.requisitionItemId());
+                if (requisitionItem == null) {
+                    throw new EntityNotFoundException(
+                        "Requisition item " + itemReq.requisitionItemId() +
+                        " does not belong to requisition " + requisition.getId()
+                    );
+                }
+                if (
+                    !requisitionItem.getProduct().getId().equals(product.getId())
+                ) {
+                    throw new IllegalArgumentException(
+                        "Product " + product.getId() + " on PO item does not match " +
+                        "the product (" + requisitionItem.getProduct().getId() +
+                        ") of requisition item " + requisitionItem.getId()
+                    );
+                }
+
+                BigDecimal alreadyAwarded = purchaseOrderRepository
+                    .sumAwardedQuantityByRequisitionItemId(requisitionItem.getId());
+                if (alreadyAwarded == null) alreadyAwarded = BigDecimal.ZERO;
+                BigDecimal newTotal = alreadyAwarded.add(itemReq.quantity());
+                if (newTotal.compareTo(requisitionItem.getQuantity()) > 0) {
+                    throw new IllegalStateException(
+                        "Over-award on requisition item " + requisitionItem.getId() +
+                        " (product " + product.getId() + "). Requested: " +
+                        requisitionItem.getQuantity() + ", already awarded: " +
+                        alreadyAwarded + ", attempted to add: " + itemReq.quantity()
+                    );
+                }
+            }
+
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                 .purchaseOrder(order)
                 .product(product)
+                .requisitionItem(requisitionItem)
                 .quantity(itemReq.quantity())
                 .unitPrice(itemReq.unitPrice())
                 .build();
@@ -155,7 +222,67 @@ public class ProcurementService {
         }
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
+
+        if (requisition != null) {
+            recomputeRequisitionStatus(requisition);
+        }
+
         return toResponse(savedOrder);
+    }
+
+    /**
+     * Recomputes a requisition's lifecycle status from its current award
+     * progress. Called after every PO is created from a requisition.
+     *
+     * <p>Mutates the passed-in entity and persists the change.
+     */
+    private void recomputeRequisitionStatus(Requisition requisition) {
+        // Refresh items from DB so we see the lines added in this transaction
+        // (some of them are referenced by the new PO we just saved).
+        Requisition fresh = requisitionRepository
+            .findByIdDetailed(requisition.getId())
+            .orElse(requisition);
+
+        Map<Long, BigDecimal> awardedByItem = purchaseOrderRepository
+            .sumAwardedByRequisitionId(fresh.getId())
+            .stream()
+            .collect(
+                Collectors.toMap(
+                    PurchaseOrderRepository.AwardedQuantityProjection::getRequisitionItemId,
+                    PurchaseOrderRepository.AwardedQuantityProjection::getAwardedQuantity
+                )
+            );
+
+        boolean anyAwarded = false;
+        boolean allFullyAwarded = !fresh.getItems().isEmpty();
+
+        for (RequisitionItem ri : fresh.getItems()) {
+            BigDecimal awarded = awardedByItem.getOrDefault(ri.getId(), BigDecimal.ZERO);
+            if (awarded.compareTo(BigDecimal.ZERO) > 0) anyAwarded = true;
+            if (awarded.compareTo(ri.getQuantity()) < 0) allFullyAwarded = false;
+        }
+
+        RequisitionStatus newStatus;
+        if (fresh.getItems().isEmpty()) {
+            newStatus = RequisitionStatus.APPROVED;
+        } else if (allFullyAwarded) {
+            newStatus = RequisitionStatus.CONVERTED;
+        } else if (anyAwarded) {
+            newStatus = RequisitionStatus.PARTIALLY_CONVERTED;
+        } else {
+            newStatus = RequisitionStatus.APPROVED;
+        }
+
+        if (fresh.getStatus() != newStatus) {
+            log.info(
+                "Requisition {} status transition: {} -> {}",
+                fresh.getRequisitionNumber(),
+                fresh.getStatus(),
+                newStatus
+            );
+            fresh.setStatus(newStatus);
+            requisitionRepository.save(fresh);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -288,7 +415,16 @@ public class ProcurementService {
             }
         }
 
-        return purchaseOrderRepository.save(order);
+        PurchaseOrder saved = purchaseOrderRepository.save(order);
+
+        // Cancelling a PO reduces the awarded quantity for any source
+        // requisition, so we may need to step the requisition status back
+        // from CONVERTED -> PARTIALLY_CONVERTED or APPROVED.
+        if (saved.getRequisition() != null) {
+            recomputeRequisitionStatus(saved.getRequisition());
+        }
+
+        return saved;
     }
 
     private Map<Long, BigDecimal> getTotalReceivedByOrder(Long orderId) {
@@ -459,7 +595,10 @@ public class ProcurementService {
                     item.getProduct().getUom().name(),
                     item.getQuantity(),
                     item.getUnitPrice(),
-                    item.getUnitPrice().multiply(item.getQuantity())
+                    item.getUnitPrice().multiply(item.getQuantity()),
+                    item.getRequisitionItem() != null
+                        ? item.getRequisitionItem().getId()
+                        : null
                 )
             )
             .toList();

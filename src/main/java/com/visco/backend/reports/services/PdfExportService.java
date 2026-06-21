@@ -18,7 +18,10 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
+import com.visco.backend.reports.models.dtos.DailyTransferReportDTO;
+import com.visco.backend.reports.models.dtos.DailyTransferReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
+import com.visco.backend.reports.models.dtos.RequisitionFulfillmentReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistributionDTO;
@@ -140,6 +143,25 @@ public class PdfExportService {
             addFooter(document);
         } catch (Exception e) {
             throw new RuntimeException("Error generating PDF daily receipt report", e);
+        }
+    }
+
+    /**
+     * Writes a daily transfers report (KPIs + per-transfer table) as a PDF.
+     */
+    public void exportDailyTransferReportToPdf(
+            List<DailyTransferReportDTO> data, DailyTransferReportKPIs kpis,
+            String title, Map<String, String> metadata, OutputStream outputStream) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
+            addHeader(document, title, metadata);
+            addDailyTransferKpiBlock(document, kpis);
+            addDailyTransferTable(document, data);
+            addFooter(document);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF daily transfer report", e);
         }
     }
 
@@ -418,6 +440,147 @@ private void addHeader(Document document, String title, Map<String, String> meta
                     : item.getCumulativeCompletenessPct().doubleValue()), regularFont);
             addCell(table, item.getReceivedBy(), regularFont);
             addCell(table, item.getNotes(), regularFont);
+        }
+
+        document.add(table);
+    }
+
+    private void addDailyTransferKpiBlock(Document document, DailyTransferReportKPIs kpis) throws IOException {
+        PdfFont boldFont = PdfFontFactory.createFont();
+        PdfFont regularFont = PdfFontFactory.createFont();
+
+        document.add(new Paragraph("Indicadores")
+                .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
+
+        Table table = new Table(UnitValue.createPercentArray(new float[]{3, 2}))
+                .useAllAvailableWidth();
+
+        addKpiRow(table, "Total Transferencias", String.valueOf(kpis.getTotalTransfers()), boldFont, regularFont);
+        addKpiRow(table, "Cantidad Total Transferida", NumberFormatter.formatNumber(kpis.getTotalQuantityTransferred()), boldFont, regularFont);
+        if (kpis.getTopTransferredProduct() != null && !kpis.getTopTransferredProduct().isEmpty()) {
+            addKpiRow(table, "Producto Mas Transferido", kpis.getTopTransferredProduct(), boldFont, regularFont);
+        }
+        if (kpis.getTopSourceWarehouse() != null && !kpis.getTopSourceWarehouse().isEmpty()) {
+            addKpiRow(table, "Almacen Origen Top", kpis.getTopSourceWarehouse(), boldFont, regularFont);
+        }
+        if (kpis.getTopDestinationWarehouse() != null && !kpis.getTopDestinationWarehouse().isEmpty()) {
+            addKpiRow(table, "Almacen Destino Top", kpis.getTopDestinationWarehouse(), boldFont, regularFont);
+        }
+
+        document.add(table);
+    }
+
+    private void addDailyTransferTable(Document document, List<DailyTransferReportDTO> data) throws IOException {
+        PdfFont regularFont = PdfFontFactory.createFont();
+        PdfFont boldFont = PdfFontFactory.createFont();
+
+        document.add(new Paragraph("Transferencias del Dia")
+                .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
+
+        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 3, 2, 2, 2, 2, 2, 3}))
+                .useAllAvailableWidth();
+        addHeaderCell(table, "Fecha");
+        addHeaderCell(table, "Producto");
+        addHeaderCell(table, "SKU");
+        addHeaderCell(table, "Codigo");
+        addHeaderCell(table, "Cantidad");
+        addHeaderCell(table, "Origen");
+        addHeaderCell(table, "Destino");
+        addHeaderCell(table, "Usuario");
+        addHeaderCell(table, "Motivo");
+
+        for (DailyTransferReportDTO item : data) {
+            addCell(table, DateUtils.formatDateTime(item.getTransferDate()), regularFont);
+            addCell(table, item.getProductName(), regularFont);
+            addCell(table, item.getProductSku(), regularFont);
+            addCell(table, item.getProductInternalCode(), regularFont);
+            addCell(table, NumberFormatter.formatNumber(item.getQuantity()), regularFont);
+            addCell(table, item.getFromWarehouseName(), regularFont);
+            addCell(table, item.getToWarehouseName(), regularFont);
+            addCell(table, item.getUserName(), regularFont);
+            addCell(table, item.getReason() != null ? item.getReason() : "", regularFont);
+        }
+
+        document.add(table);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Requisition Fulfillment (multi-PO per requisition)
+    // ─────────────────────────────────────────────────────────────
+
+    /**
+     * Writes a "requisition fulfillment" report as a PDF. The layout
+     * groups rows by requisition and shows the per-PO breakdown inside
+     * each requisition block so the reader can see how a single
+     * requisition was split across suppliers.
+     */
+    public void exportRequisitionFulfillmentReportToPdf(
+        List<RequisitionFulfillmentReportDTO> data,
+        String title,
+        Map<String, String> metadata,
+        OutputStream outputStream
+    ) {
+        try (PdfWriter writer = new PdfWriter(outputStream);
+             PdfDocument pdf = new PdfDocument(writer);
+             Document document = new Document(pdf, PageSize.A4.rotate())) {
+            document.setMargins(20, 20, 20, 20);
+            addHeader(document, title, metadata);
+            addRequisitionFulfillmentTable(document, data);
+            addFooter(document);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating PDF requisition fulfillment report", e);
+        }
+    }
+
+    private void addRequisitionFulfillmentTable(
+        Document document,
+        List<RequisitionFulfillmentReportDTO> data
+    ) throws IOException {
+        PdfFont regularFont = PdfFontFactory.createFont();
+        PdfFont boldFont = PdfFontFactory.createFont();
+
+        document.add(new Paragraph("Adjudicación de Requisiciones")
+                .setFont(boldFont).setFontSize(12).setFontColor(PRIMARY).setMarginTop(10));
+
+        Table table = new Table(UnitValue.createPercentArray(new float[]{
+                2, 2, 2, 2, 2, 2, 1.5f, 1.5f, 1.5f, 1.5f
+            }))
+            .useAllAvailableWidth();
+
+        addHeaderCell(table, "Requisición");
+        addHeaderCell(table, "Estado Req.");
+        addHeaderCell(table, "Solicitante");
+        addHeaderCell(table, "Centro Costo");
+        addHeaderCell(table, "Producto");
+        addHeaderCell(table, "OC Adjudicada");
+        addHeaderCell(table, "Solicitada");
+        addHeaderCell(table, "Adjudicada");
+        addHeaderCell(table, "Pendiente");
+        addHeaderCell(table, "Estado");
+
+        for (RequisitionFulfillmentReportDTO row : data) {
+            addCell(table, row.getRequisitionNumber(), regularFont);
+            addCell(table, row.getRequisitionStatus(), regularFont);
+            addCell(table, row.getRequestedBy(), regularFont);
+            addCell(table, row.getCostCenter(), regularFont);
+            addCell(table, row.getProductName() + "\n" + row.getProductSku(), regularFont);
+
+            StringBuilder pos = new StringBuilder();
+            if (row.getAwardedPos() != null) {
+                for (var po : row.getAwardedPos()) {
+                    if (pos.length() > 0) pos.append("\n");
+                    pos.append(po.getOrderNumber())
+                       .append(" (").append(po.getSupplierName()).append(") — ")
+                       .append(NumberFormatter.formatNumber(po.getQuantity()))
+                       .append(" @ ").append(NumberFormatter.formatCurrency(po.getUnitPrice()));
+                }
+            }
+            addCell(table, pos.toString(), regularFont);
+
+            addCell(table, NumberFormatter.formatNumber(row.getRequestedQuantity()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(row.getAwardedQuantity()), regularFont);
+            addCell(table, NumberFormatter.formatNumber(row.getPendingQuantity()), regularFont);
+            addCell(table, row.getFulfillmentState(), regularFont);
         }
 
         document.add(table);
