@@ -29,7 +29,7 @@ Genera un **manual de usuario profesional** para el sistema **OriFlow by Visco O
 
 ## 2. INTRODUCCIÓN
 ### 2.1 ¿Qué es OriFlow?
-Plataforma empresarial para la gestión integral de almacenes, compras y proveedores. Cubre el ciclo completo desde la requisición de materiales hasta la recepción y despacho de mercancía, incluyendo órdenes de compra, facturación, reportes y administración de usuarios.
+Plataforma empresarial para la gestión integral de almacenes, compras y proveedores. Cubre el ciclo completo desde la requisición de materiales hasta la recepción y despacho de mercancía, incluyendo órdenes de compra, reportes y administración de usuarios.
 
 ### 2.2 Módulos del Sistema
 1. Dashboard — Resumen Ejecutivo
@@ -375,7 +375,7 @@ Gestión de usuarios, invitaciones y empleados del sistema.
 - **SKU**: Código único de identificación de producto
 - **Kardex**: Registro histórico de movimientos de inventario
 - **Lead Time**: Tiempo de entrega estimado del proveedor
-- **3-Way Matching**: Conciliación entre orden de compra, recepción y factura
+- **(Eliminado) 3-Way Matching**: Módulo de facturas eliminado del backend
 - **Punto de Reorden**: Nivel mínimo de stock que dispara una alerta de reabastecimiento
 - **Stock Máximo**: Nivel máximo de stock recomendado para un producto
 - **SAP**: Código de referencia del sistema SAP corporativo

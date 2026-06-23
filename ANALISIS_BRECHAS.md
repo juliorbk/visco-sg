@@ -8,10 +8,8 @@
 
 ## 1. BRECHAS CRÍTICAS (Bloquean funcionalidad)
 
-### 1.1 Invoice 3-way matching incompleto (InvoiceService.java:82-143)
-- **Problema**: El 3-way matching solo compara factura vs orden de compra (cantidad y precio unitario). NO valida correctamente contra las cantidades recibidas (goods receipt). Aunque calcula `receivedQtys`, la lógica de `qtyMatch` solo compara `invQty != poQty`, ignorando si lo recibido coincide.
-- **Impacto**: Una factura puede marcarse como `MATCHED` aunque las cantidades recibidas no coincidan con lo facturado.
-- **Solución**: El `qtyMatch` debe validar: `invQty.compareTo(poQty) == 0 && invQty.compareTo(receivedQty) == 0`.
+### 1.1 Invoice 3-way matching incompleto
+- **NOTA**: El módulo de facturas (Invoice) fue eliminado del backend. Esta brecha ya no aplica.
 
 ### 1.2 GoodReceipt no registra quién recibió (GoodReceipt.java)
 - **Problema**: `GoodReceipt` no tiene campo `receivedBy` (usuario que recibió la mercancía). El `createdBy` se obtiene de `order.getCreatedBy()`, que es quien CREÓ la orden, no quien recibió.
@@ -90,10 +88,8 @@
 - **Impacto**: Dashboard muestra datos desactualizados hasta que el caché se limpie manualmente.
 - **Solución**: Configurar TTL global en application.properties (`spring.cache.cache-name.specs`) o agregar `@CacheEvict` en servicios que modifican datos (crear PO, recibir mercancía, etc.).
 
-### 3.5 Invoice e InvoiceItem sin índices (Invoice.java, InvoiceItem.java)
-- **Problema**: Las tablas `invoices` e `invoice_items` no tienen ningún `@Index`. Las consultas por `purchaseOrderId` (muy frecuentes) harán full table scan.
-- **Impacto**: Degradación severa al crecer el volumen de facturas.
-- **Solución**: Agregar `@Index(name = "idx_invoice_po", columnList = "purchase_order_id")` y similar en invoice_items.
+### 3.5 Invoice e InvoiceItem sin índices
+- **NOTA**: Módulo de facturas eliminado. Esta brecha ya no aplica.
 
 ---
 
@@ -130,9 +126,8 @@
 - **Impacto**: El campo puede no crearse en la tabla si DDL es `update` y no hay columna `deleted_at`.
 - **Solución**: Agregar `@Column(name = "deleted_at")`.
 
-### 4.6 Invoice no tiene @Index en purchase_order_id (Invoice.java)
-- **Problema**: Las consultas `findByPurchaseOrderId` en InvoiceRepository harán sequential scan.
-- **Solución**: Agregar `@Index(name = "idx_invoice_po", columnList = "purchase_order_id")`.
+### 4.6 Invoice no tiene @Index en purchase_order_id
+- **NOTA**: Módulo de facturas eliminado. Esta brecha ya no aplica.
 
 ---
 
@@ -182,7 +177,7 @@
 | DashboardController | ✅ |
 | SuppliersController | ✅ |
 | WarehouseController | ✅ |
-| **InvoiceController** | ❌ |
+| **InvoiceController** | ❌ (Eliminado) |
 | **ProcurementController** | ❌ |
 | **ProductController** | ❌ |
 | **RequisitionController** | ❌ |
@@ -200,7 +195,7 @@
 ### 6.3 No hay tests de servicio ni repositorio
 - **Problema**: Solo hay tests de controlador (`@WebMvcTest`). No hay tests unitarios de servicios ni tests de integración de repositorios (`@DataJpaTest`).
 - **Impacto**: La lógica de negocio (3-way matching, transiciones de estado, cálculos de stock) no está testeada.
-- **Solución**: Agregar tests unitarios de servicios críticos (InvoiceService, ProcurementService, WarehouseService) y tests de integración de repositorios.
+- **Solución**: Agregar tests unitarios de servicios críticos (ProcurementService, WarehouseService) y tests de integración de repositorios.
 
 ### 6.4 Cobertura de casos de error insuficiente
 - **Problema**: Los tests existentes prueban principalmente el "happy path". Hay pocos tests de casos de error (404, 409, 400, 401, 403).
@@ -233,7 +228,7 @@
 - **Problema**: El running balance en `getMovements()` (WarehouseService.java:599-627) simplemente suma `m.getQuantity()` a `runningBalance[0]`. Pero para OUTPUT y ADJUSTMENT, la cantidad debería restarse (no sumarse), pues `quantity` siempre es positiva en el movimiento.
 - **Solución**: `runningBalance[0] = runningBalance[0].add(m.getType() == MovementType.OUTPUT ? m.getQuantity().negate() : m.getQuantity())`.
 
-### 8.2 GoodReceipt.notes tiene @Column(length = 1000) inconsistente con Invoice.notes (length = 500)
+### 8.2 GoodReceipt.notes tiene @Column(length = 1000) (brecha de consistencia ya no aplica, Invoice eliminado)
 - No es crítico pero sugiere falta de estandarización.
 
 ### 8.3 RateLimitFilter no diferencia métodos HTTP
@@ -253,7 +248,7 @@
 ## 9. RECOMENDACIONES PRIORITARIAS
 
 ### SPRINT 1 (Quick Wins - 1-2 días)
-1. ✅ Agregar `@Index` a `Invoice` y `InvoiceItem` (purchaseOrderId)
+1. ✅ (Eliminado) Agregar `@Index` a `Invoice` y `InvoiceItem`
 2. ✅ Agregar `@Column(name = "deleted_at")` a `PurchaseOrder.deletedAt`
 3. ✅ Corregir running balance en `WarehouseService.getMovements()` (restar en OUTPUT)
 4. ✅ Mover CORS origins a application.properties
@@ -267,7 +262,7 @@
 5. 🔴 Implementar bloqueo de cuentas por intentos fallidos
 
 ### SPRINT 3 (Funcionalidad Crítica - 1 semana)
-1. 🔴 Corregir 3-way matching en InvoiceService (validar contra received quantities)
+1. 🔴 (Eliminado) Corregir 3-way matching en InvoiceService
 2. 🔴 Agregar `receivedBy` a GoodReceipt
 3. 🔴 Corregir cancelación de PO (revertir pending stock correctamente)
 4. 🔴 Agregar `expectedDeliveryDate`, `paymentTerms`, `incoterms` a PO
@@ -276,11 +271,11 @@
 1. ⚠️ Implementar `@Version` en `StockLevel` para optimistic locking
 2. ⚠️ Agregar paginación a `getMovements()`
 3. ⚠️ Configurar TTL de caché dashboard
-4. ⚠️ Crear índices faltantes en tablas Invoice, InvoiceItem, User, Warehouse
+4. ⚠️ Crear índices faltantes en tablas User, Warehouse (Invoice eliminado)
 
 ### SPRINT 5 (Testing - 1-2 semanas)
-1. ✅ Tests para controllers faltantes (Invoice, Procurement, Product, Requisition)
-2. ✅ Tests de servicio (ProcurementService, InvoiceService, WarehouseService, StatsService)
+1. ✅ Tests para controllers faltantes (Procurement, Product, Requisition) — Invoice eliminado
+2. ✅ Tests de servicio (ProcurementService, WarehouseService, StatsService) — InvoiceService eliminado
 3. ✅ Tests de repositorio con @DataJpaTest
 4. ✅ Tests de seguridad (probar rutas protegidas con addFilters=true)
 
@@ -299,7 +294,7 @@
 | # | Riesgo | Severidad | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|---|---|
 | 1 | **Inconsistencia de stock por race conditions** | CRÍTICA | Alta | $ y datos incorrectos | `@Version` en StockLevel ASAP |
-| 2 | **Factura pagada sin coincidir con recepción** | CRÍTICA | Media | $ pérdida financiera | Corregir 3-way matching |
+| 2 | **Factura pagada sin coincidir con recepción** | CRÍTICA | Media | $ pérdida financiera | (Eliminado) Módulo de facturas removido |
 | 3 | **Cost-centers expuestos públicamente** | ALTA | Baja | Información sensible expuesta | Mover a autenticado |
 | 4 | **Backup no funcional** | ALTA | Cierta | Pérdida total de datos | Implementar backup.sh |
 | 5 | **Dashboard stale por cache sin TTL** | MEDIA | Alta | Decisiones con datos desactualizados | Configurar TTL |
@@ -311,10 +306,10 @@
 ## 11. QUICK WINS (Implementación inmediata)
 
 ```java
-// 1. Invoice.java - Agregar índice faltante
-@Table(name = "invoices", indexes = {
-    @Index(name = "idx_invoice_po", columnList = "purchase_order_id"),
-    @Index(name = "idx_invoice_supplier", columnList = "supplier_id")
+// 1. (Eliminado) Invoice.java - Ya no aplica, módulo eliminado
+// @Table(name = "invoices", indexes = {
+//     @Index(name = "idx_invoice_po", columnList = "purchase_order_id"),
+//     @Index(name = "idx_invoice_supplier", columnList = "supplier_id")
 })
 
 // 2. PurchaseOrder.java - Agregar @Column faltante
@@ -332,7 +327,7 @@ runningBalance[0] = runningBalance[0].add(
 @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
 private String[] allowedOrigins;
 
-// 5. InvoiceService.java:109 - Corregir 3-way matching
+// 5. (Eliminado) InvoiceService.java - Ya no aplica, módulo eliminado
 boolean qtyMatch = invQty.compareTo(poQty) == 0 && invQty.compareTo(receivedQty) == 0;
 ```
 

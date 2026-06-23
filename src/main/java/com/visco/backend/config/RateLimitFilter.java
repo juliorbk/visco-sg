@@ -46,7 +46,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         SUPPLIERS("/api/suppliers/**", "rate-limit.suppliers"),
         WAREHOUSES("/api/warehouse/**", "rate-limit.warehouses"),
         DASHBOARD("/api/dashboard/**", "rate-limit.dashboard"),
-        INVOICES("/api/invoices/**", "rate-limit.invoices"),
         REQUISITIONS("/api/requisitions/**", "rate-limit.requisitions"),
         COST_CENTERS("/api/cost-centers/**", "rate-limit.cost-centers"),
         EMPLOYEES("/api/employees/**", "rate-limit.employees"),
@@ -101,10 +100,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private int dashboardCapacity;
     @Value("${rate-limit.dashboard.minutes:1}")
     private int dashboardMinutes;
-    @Value("${rate-limit.invoices.capacity:60}")
-    private int invoicesCapacity;
-    @Value("${rate-limit.invoices.minutes:1}")
-    private int invoicesMinutes;
     @Value("${rate-limit.requisitions.capacity:60}")
     private int requisitionsCapacity;
     @Value("${rate-limit.requisitions.minutes:1}")
@@ -136,7 +131,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             case SUPPLIERS -> suppliersCapacity;
             case WAREHOUSES -> warehousesCapacity;
             case DASHBOARD -> dashboardCapacity;
-            case INVOICES -> invoicesCapacity;
             case REQUISITIONS -> requisitionsCapacity;
             case COST_CENTERS -> costCentersCapacity;
             case EMPLOYEES -> employeesCapacity;
@@ -156,7 +150,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             case SUPPLIERS -> suppliersMinutes;
             case WAREHOUSES -> warehousesMinutes;
             case DASHBOARD -> dashboardMinutes;
-            case INVOICES -> invoicesMinutes;
             case REQUISITIONS -> requisitionsMinutes;
             case COST_CENTERS -> costCentersMinutes;
             case EMPLOYEES -> employeesMinutes;
