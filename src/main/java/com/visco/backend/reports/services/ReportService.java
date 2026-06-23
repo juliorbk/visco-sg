@@ -6,8 +6,11 @@ import com.visco.backend.reports.models.dtos.CreateReportRequest;
 import com.visco.backend.reports.models.dtos.CreateScheduledReportRequest;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
+import com.visco.backend.reports.models.dtos.DailyTransferReportDTO;
+import com.visco.backend.reports.models.dtos.DailyTransferReportKPIs;
 import com.visco.backend.reports.models.dtos.ReportAnalyticsDTO;
 import com.visco.backend.reports.models.dtos.ReportDTO;
+import com.visco.backend.reports.models.dtos.RequisitionFulfillmentReportDTO;
 import com.visco.backend.reports.models.dtos.ScheduledReportDTO;
 import com.visco.backend.reports.models.dtos.UpdateScheduledReportRequest;
 import com.visco.backend.reports.models.entities.Report;
@@ -221,6 +224,24 @@ public class ReportService {
                     writeDailyReceiptReport(baos, request, data, kpis, metadata);
                     yield data.size();
                 }
+                case DAILY_TRANSFERS -> {
+                    var kpis = reportGeneratorService.generateDailyTransferReport(
+                            request.getWarehouseId(), request.getStartDate(), request.getEndDate());
+                    var data = kpis.getRows();
+                    if (data.size() > maxRecords) data = data.subList(0, maxRecords);
+                    writeDailyTransferReport(baos, request, data, kpis, metadata);
+                    yield data.size();
+                }
+                case REQUISITION_FULFILLMENT -> {
+                    String statusFilter = request.getAdditionalFilters() == null
+                        ? null
+                        : (String) request.getAdditionalFilters().get("requisitionStatus");
+                    var data = reportGeneratorService.generateRequisitionFulfillmentReport(
+                            request.getStartDate(), request.getEndDate(), statusFilter);
+                    if (data.size() > maxRecords) data = data.subList(0, maxRecords);
+                    writeRequisitionFulfillmentReport(baos, request, data, metadata);
+                    yield data.size();
+                }
                 default -> throw new IllegalArgumentException("Tipo de reporte no soportado: " + request.getType());
             };
             return new GeneratedReport(baos.toByteArray(), recordCount);
@@ -289,6 +310,36 @@ public class ReportService {
             pdfExportService.exportDailyReceiptReportToPdf(data, kpis, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
             excelExportService.exportDailyReceiptReportToExcel(data, kpis, request.getName(), metadata, out);
+        } else {
+            throw new IllegalArgumentException("Formato no soportado: " + request.getFormat());
+        }
+    }
+
+    private void writeDailyTransferReport(ByteArrayOutputStream out, CreateReportRequest request,
+                                           List<DailyTransferReportDTO> data,
+                                           DailyTransferReportKPIs kpis,
+                                           Map<String, String> metadata) {
+        if (request.getFormat() == ReportFormat.PDF) {
+            pdfExportService.exportDailyTransferReportToPdf(data, kpis, request.getName(), metadata, out);
+        } else if (request.getFormat() == ReportFormat.EXCEL) {
+            excelExportService.exportDailyTransferReportToExcel(data, kpis, request.getName(), metadata, out);
+        } else {
+            throw new IllegalArgumentException("Formato no soportado: " + request.getFormat());
+        }
+    }
+
+    private void writeRequisitionFulfillmentReport(ByteArrayOutputStream out,
+                                                   CreateReportRequest request,
+                                                   List<RequisitionFulfillmentReportDTO> data,
+                                                   Map<String, String> metadata) {
+        if (request.getFormat() == ReportFormat.PDF) {
+            pdfExportService.exportRequisitionFulfillmentReportToPdf(
+                data, request.getName(), metadata, out
+            );
+        } else if (request.getFormat() == ReportFormat.EXCEL) {
+            excelExportService.exportRequisitionFulfillmentReportToExcel(
+                data, request.getName(), metadata, out
+            );
         } else {
             throw new IllegalArgumentException("Formato no soportado: " + request.getFormat());
         }

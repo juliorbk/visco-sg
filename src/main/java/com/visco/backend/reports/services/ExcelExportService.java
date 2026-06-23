@@ -3,7 +3,10 @@ package com.visco.backend.reports.services;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
+import com.visco.backend.reports.models.dtos.DailyTransferReportDTO;
+import com.visco.backend.reports.models.dtos.DailyTransferReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
+import com.visco.backend.reports.models.dtos.RequisitionFulfillmentReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO.CategoryDistributionDTO;
@@ -151,6 +154,26 @@ public class ExcelExportService {
     }
   }
 
+  public void exportDailyTransferReportToExcel(
+    List<DailyTransferReportDTO> data,
+    DailyTransferReportKPIs kpis,
+    String title,
+    Map<String, String> metadata,
+    OutputStream outputStream
+  ) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Transferencias Diarias");
+      int rowNum = 0;
+      rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
+      rowNum = buildDailyTransferKpiBlock(wb, sheet, rowNum, kpis);
+      rowNum = buildDailyTransferTable(wb, sheet, rowNum, data);
+      for (int i = 0; i < 9; i++) sheet.autoSizeColumn(i);
+      wb.write(outputStream);
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating Excel daily transfer report", e);
+    }
+  }
+
   private int buildDailyReceiptKpiBlock(
     XSSFWorkbook wb, Sheet sheet, int rowNum, DailyReceiptReportKPIs kpis
   ) {
@@ -249,6 +272,106 @@ public class ExcelExportService {
           : item.getCumulativeCompletenessPct().doubleValue()), style);
       setCellValue(row, 11, item.getReceivedBy(), style);
       setCellValue(row, 12, item.getNotes(), style);
+    }
+
+    sheet.createFreezePane(0, rowNum - data.size());
+    return rowNum + 1;
+  }
+
+  private int buildDailyTransferKpiBlock(
+    XSSFWorkbook wb, Sheet sheet, int rowNum, DailyTransferReportKPIs kpis
+  ) {
+    XSSFFont kpiFont = wb.createFont();
+    kpiFont.setBold(true);
+    kpiFont.setFontHeightInPoints((short) 10);
+    kpiFont.setColor(PRIMARY);
+
+    XSSFFont valFont = wb.createFont();
+    valFont.setFontHeightInPoints((short) 10);
+
+    String[][] kpiData = {
+      { "Total Transferencias", String.valueOf(kpis.getTotalTransfers()) },
+      { "Cantidad Total Transferida", NumberFormatter.formatNumber(kpis.getTotalQuantityTransferred()) },
+    };
+
+    for (String[] pair : kpiData) {
+      Row row = sheet.createRow(rowNum++);
+      Cell labelCell = row.createCell(0);
+      labelCell.setCellValue(pair[0]);
+      XSSFCellStyle labelStyle = wb.createCellStyle();
+      labelStyle.setFont(kpiFont);
+      labelCell.setCellStyle(labelStyle);
+      Cell valCell = row.createCell(1);
+      valCell.setCellValue(pair[1]);
+      XSSFCellStyle valStyle = wb.createCellStyle();
+      valStyle.setFont(valFont);
+      valCell.setCellStyle(valStyle);
+    }
+
+    if (kpis.getTopTransferredProduct() != null && !kpis.getTopTransferredProduct().isEmpty()) {
+      Row row = sheet.createRow(rowNum++);
+      Cell l = row.createCell(0);
+      l.setCellValue("Producto Mas Transferido");
+      XSSFCellStyle ls = wb.createCellStyle(); ls.setFont(kpiFont); l.setCellStyle(ls);
+      Cell v = row.createCell(1);
+      v.setCellValue(kpis.getTopTransferredProduct());
+      XSSFCellStyle vs = wb.createCellStyle(); vs.setFont(valFont); v.setCellStyle(vs);
+    }
+    if (kpis.getTopSourceWarehouse() != null && !kpis.getTopSourceWarehouse().isEmpty()) {
+      Row row = sheet.createRow(rowNum++);
+      Cell l = row.createCell(0);
+      l.setCellValue("Almacen Origen Top");
+      XSSFCellStyle ls = wb.createCellStyle(); ls.setFont(kpiFont); l.setCellStyle(ls);
+      Cell v = row.createCell(1);
+      v.setCellValue(kpis.getTopSourceWarehouse());
+      XSSFCellStyle vs = wb.createCellStyle(); vs.setFont(valFont); v.setCellStyle(vs);
+    }
+    if (kpis.getTopDestinationWarehouse() != null && !kpis.getTopDestinationWarehouse().isEmpty()) {
+      Row row = sheet.createRow(rowNum++);
+      Cell l = row.createCell(0);
+      l.setCellValue("Almacen Destino Top");
+      XSSFCellStyle ls = wb.createCellStyle(); ls.setFont(kpiFont); l.setCellStyle(ls);
+      Cell v = row.createCell(1);
+      v.setCellValue(kpis.getTopDestinationWarehouse());
+      XSSFCellStyle vs = wb.createCellStyle(); vs.setFont(valFont); v.setCellStyle(vs);
+    }
+
+    rowNum++;
+    return rowNum;
+  }
+
+  private int buildDailyTransferTable(
+    XSSFWorkbook wb, Sheet sheet, int rowNum, List<DailyTransferReportDTO> data
+  ) {
+    XSSFCellStyle headerStyle = createHeaderStyle(wb);
+
+    String[] headers = {
+      "Fecha", "Producto", "SKU", "Codigo", "Cantidad",
+      "Origen", "Destino", "Usuario", "Motivo"
+    };
+    Row headerRow = sheet.createRow(rowNum++);
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
+    }
+
+    XSSFCellStyle dataStyle = createDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
+
+    int count = 0;
+    for (DailyTransferReportDTO item : data) {
+      Row row = sheet.createRow(rowNum++);
+      CellStyle style = (count++ % 2 == 0) ? dataStyle : altStyle;
+      setCellValue(row, 0, DateUtils.formatDateTime(item.getTransferDate()), style);
+      setCellValue(row, 1, item.getProductName(), style);
+      setCellValue(row, 2, item.getProductSku(), style);
+      setCellValue(row, 3, item.getProductInternalCode(), style);
+      setCellValue(row, 4, NumberFormatter.formatNumber(item.getQuantity()), style);
+      setCellValue(row, 5, item.getFromWarehouseName(), style);
+      setCellValue(row, 6, item.getToWarehouseName(), style);
+      setCellValue(row, 7, item.getUserName(), style);
+      setCellValue(row, 8, item.getReason() != null ? item.getReason() : "", style);
     }
 
     sheet.createFreezePane(0, rowNum - data.size());
@@ -620,5 +743,109 @@ public class ExcelExportService {
     Cell cell = row.createCell(col);
     cell.setCellValue(value != null ? value : "");
     cell.setCellStyle(style);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Requisition Fulfillment (multi-PO per requisition)
+  // ─────────────────────────────────────────────────────────────
+
+  public void exportRequisitionFulfillmentReportToExcel(
+    List<RequisitionFulfillmentReportDTO> data,
+    String title,
+    Map<String, String> metadata,
+    OutputStream outputStream
+  ) {
+    try (XSSFWorkbook wb = new XSSFWorkbook()) {
+      Sheet sheet = wb.createSheet("Adjudicación");
+      int rowNum = 0;
+      rowNum = buildHeader(wb, sheet, rowNum, title, metadata);
+      rowNum = buildRequisitionFulfillmentTable(wb, sheet, rowNum, data);
+      for (int i = 0; i < 10; i++) sheet.autoSizeColumn(i);
+      wb.write(outputStream);
+    } catch (Exception e) {
+      throw new RuntimeException(
+        "Error generating Excel requisition fulfillment report",
+        e
+      );
+    }
+  }
+
+  private int buildRequisitionFulfillmentTable(
+    XSSFWorkbook wb,
+    Sheet sheet,
+    int rowNum,
+    List<RequisitionFulfillmentReportDTO> data
+  ) {
+    XSSFCellStyle headerStyle = createHeaderStyle(wb);
+
+    String[] headers = {
+      "Requisición",
+      "Estado Req.",
+      "Solicitante",
+      "Centro Costo",
+      "Producto",
+      "OC Adjudicada",
+      "Solicitada",
+      "Adjudicada",
+      "Pendiente",
+      "Estado",
+    };
+    Row headerRow = sheet.createRow(rowNum++);
+    for (int i = 0; i < headers.length; i++) {
+      Cell cell = headerRow.createCell(i);
+      cell.setCellValue(headers[i]);
+      cell.setCellStyle(headerStyle);
+    }
+
+    XSSFCellStyle dataStyle = createDataStyle(wb);
+    XSSFCellStyle altStyle = createAltDataStyle(wb, dataStyle);
+    XSSFCellStyle fullStyle = createAlertStyle(wb, new Color(220, 252, 231));
+    XSSFCellStyle partialStyle = createAlertStyle(wb, new Color(254, 249, 195));
+    XSSFCellStyle noneStyle = createAlertStyle(wb, new Color(254, 226, 226));
+
+    int count = 0;
+    for (RequisitionFulfillmentReportDTO row : data) {
+      Row r = sheet.createRow(rowNum++);
+      CellStyle stateStyle = switch (row.getFulfillmentState()) {
+        case "FULLY_AWARDED" -> fullStyle;
+        case "PARTIALLY_AWARDED" -> partialStyle;
+        default -> noneStyle;
+      };
+      CellStyle baseStyle = (count++ % 2 == 0) ? dataStyle : altStyle;
+
+      setCellValue(r, 0, row.getRequisitionNumber(), baseStyle);
+      setCellValue(r, 1, row.getRequisitionStatus(), baseStyle);
+      setCellValue(r, 2, row.getRequestedBy(), baseStyle);
+      setCellValue(r, 3, row.getCostCenter(), baseStyle);
+      setCellValue(
+        r,
+        4,
+        row.getProductName() + " (" + row.getProductSku() + ")",
+        baseStyle
+      );
+
+      StringBuilder pos = new StringBuilder();
+      if (row.getAwardedPos() != null) {
+        for (var po : row.getAwardedPos()) {
+          if (pos.length() > 0) pos.append(" | ");
+          pos.append(po.getOrderNumber())
+            .append(" — ")
+            .append(po.getSupplierName())
+            .append(": ")
+            .append(NumberFormatter.formatNumber(po.getQuantity()))
+            .append(" @ ")
+            .append(NumberFormatter.formatCurrency(po.getUnitPrice()));
+        }
+      }
+      setCellValue(r, 5, pos.toString(), baseStyle);
+
+      setCellValue(r, 6, NumberFormatter.formatNumber(row.getRequestedQuantity()), baseStyle);
+      setCellValue(r, 7, NumberFormatter.formatNumber(row.getAwardedQuantity()), baseStyle);
+      setCellValue(r, 8, NumberFormatter.formatNumber(row.getPendingQuantity()), baseStyle);
+      setCellValue(r, 9, row.getFulfillmentState(), stateStyle);
+    }
+
+    sheet.createFreezePane(0, rowNum - data.size());
+    return rowNum + 1;
   }
 }

@@ -1,5 +1,7 @@
 package com.visco.backend.services;
 
+import com.visco.backend.models.dtos.AdjustStockBatchRequest;
+import com.visco.backend.models.dtos.AdjustStockItem;
 import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.DispatchRequest;
@@ -11,6 +13,8 @@ import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
+import com.visco.backend.models.dtos.TransferStockBatchRequest;
+import com.visco.backend.models.dtos.TransferStockItem;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.UpdateReceiptItemLocationRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
@@ -47,6 +51,7 @@ import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -911,6 +916,50 @@ public class WarehouseService {
    */
   @Transactional
   public void transferStock(TransferStockRequest request) {
+    Warehouse fromWarehouse = warehouseRepository
+      .findById(request.fromWarehouseId())
+      .orElseThrow(() ->
+        new EntityNotFoundException("Source warehouse not found")
+      );
+
+    Warehouse toWarehouse = warehouseRepository
+      .findById(request.toWarehouseId())
+      .orElseThrow(() ->
+        new EntityNotFoundException("Destination warehouse not found")
+      );
+
+    Product product = productRepository
+      .findById(request.productId())
+      .orElseThrow(() ->
+        new EntityNotFoundException("Product not found: " + request.productId())
+      );
+
+    User createdBy = userRepository
+      .findById(request.createdById())
+      .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+    applyTransferLine(
+      fromWarehouse,
+      toWarehouse,
+      product,
+      request.quantity(),
+      request.reason(),
+      createdBy
+    );
+  }
+
+  /**
+   * Transfers stock of multiple products between the same pair of
+   * warehouses in a single transaction. Either every line succeeds
+   * or none of the stock changes are persisted.
+   *
+   * @param request the batch transfer request
+   * @return the resulting movements, one per line, in input order
+   */
+  @Transactional
+  public List<InventoryMovementResponse> transferStockBatch(
+    TransferStockBatchRequest request
+  ) {
     if (request.fromWarehouseId().equals(request.toWarehouseId())) {
       throw new IllegalArgumentException(
         "Source and destination warehouses must be different"
@@ -929,61 +978,81 @@ public class WarehouseService {
         new EntityNotFoundException("Destination warehouse not found")
       );
 
-    // Validar producto existente ANTES de mover stock para no dejar
-    // stock debitado del origen sin acreditar al destino si la validación falla.
-    Product product = productRepository
-      .findById(request.productId())
-      .orElseThrow(() ->
-        new EntityNotFoundException("Product not found: " + request.productId())
-      );
-
     User createdBy = userRepository
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-    // Validar stock suficiente antes de transferir
-    BigDecimal currentStock =
-      stockLevelRepository.getStockByProductAndWarehouse(
-        request.productId(),
-        request.fromWarehouseId()
-      );
-    if (
-      currentStock == null || currentStock.compareTo(request.quantity()) < 0
-    ) {
-      throw new IllegalArgumentException(
-        "Insufficient stock in the source warehouse for this transfer."
+    List<InventoryMovement> movements = new ArrayList<>(request.items().size());
+    for (TransferStockItem item : request.items()) {
+      Product product = productRepository
+        .findById(item.productId())
+        .orElseThrow(() ->
+          new EntityNotFoundException("Product not found: " + item.productId())
+        );
+      movements.add(
+        applyTransferLine(
+          fromWarehouse,
+          toWarehouse,
+          product,
+          item.quantity(),
+          request.reason(),
+          createdBy
+        )
       );
     }
 
-    // Operaciones atómicas: debitar origen y acreditar destino
-    stockLevelRepository.subtractCurrentStockAtomic(
-      request.productId(),
-      request.fromWarehouseId(),
-      request.quantity()
-    );
+    return movements.stream().map(this::toMovementResponse).toList();
+  }
 
+  /**
+   * Core per-line transfer logic. Assumes the warehouses, product and
+   * user are already loaded. Validates available stock, performs the
+   * atomic stock update, and persists the corresponding movement.
+   */
+  private InventoryMovement applyTransferLine(
+    Warehouse fromWarehouse,
+    Warehouse toWarehouse,
+    Product product,
+    BigDecimal quantity,
+    String reason,
+    User createdBy
+  ) {
+    BigDecimal currentStock =
+      stockLevelRepository.getStockByProductAndWarehouse(
+        product.getId(),
+        fromWarehouse.getId()
+      );
+    if (currentStock == null || currentStock.compareTo(quantity) < 0) {
+      throw new IllegalArgumentException(
+        "Insufficient stock in the source warehouse for product " +
+          product.getSku() +
+          "."
+      );
+    }
+
+    stockLevelRepository.subtractCurrentStockAtomic(
+      product.getId(),
+      fromWarehouse.getId(),
+      quantity
+    );
     stockLevelRepository.addCurrentStockAtomic(
-      request.productId(),
-      request.toWarehouseId(),
-      request.quantity()
+      product.getId(),
+      toWarehouse.getId(),
+      quantity
     );
 
     InventoryMovement movement = InventoryMovement.builder()
       .product(product)
       .fromWarehouse(fromWarehouse)
       .toWarehouse(toWarehouse)
-      .quantity(request.quantity())
+      .quantity(quantity)
       .type(MovementType.TRANSFER)
-      .reason(
-        request.reason() != null
-          ? request.reason()
-          : "Transfer to other warehouse"
-      )
+      .reason(reason != null ? reason : "Transfer to other warehouse")
       .createdAt(LocalDateTime.now())
       .createdBy(createdBy)
       .build();
 
-    inventoryMovementRepository.save(movement);
+    return inventoryMovementRepository.save(movement);
   }
 
   /**
@@ -1153,6 +1222,71 @@ public class WarehouseService {
       .findById(request.createdById())
       .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
+    applyAdjustLine(
+      warehouse,
+      product,
+      request.newStock(),
+      request.reason(),
+      createdBy,
+      request.unitCost()
+    );
+  }
+
+  /**
+   * Sets the stock of multiple products in the same warehouse to an
+   * absolute value, in a single transaction. Either every line
+   * succeeds or none of the changes are persisted.
+   *
+   * @param request the batch adjustment request
+   * @return the resulting movements, one per line, in input order
+   */
+  @Transactional
+  public List<InventoryMovementResponse> adjustStockBatch(
+    AdjustStockBatchRequest request
+  ) {
+    Warehouse warehouse = warehouseRepository
+      .findById(request.warehouseId())
+      .orElseThrow(() -> new EntityNotFoundException("Warehouse not found"));
+
+    User createdBy = userRepository
+      .findById(request.createdById())
+      .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+    List<InventoryMovement> movements = new ArrayList<>(request.items().size());
+    for (AdjustStockItem item : request.items()) {
+      Product product = productRepository
+        .findById(item.productId())
+        .orElseThrow(() ->
+          new EntityNotFoundException("Product not found: " + item.productId())
+        );
+      movements.add(
+        applyAdjustLine(
+          warehouse,
+          product,
+          item.newStock(),
+          request.reason(),
+          createdBy,
+          item.unitCost()
+        )
+      );
+    }
+
+    return movements.stream().map(this::toMovementResponse).toList();
+  }
+
+  /**
+   * Core per-line adjustment logic. Assumes the warehouse, product and
+   * user are already loaded. Computes the delta vs. current stock,
+   * performs the atomic upsert and persists the movement.
+   */
+  private InventoryMovement applyAdjustLine(
+    Warehouse warehouse,
+    Product product,
+    BigDecimal newStock,
+    String reason,
+    User createdBy,
+    BigDecimal unitCost
+  ) {
     BigDecimal currentStock =
       stockLevelRepository.getStockByProductAndWarehouse(
         product.getId(),
@@ -1160,13 +1294,12 @@ public class WarehouseService {
       );
     if (currentStock == null) currentStock = BigDecimal.ZERO;
 
-    BigDecimal difference = request.newStock().subtract(currentStock);
+    BigDecimal difference = newStock.subtract(currentStock);
 
-    // Operación atómica: upsert con valor exacto
     stockLevelRepository.setCurrentStockAtomic(
       product.getId(),
       warehouse.getId(),
-      request.newStock()
+      newStock
     );
 
     InventoryMovement movement = InventoryMovement.builder()
@@ -1175,13 +1308,36 @@ public class WarehouseService {
       .toWarehouse(warehouse)
       .quantity(difference)
       .type(MovementType.ADJUSTMENT)
-      .reason(request.reason() != null ? request.reason() : "Adjust stock")
-      .entryUnitPrice(request.unitCost())
+      .reason(reason != null ? reason : "Adjust stock")
+      .entryUnitPrice(unitCost)
       .createdAt(LocalDateTime.now())
       .createdBy(createdBy)
       .build();
 
-    inventoryMovementRepository.save(movement);
+    return inventoryMovementRepository.save(movement);
+  }
+
+  /**
+   * Maps a persisted inventory movement into its DTO. Running balance is
+   * left null because batch endpoints return brand-new movements without
+   * a kardex context.
+   */
+  private InventoryMovementResponse toMovementResponse(InventoryMovement m) {
+    return new InventoryMovementResponse(
+      m.getId(),
+      m.getProduct().getId(),
+      m.getProduct().getName(),
+      m.getProduct().getSku(),
+      m.getType().name(),
+      m.getQuantity(),
+      m.getEntryUnitPrice(),
+      m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
+      m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
+      m.getReason(),
+      m.getCreatedAt(),
+      m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
+      null
+    );
   }
 
   /**

@@ -4,12 +4,16 @@ import com.visco.backend.models.entities.GoodReceipt;
 import com.visco.backend.models.entities.InventoryMovement;
 import com.visco.backend.models.entities.MovementType;
 import com.visco.backend.models.entities.Product;
+import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.models.entities.StockLevel;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.reports.models.dtos.AlertReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportDTO;
 import com.visco.backend.reports.models.dtos.DailyReceiptReportKPIs;
+import com.visco.backend.reports.models.dtos.DailyTransferReportDTO;
+import com.visco.backend.reports.models.dtos.DailyTransferReportKPIs;
 import com.visco.backend.reports.models.dtos.MovementReportDTO;
+import com.visco.backend.reports.models.dtos.RequisitionFulfillmentReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO;
 import com.visco.backend.reports.models.dtos.StockReportDTO.WarehouseStockInfo;
 import com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO;
@@ -20,6 +24,8 @@ import com.visco.backend.repositories.InventoryMovementRepository;
 import com.visco.backend.repositories.InventoryMovementSpecification;
 import com.visco.backend.repositories.ProductRepository;
 import com.visco.backend.repositories.ProductSpecification;
+import com.visco.backend.repositories.PurchaseOrderRepository;
+import com.visco.backend.repositories.RequisitionRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.WarehouseRepository;
 import java.math.BigDecimal;
@@ -52,6 +58,8 @@ public class ReportGeneratorService {
   private final InventoryMovementRepository movementRepository;
   private final WarehouseRepository warehouseRepository;
   private final GoodReceiptRepository goodReceiptRepository;
+  private final RequisitionRepository requisitionRepository;
+  private final PurchaseOrderRepository purchaseOrderRepository;
 
   @Value("${app.reports.max-records-per-export:50000}")
   private int maxRecords;
@@ -733,6 +741,20 @@ public class ReportGeneratorService {
     return kpis;
   }
 
+  /**
+   * Best-effort conversion of a free-form status string (typically coming
+   * from a UI filter) into a {@link RequisitionStatus}. Returns null when
+   * the input is null/blank/unknown so the query simply ignores the filter.
+   */
+  private RequisitionStatus parseStatus(String name) {
+    if (name == null || name.isBlank()) return null;
+    try {
+      return RequisitionStatus.valueOf(name.trim().toUpperCase(java.util.Locale.ROOT));
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+  }
+
   private DailyReceiptReportKPIs buildEmptyKpis(Long warehouseId) {
     String warehouseName = warehouseId != null
       ? warehouseRepository.findById(warehouseId).map(Warehouse::getName).orElse("")
@@ -748,5 +770,250 @@ public class ReportGeneratorService {
       .generatedAt(LocalDateTime.now())
       .warehouseName(warehouseName)
       .build();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Requisition Fulfillment report (multi-PO per requisition)
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Builds a flat row-per-requisition-item report that shows, for every
+   * requisition in the given date range (inclusive), the requested and
+   * awarded quantities, plus the list of POs that were awarded against
+   * that line item.
+   *
+   * <p>Useful for auditing how a single requisition was split across
+   * suppliers based on price.
+   *
+   * @param startDate  inclusive lower bound on requisition creation date (nullable)
+   * @param endDate    inclusive upper bound on requisition creation date (nullable)
+   * @param statusName optional requisition status filter (e.g. APPROVED, CONVERTED)
+   */
+  public List<RequisitionFulfillmentReportDTO> generateRequisitionFulfillmentReport(
+    LocalDateTime startDate,
+    LocalDateTime endDate,
+    String statusName
+  ) {
+    RequisitionStatus statusFilter = parseStatus(statusName);
+
+    var requisitions = requisitionRepository
+      .findAllForFulfillmentReport(startDate, endDate, statusFilter);
+
+    if (requisitions.isEmpty()) {
+      return java.util.Collections.emptyList();
+    }
+
+    List<Long> requisitionIds = requisitions.stream().map(r -> r.getId()).toList();
+    List<PurchaseOrderRepository.BulkAwardedProjection> aggregated =
+      purchaseOrderRepository.sumAwardedByRequisitionIds(requisitionIds);
+
+    Map<Long, Map<Long, BigDecimal>> awardedByReqItem = new java.util.HashMap<>();
+    for (var row : aggregated) {
+      awardedByReqItem
+        .computeIfAbsent(row.getRequisitionId(), k -> new java.util.HashMap<>())
+        .put(row.getRequisitionItemId(), row.getAwardedQuantity());
+    }
+
+    Map<Long, List<PurchaseOrderRepository.AwardedPoLineProjection>> linesByItem =
+      new java.util.HashMap<>();
+    for (Long reqId : requisitionIds) {
+      for (var line : purchaseOrderRepository.findAwardedLinesByRequisitionId(reqId)) {
+        linesByItem
+          .computeIfAbsent(line.getRequisitionItemId(), k -> new java.util.ArrayList<>())
+          .add(line);
+      }
+    }
+
+    List<RequisitionFulfillmentReportDTO> rows = new java.util.ArrayList<>();
+    for (var req : requisitions) {
+      if (req.getItems() == null) continue;
+      Map<Long, BigDecimal> awardedForReq = awardedByReqItem.getOrDefault(
+        req.getId(),
+        java.util.Collections.emptyMap()
+      );
+
+      for (var item : req.getItems()) {
+        BigDecimal awarded = awardedForReq.getOrDefault(item.getId(), BigDecimal.ZERO);
+        BigDecimal pending = item.getQuantity().subtract(awarded);
+        if (pending.compareTo(BigDecimal.ZERO) < 0) pending = BigDecimal.ZERO;
+
+        String state;
+        if (awarded.compareTo(BigDecimal.ZERO) == 0) state = "NOT_AWARDED";
+        else if (awarded.compareTo(item.getQuantity()) >= 0) state = "FULLY_AWARDED";
+        else state = "PARTIALLY_AWARDED";
+
+        List<RequisitionFulfillmentReportDTO.AwardedPoLine> awardedPos =
+          linesByItem
+            .getOrDefault(item.getId(), java.util.Collections.emptyList())
+            .stream()
+            .<RequisitionFulfillmentReportDTO.AwardedPoLine>map(line ->
+              RequisitionFulfillmentReportDTO.AwardedPoLine.builder()
+                .purchaseOrderId(line.getPurchaseOrderId())
+                .orderNumber(line.getOrderNumber())
+                .supplierName(line.getSupplierName())
+                .status(line.getStatus() == null ? null : line.getStatus().name())
+                .quantity(line.getQuantity())
+                .unitPrice(line.getUnitPrice())
+                .subtotal(
+                  line.getUnitPrice() == null || line.getQuantity() == null
+                    ? BigDecimal.ZERO
+                    : line.getUnitPrice().multiply(line.getQuantity())
+                )
+                .createdAt(line.getCreatedAt())
+                .build()
+            )
+            .toList();
+
+        rows.add(
+          RequisitionFulfillmentReportDTO.builder()
+            .requisitionId(req.getId())
+            .requisitionNumber(req.getRequisitionNumber())
+            .requisitionStatus(
+              req.getStatus() == null ? "" : req.getStatus().name()
+            )
+            .requisitionCreatedAt(req.getCreatedAt())
+            .requestedBy(
+              req.getRequestedBy() == null ? "" : req.getRequestedBy().getName()
+            )
+            .costCenter(
+              req.getCostCenter() == null ? "" : req.getCostCenter().getFullDescription()
+            )
+            .requisitionItemId(item.getId())
+            .productId(
+              item.getProduct() == null ? null : item.getProduct().getId()
+            )
+            .productSku(
+              item.getProduct() == null ? "" : item.getProduct().getSku()
+            )
+            .productInternalCode(
+              item.getProduct() == null
+                ? ""
+                : item.getProduct().getInternalCode()
+            )
+            .productName(
+              item.getProduct() == null ? "" : item.getProduct().getName()
+            )
+            .uom(
+              item.getProduct() == null || item.getProduct().getUom() == null
+                ? ""
+                : item.getProduct().getUom().name()
+            )
+            .requestedQuantity(item.getQuantity())
+            .awardedQuantity(awarded)
+            .pendingQuantity(pending)
+            .fulfillmentState(state)
+            .awardedPos(awardedPos)
+            .build()
+        );
+      }
+    }
+    return rows;
+  }
+
+  /**
+   * Builds a daily transfers report showing all TRANSFER movements in the
+   * given date range, optionally filtered by warehouse (either as source or
+   * destination).
+   */
+  public DailyTransferReportKPIs generateDailyTransferReport(
+    Long warehouseId,
+    LocalDateTime start,
+    LocalDateTime end
+  ) {
+    Specification<InventoryMovement> spec = Specification
+      .where(InventoryMovementSpecification.withAssociations())
+      .and(InventoryMovementSpecification.hasType(MovementType.TRANSFER))
+      .and(InventoryMovementSpecification.touchesWarehouse(warehouseId))
+      .and(InventoryMovementSpecification.createdAtBetween(start, end));
+
+    List<InventoryMovement> movements = movementRepository.findAll(
+      spec,
+      PageRequest.of(0, maxRecords, Sort.by("createdAt").descending())
+    ).getContent();
+
+    if (movements.isEmpty()) {
+      return DailyTransferReportKPIs.builder()
+        .totalTransfers(0)
+        .totalQuantityTransferred(BigDecimal.ZERO)
+        .generatedAt(LocalDateTime.now())
+        .rows(List.of())
+        .build();
+    }
+
+    BigDecimal totalQty = BigDecimal.ZERO;
+    Map<String, Long> productCounts = new java.util.LinkedHashMap<>();
+    Map<String, Long> sourceCounts = new java.util.LinkedHashMap<>();
+    Map<String, Long> destCounts = new java.util.LinkedHashMap<>();
+    List<DailyTransferReportDTO> rows = new ArrayList<>();
+
+    for (var m : movements) {
+      totalQty = totalQty.add(m.getQuantity());
+
+      String productName = m.getProduct().getName();
+      productCounts.merge(productName, m.getQuantity().longValue(), Long::sum);
+
+      if (m.getFromWarehouse() != null) {
+        sourceCounts.merge(
+          m.getFromWarehouse().getName(),
+          m.getQuantity().longValue(),
+          Long::sum
+        );
+      }
+      if (m.getToWarehouse() != null) {
+        destCounts.merge(
+          m.getToWarehouse().getName(),
+          m.getQuantity().longValue(),
+          Long::sum
+        );
+      }
+
+      rows.add(
+        DailyTransferReportDTO.builder()
+          .movementId(m.getId())
+          .transferDate(m.getCreatedAt())
+          .productId(m.getProduct().getId())
+          .productInternalCode(m.getProduct().getInternalCode())
+          .productSku(m.getProduct().getSku())
+          .productName(productName)
+          .quantity(m.getQuantity())
+          .fromWarehouseName(
+            m.getFromWarehouse() != null
+              ? m.getFromWarehouse().getName()
+              : ""
+          )
+          .toWarehouseName(
+            m.getToWarehouse() != null
+              ? m.getToWarehouse().getName()
+              : ""
+          )
+          .userName(
+            m.getCreatedBy() != null ? m.getCreatedBy().getName() : ""
+          )
+          .reason(m.getReason())
+          .build()
+      );
+    }
+
+    String topProduct = productCounts.entrySet().stream()
+      .max(Map.Entry.comparingByValue())
+      .map(Map.Entry::getKey).orElse("");
+    String topSource = sourceCounts.entrySet().stream()
+      .max(Map.Entry.comparingByValue())
+      .map(Map.Entry::getKey).orElse("");
+    String topDest = destCounts.entrySet().stream()
+      .max(Map.Entry.comparingByValue())
+      .map(Map.Entry::getKey).orElse("");
+
+    DailyTransferReportKPIs kpis = DailyTransferReportKPIs.builder()
+      .totalTransfers(movements.size())
+      .totalQuantityTransferred(totalQty)
+      .topTransferredProduct(topProduct)
+      .topSourceWarehouse(topSource)
+      .topDestinationWarehouse(topDest)
+      .generatedAt(LocalDateTime.now())
+      .build();
+
+    kpis.setRows(rows);
+    return kpis;
   }
 }

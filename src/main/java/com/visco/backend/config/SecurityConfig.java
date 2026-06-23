@@ -182,7 +182,6 @@ public class SecurityConfig {
             "/api/procurement/**",
             "/api/requisitions/**",
             "/api/warehouse/**",
-            "/api/invoices/**",
             "/api/inventory/**",
             "/api/reports/**",
             "/api/dashboard/**"
@@ -199,9 +198,6 @@ public class SecurityConfig {
           // ADMIN, MANAGER, PROCUREMENT y WAREHOUSEMAN: escritura almacen
           .requestMatchers("/api/warehouse/**")
           .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT", "WAREHOUSEMAN")
-          // ADMIN, MANAGER, PROCUREMENT: escritura facturas
-          .requestMatchers("/api/invoices/**")
-          .hasAnyRole("ADMIN", "MANAGER", "PROCUREMENT")
           //Admin
           .requestMatchers("/api/migration/**")
           .hasRole("ADMIN")

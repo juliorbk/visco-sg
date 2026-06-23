@@ -6,7 +6,9 @@ public enum ReportType {
     STOCK_MOVEMENTS("Reporte de Movimientos"),
     CRITICAL_ALERTS("Alertas Críticas"),
     WAREHOUSE_ANALYSIS("Análisis por Almacén"),
-    DAILY_RECEIPTS("Recepciones Diarias");
+    DAILY_RECEIPTS("Recepciones Diarias"),
+    DAILY_TRANSFERS("Transferencias Diarias"),
+    REQUISITION_FULFILLMENT("Adjudicación de Requisiciones");
 
     private final String displayName;
 

@@ -3,7 +3,6 @@ package com.visco.backend.models.dtos;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 // Request payload for a single line item in a purchase order.
@@ -16,5 +15,10 @@ public record PurchaseOrderItemRequest(
         BigDecimal quantity,
 
         @NotNull @DecimalMin(value = "0.01",
-                message = "Unit price must be greater than zero") BigDecimal unitPrice) {
+                message = "Unit price must be greater than zero") BigDecimal unitPrice,
+
+        // Optional: required when the PO is being created from a requisition,
+        // identifies which RequisitionItem this line is fulfilling so the
+        // backend can validate over-award and track partial conversion.
+        Long requisitionItemId) {
 }
