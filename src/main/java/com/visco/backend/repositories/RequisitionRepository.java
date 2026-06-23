@@ -38,13 +38,13 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
           "LEFT JOIN FETCH r.approvedBy " +
           "LEFT JOIN FETCH r.items i " +
           "LEFT JOIN FETCH i.product " +
-          "WHERE :search IS NULL " +
-          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))",
+          "WHERE CAST(:search AS string) IS NULL " +
+          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))",
         countQuery = "SELECT COUNT(r) FROM Requisition r " +
-          "WHERE :search IS NULL " +
-          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))"
+          "WHERE CAST(:search AS string) IS NULL " +
+          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))"
     )
     Page<Requisition> findAllWithSearch(@Param("search") String search, Pageable pageable);
  
@@ -56,14 +56,14 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
           "LEFT JOIN FETCH r.items i " +
           "LEFT JOIN FETCH i.product " +
           "WHERE r.status = :status " +
-          "AND (:search IS NULL " +
-          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%')))",
+          "AND (CAST(:search AS string) IS NULL " +
+          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))",
         countQuery = "SELECT COUNT(r) FROM Requisition r " +
           "WHERE r.status = :status " +
-          "AND (:search IS NULL " +
-          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%')))"
+          "AND (CAST(:search AS string) IS NULL " +
+          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))"
     )
     Page<Requisition> findByStatusWithSearch(
         @Param("status") RequisitionStatus status,

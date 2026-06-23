@@ -32,16 +32,16 @@ public interface GoodReceiptRepository
       "LEFT JOIN FETCH gr.items i " +
       "LEFT JOIN FETCH i.product " +
       "LEFT JOIN FETCH i.location " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', :search, '%'))",
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))",
     countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr " +
       "LEFT JOIN gr.purchaseOrder po " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', :search, '%'))"
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))"
   )
   Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);
 

@@ -31,13 +31,13 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
       "JOIN FETCH dn.createdBy " +
       "LEFT JOIN FETCH dn.items i " +
       "LEFT JOIN FETCH i.product " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(dn.dispatchNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(dn.notes) LIKE LOWER(CONCAT('%', :search, '%'))",
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(dn.dispatchNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(dn.notes) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))",
     countQuery = "SELECT COUNT(dn) FROM DispatchNote dn " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(dn.dispatchNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(dn.notes) LIKE LOWER(CONCAT('%', :search, '%'))"
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(dn.dispatchNumber) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(dn.notes) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))"
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
 

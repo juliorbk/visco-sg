@@ -20,13 +20,13 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
   @Query(
     value = "SELECT s FROM Supplier s LEFT JOIN FETCH s.category " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))",
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))",
     countQuery = "SELECT COUNT(s) FROM Supplier s " +
-      "WHERE :search IS NULL " +
-      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
-      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))"
+      "WHERE CAST(:search AS string) IS NULL " +
+      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))"
   )
   Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
 

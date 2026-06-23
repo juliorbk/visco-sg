@@ -101,13 +101,13 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
       "LEFT JOIN FETCH p.category " +
       "WHERE sl.warehouse.id = :warehouseId " +
       "AND (:onlyWithStock = false OR sl.currentStock > 0) " +
-      "AND (:name IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT(:name, '%'))) " +
+      "AND (CAST(:name AS string) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT(CAST(:name AS string), '%'))) " +
       "AND (:sapCode IS NULL OR p.sapCode = :sapCode) " +
       "AND (:sku IS NULL OR p.sku = :sku)",
     countQuery = "SELECT COUNT(sl) FROM StockLevel sl " +
       "WHERE sl.warehouse.id = :warehouseId " +
       "AND (:onlyWithStock = false OR sl.currentStock > 0) " +
-      "AND (:name IS NULL OR LOWER(sl.product.name) LIKE LOWER(CONCAT(:name, '%'))) " +
+      "AND (CAST(:name AS string) IS NULL OR LOWER(sl.product.name) LIKE LOWER(CONCAT(CAST(:name AS string), '%'))) " +
       "AND (:sapCode IS NULL OR sl.product.sapCode = :sapCode) " +
       "AND (:sku IS NULL OR sl.product.sku = :sku)"
   )
