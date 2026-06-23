@@ -12,7 +12,7 @@ C4Context
     System_Ext(frontend, "Frontend Next.js", "viscoorinocosia.vercel.app — SPA que consume la API REST via JWT en cookie HttpOnly")
 
     System_Boundary(visco, "Visco Orinoco Platform") {
-        System(api, "API Spring Boot", "Backend monolitico REST — gestion de inventario, compras, almacenes, reportes")
+        System(api, "API Spring Boot", "Backend monolitico REST — gestion de inventario, compras, facturacion, almacenes, reportes")
         SystemDb(db, "PostgreSQL 16", "Base de datos principal — entidades, usuarios, transacciones")
     }
 
@@ -101,8 +101,8 @@ C4Component
         Component(wh_ctrl, "WarehouseController + LocationController", "REST", "/api/warehouse/*, /api/warehouse/locations/* — CRUD, transferencias, ajustes, recepciones, despachos")
         Component(wh_svc, "WarehouseService + LocationService", "", "Stock levels (optimistic locking), kardex de movimientos, good receipts contra OC, dispatch notes")
 
-        Component(inv_ctrl, "InvoiceController", "REST", "[ELIMINADO]")
-        Component(inv_svc, "InvoiceService", "", "[ELIMINADO]")
+        Component(inv_ctrl, "InvoiceController", "REST", "/api/invoices/* — CRUD, 3-way matching, marcar pagado, cancelar")
+        Component(inv_svc, "InvoiceService", "", "Facturacion: PENDING → PAID/CANCELLED, matching OC vs recepcion vs factura")
 
         Component(dash_ctrl, "DashboardController", "REST", "/api/dashboard/* — KPIs cacheados en Caffeine")
         Component(stats_svc, "StatsService", "", "Metricas: total OC, unidades inventario, gasto mensual, fulfillment rate, critico/sobrestock")
@@ -176,12 +176,14 @@ erDiagram
     PurchaseOrder ||--o{ PurchaseOrderItem : "contiene items"
     PurchaseOrderItem }o--|| Product : "referencia"
     PurchaseOrder ||--o{ GoodReceipt : "recepcionado via"
+    PurchaseOrder ||--o{ Invoice : "facturado via"
     
     Requisition ||--o{ RequisitionItem : "contiene items"
     RequisitionItem }o--|| Product : "referencia"
     
     GoodReceipt ||--o{ GoodReceiptItem : "contiene items"
     DispatchNote ||--o{ DispatchNoteItem : "contiene items"
+    Invoice ||--o{ InvoiceItem : "contiene items"
     
     Warehouse ||--o{ InventoryMovement : "origen/destino"
     InventoryMovement }o--|| Product : "producto movido"
@@ -207,7 +209,7 @@ erDiagram
 
 ### Patrones Clave
 - **Soft Delete**: `@SQLDelete` en Supplier, Product, Location, Employee, CostCenter, Warehouse
-- **Optimistic Locking**: `@Version` en PurchaseOrder, Requisition, StockLevel, GoodReceipt, DispatchNote
+- **Optimistic Locking**: `@Version` en PurchaseOrder, Requisition, Invoice, StockLevel, GoodReceipt, DispatchNote
 - **Async Processing**: `@Async` en EmailService (ThreadPool: core 2, max 4, queue 100)
 - **Scheduling**: `@Scheduled` — reporte semanal (Lunes 8 AM) + verificacion horaria de reportes programados
 - **Stateless Auth**: JWT en cookie HttpOnly, sin sesiones en servidor

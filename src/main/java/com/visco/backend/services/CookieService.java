@@ -57,6 +57,7 @@ public class CookieService {
     cookie.setPath("/");
     cookie.setMaxAge(0);
     cookie.setAttribute("SameSite", "None");
+
     return cookie;
   }
 }

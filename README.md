@@ -1,6 +1,6 @@
 # Visco Orinoco — Backend API
 
-Sistema de gestión empresarial para control de inventario, órdenes de compra y proveedores. Desarrollado con Spring Boot 3 y desplegado en Render.
+Sistema de gestión empresarial para control de inventario, órdenes de compra, proveedores y facturación. Desarrollado con Spring Boot 3 y desplegado en Render.
 
 ---
 
@@ -90,6 +90,9 @@ Flujo de solicitudes de compra con workflow de aprobación: `DRAFT → PENDING �
 
 ### 🛒 Órdenes de Compra (`/api/procurement`)
 Gestión completa del ciclo de compra con workflow de aprobación: `PENDING → AWAITING_APPROVAL → APPROVED → IN_TRANSIT → DELIVERED`.
+
+### 🧾 Facturas (`/api/invoices`)
+Conciliación de facturas contra órdenes de compra (3-way matching: cantidad ordenada, cantidad recibida y precio unitario).
 
 ### 📊 Dashboard (`/api/dashboard`)
 KPIs en tiempo real: total de órdenes, unidades en inventario, gasto mensual, tasa de cumplimiento, inventario crítico y órdenes recientes.
@@ -258,7 +261,7 @@ GET    /api/dashboard/critical-inventory
 |-----|--------|
 | `ADMIN` | Todo el sistema |
 | `MANAGER` | Proveedores, compras, requisiciones, dashboard |
-| `PROCUREMENT` | Proveedores, compras, requisiciones |
+| `PROCUREMENT` | Proveedores, compras, requisiciones, facturas |
 | `WAREHOUSEMAN` | Almacenes, inventario, dashboard |
 | `USER` | Solo endpoints autenticados básicos |
 

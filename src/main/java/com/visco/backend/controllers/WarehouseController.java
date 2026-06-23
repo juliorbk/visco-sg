@@ -1,6 +1,5 @@
 package com.visco.backend.controllers;
 
-import com.visco.backend.models.dtos.AdjustStockBatchRequest;
 import com.visco.backend.models.dtos.AdjustStockRequest;
 import com.visco.backend.models.dtos.CreateWarehouseRequest;
 import com.visco.backend.models.dtos.DispatchRequest;
@@ -11,7 +10,6 @@ import com.visco.backend.models.dtos.ProductOnStock;
 import com.visco.backend.models.dtos.ProductStockBreakdown;
 import com.visco.backend.models.dtos.PurchaseOrderReceiptSummary;
 import com.visco.backend.models.dtos.ReceiveGoodsRequest;
-import com.visco.backend.models.dtos.TransferStockBatchRequest;
 import com.visco.backend.models.dtos.TransferStockRequest;
 import com.visco.backend.models.dtos.UpdateReceiptItemLocationRequest;
 import com.visco.backend.models.dtos.WarehouseDTO;
@@ -99,33 +97,11 @@ public class WarehouseController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/stock/transfer-batch")
-    @Operation(
-        summary = "Transfer multiple products between warehouses",
-        description = "Transfers stock of N products between the same pair of warehouses in a single transaction. Returns one movement per product."
-    )
-    public ResponseEntity<List<InventoryMovementResponse>> transferStockBatch(
-        @Valid @RequestBody TransferStockBatchRequest request
-    ) {
-        return ResponseEntity.ok(warehouseService.transferStockBatch(request));
-    }
-
     @PostMapping("/stock/adjust")
     @Operation(summary = "Adjust stock", description = "Adjusts stock quantity in a warehouse")
     public ResponseEntity<Void> adjustStock(@Valid @RequestBody AdjustStockRequest request) {
         warehouseService.adjustStock(request);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/stock/adjust-batch")
-    @Operation(
-        summary = "Adjust stock of multiple products in a warehouse",
-        description = "Sets the stock of N products in the same warehouse to an absolute value, in a single transaction. Returns one movement per product."
-    )
-    public ResponseEntity<List<InventoryMovementResponse>> adjustStockBatch(
-        @Valid @RequestBody AdjustStockBatchRequest request
-    ) {
-        return ResponseEntity.ok(warehouseService.adjustStockBatch(request));
     }
 
     @GetMapping("/{id}/products")
