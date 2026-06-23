@@ -138,6 +138,13 @@ public class ProcurementService {
                 throw new EntityNotFoundException("Product not found: " + itemReq.productId());
             }
 
+            if (itemReq.quantity().compareTo(BigDecimal.ZERO) > 0
+                    && itemReq.unitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(
+                    "Unit price must be greater than zero for product " + itemReq.productId()
+                );
+            }
+
             PurchaseOrderItem item = PurchaseOrderItem.builder()
                 .purchaseOrder(order)
                 .product(product)
