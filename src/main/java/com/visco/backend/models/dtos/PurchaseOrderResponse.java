@@ -1,5 +1,6 @@
 package com.visco.backend.models.dtos;
 
+import com.visco.backend.models.entities.Incoterm;
 import com.visco.backend.models.entities.PaymentMethod;
 import com.visco.backend.models.entities.PurchaseOrderStatus;
 import com.visco.backend.models.entities.PurchaseOrderType;
@@ -21,6 +22,7 @@ public record PurchaseOrderResponse(
     PurchaseOrderType type,
     String requisitionNumber,
     String shipConditions,
+    Incoterm incoterm,
     String createdBy,
     LocalDateTime createdAt,
     String approvalNotes,

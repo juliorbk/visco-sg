@@ -260,6 +260,7 @@ class ProcurementServiceStockTest {
       null, // requisitionId
       null, // leadTime
       null, // shipConditions
+      null, // incoterm
       List.of(new com.visco.backend.models.dtos.PurchaseOrderItemRequest(
         product.getId(), BigDecimal.valueOf(7), BigDecimal.valueOf(2)
       ))

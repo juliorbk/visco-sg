@@ -102,6 +102,7 @@ public class ProcurementService {
             .supplier(supplier)
             .leadTime(request.leadTime())
             .shipConditions(request.shipConditions())
+            .incoterm(request.incoterm())
             .createdAt(LocalDateTime.now())
             .build();
 
@@ -494,6 +495,7 @@ public class ProcurementService {
             order.getType(),
             order.getRequisition() != null ? order.getRequisition().getRequisitionNumber() : null,
             order.getShipConditions(),
+            order.getIncoterm(),
             order.getCreatedBy() != null ? order.getCreatedBy().getName() : "Unknown",
             order.getCreatedAt(),
             order.getApprovalNotes(),

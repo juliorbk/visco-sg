@@ -99,6 +99,10 @@ public class PurchaseOrder {
     @Column(name = "ship_conditions", length = 1000)
     private String shipConditions;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "incoterm")
+    private Incoterm incoterm;
+
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 

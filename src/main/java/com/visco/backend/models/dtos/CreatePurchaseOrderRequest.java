@@ -1,6 +1,7 @@
 // ... other imports
 package com.visco.backend.models.dtos;
 
+import com.visco.backend.models.entities.Incoterm;
 import com.visco.backend.models.entities.PaymentMethod;
 import com.visco.backend.models.entities.PurchaseOrderType;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ public record CreatePurchaseOrderRequest(
   Long requisitionId,
   Integer leadTime, //Days
   String shipConditions,
+  Incoterm incoterm,
   @NotEmpty(message = "At least one item is required")
   @Valid
   List<PurchaseOrderItemRequest> items
