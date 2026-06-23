@@ -69,7 +69,7 @@ public class Product {
   @Column(length = 1000)
   private String description;
 
-  @Column(name = "sap_code", nullable = false, unique = true)
+  @Column(name = "sap_code", nullable = false)
   private String sapCode;
 
   @Enumerated(EnumType.STRING)

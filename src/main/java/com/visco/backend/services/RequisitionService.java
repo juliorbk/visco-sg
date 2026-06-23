@@ -1,9 +1,7 @@
 package com.visco.backend.services;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,14 +19,12 @@ import com.visco.backend.models.dtos.RequisitionResponse;
 import com.visco.backend.models.dtos.UpdateRequisition;
 import com.visco.backend.models.entities.CostCenter;
 import com.visco.backend.models.entities.Product;
-import com.visco.backend.models.entities.PurchaseOrder;
 import com.visco.backend.models.entities.Requisition;
 import com.visco.backend.models.entities.RequisitionItem;
 import com.visco.backend.models.entities.RequisitionStatus;
 import com.visco.backend.models.entities.User;
 import com.visco.backend.repositories.CostCenterRepository;
 import com.visco.backend.repositories.ProductRepository;
-import com.visco.backend.repositories.PurchaseOrderRepository;
 import com.visco.backend.repositories.RequisitionRepository;
 import com.visco.backend.repositories.StockLevelRepository;
 import com.visco.backend.repositories.UserRepository;
@@ -50,7 +46,6 @@ public class RequisitionService {
   private final CostCenterRepository costCenterRepository;
   private final ProductRepository productRepository;
   private final StockLevelRepository stockLevelRepository;
-  private final PurchaseOrderRepository purchaseOrderRepository;
 
   /**
    * Creates a new requisition with requested products.
@@ -300,14 +295,7 @@ public class RequisitionService {
   }
 
   /**
-   * Recomputes the requisition's lifecycle status from its current award
-   * progress. Kept for backwards compatibility with the legacy
-   * {@code PATCH /api/requisitions/{id}/convert} endpoint.
-   *
-   * <p>Note: with the multi-PO model, the status transitions are
-   * automatically driven by PO creation / cancellation. This manual
-   * endpoint is now effectively a no-op that re-applies the same
-   * computation, useful for backfilling legacy data.
+   * Marks an approved requisition as converted to a purchase order.
    *
    * @param id the requisition ID
    * @return the updated requisition response
@@ -315,17 +303,14 @@ public class RequisitionService {
   @Transactional
   public RequisitionResponse markAsConverted(Long id) {
     Requisition req = findById(id);
-    if (
-      req.getStatus() != RequisitionStatus.APPROVED &&
-      req.getStatus() != RequisitionStatus.PARTIALLY_CONVERTED &&
-      req.getStatus() != RequisitionStatus.CONVERTED
-    ) {
+    if (req.getStatus() != RequisitionStatus.APPROVED) {
       throw new IllegalStateException(
-        "Only APPROVED / PARTIALLY_CONVERTED / CONVERTED requisitions can be reconciled. " +
-        "Current status: " + req.getStatus()
+        "Only approved requisitions can be converted to PO"
       );
     }
-    return toResponse(req);
+    req.setStatus(RequisitionStatus.CONVERTED);
+    Requisition saved = requisitionRepository.save(req);
+    return toResponse(saved);
   }
 
   /**
@@ -404,70 +389,22 @@ public class RequisitionService {
   }
 
   private RequisitionResponse toResponse(Requisition req) {
-    // Paged list queries don't fetch items eagerly. We treat an empty /
-    // uninitialised items collection as "no per-line breakdown available"
-    // so the listing endpoint keeps working without forcing an item fetch
-    // for every row.
-    boolean itemsLoaded = req.getItems() != null && !req.getItems().isEmpty();
-
-    List<RequisitionItemResponse> itemResponses;
-    final Map<Long, BigDecimal> awardedByItem;
-
-    if (itemsLoaded) {
-      // Aggregate awarded quantity per requisition item in a single query.
-      // Items with no award yet are simply missing from the map (treated as 0).
-      awardedByItem = purchaseOrderRepository
-        .sumAwardedByRequisitionId(req.getId())
-        .stream()
-        .collect(
-          Collectors.toMap(
-            PurchaseOrderRepository.AwardedQuantityProjection::getRequisitionItemId,
-            PurchaseOrderRepository.AwardedQuantityProjection::getAwardedQuantity
-          )
-        );
-
-      itemResponses = req
-        .getItems()
-        .stream()
-        .map(item -> {
-          BigDecimal awarded = awardedByItem.getOrDefault(item.getId(), BigDecimal.ZERO);
-          BigDecimal pending = item.getQuantity().subtract(awarded);
-          if (pending.compareTo(BigDecimal.ZERO) < 0) pending = BigDecimal.ZERO;
-          boolean fullyAwarded = awarded.compareTo(item.getQuantity()) >= 0;
-          return new RequisitionItemResponse(
-            item.getId(),
-            item.getProduct().getId(),
-            item.getProduct().getName(),
-            item.getProduct().getSku(),
-            item.getProduct().getInternalCode(),
-            item.getProduct().getSapCode(),
-            item.getProduct().getUom().name(),
-            item.getQuantity(),
-            item.getNotes(),
-            awarded,
-            pending,
-            fullyAwarded
-          );
-        })
-        .toList();
-    } else {
-      itemResponses = new ArrayList<>();
-    }
-
-    // Linked POs (lightweight; no items) — only fetch when relevant
-    // (single-detail fetch path), to keep paged list queries cheap.
-    List<RequisitionResponse.RequisitionPurchaseOrderSummary> poSummaries = Collections.emptyList();
-    if (
-      itemsLoaded &&
-      (req.getStatus() == RequisitionStatus.PARTIALLY_CONVERTED ||
-        req.getStatus() == RequisitionStatus.CONVERTED)
-    ) {
-      poSummaries = purchaseOrderRepository
-        .findByRequisitionIdOrdered(req.getId())
-        .stream()
-        .map(this::toPoSummary)
-        .toList();
-    }
+    List<RequisitionItemResponse> itemResponses = req
+      .getItems()
+      .stream()
+      .map(item ->
+        new RequisitionItemResponse(
+          item.getProduct().getId(),
+          item.getProduct().getName(),
+          item.getProduct().getSku(),
+          item.getProduct().getInternalCode(),
+          item.getProduct().getSapCode(),
+          item.getProduct().getUom().name(),
+          item.getQuantity(),
+          item.getNotes()
+        )
+      )
+      .toList();
 
     return new RequisitionResponse(
       req.getId(),
@@ -481,34 +418,7 @@ public class RequisitionService {
       req.getApprovedBy() != null ? req.getApprovedBy().getName() : null,
       req.getApprovedAt(),
       req.getCreatedAt(),
-      itemResponses,
-      poSummaries
-    );
-  }
-
-  private RequisitionResponse.RequisitionPurchaseOrderSummary toPoSummary(
-    PurchaseOrder order
-  ) {
-    BigDecimal total = order.getItems() == null
-      ? BigDecimal.ZERO
-      : order
-        .getItems()
-        .stream()
-        .map(i -> {
-          if (i.getUnitPrice() == null || i.getQuantity() == null) {
-            return BigDecimal.ZERO;
-          }
-          return i.getUnitPrice().multiply(i.getQuantity());
-        })
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-    return new RequisitionResponse.RequisitionPurchaseOrderSummary(
-      order.getId(),
-      order.getOrderNumber(),
-      order.getSupplier() != null ? order.getSupplier().getName() : "Unknown",
-      order.getStatus().name(),
-      total,
-      order.getCreatedAt()
+      itemResponses
     );
   }
 }

@@ -22,8 +22,7 @@ import lombok.ToString;
 @Entity
 @Table(name = "purchase_order_items", indexes = {
     @Index(name = "idx_poi_purchase_order", columnList = "purchase_order_id"),
-    @Index(name = "idx_poi_product", columnList = "product_id"),
-    @Index(name = "idx_poi_requisition_item", columnList = "requisition_item_id")
+    @Index(name = "idx_poi_product", columnList = "product_id")
 })
 @Data
 @AllArgsConstructor
@@ -47,14 +46,6 @@ public class PurchaseOrderItem {
   @EqualsAndHashCode.Exclude
   @ToString.Exclude
   private Product product;
-
-  // Optional back-reference to the RequisitionItem this PO line is fulfilling.
-  // Null when the PO is not tied to a requisition (direct POs) or for legacy data.
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "requisition_item_id")
-  @EqualsAndHashCode.Exclude
-  @ToString.Exclude
-  private RequisitionItem requisitionItem;
 
   @Column(nullable = false, precision = 18, scale = 4)
   private BigDecimal quantity; // Cantidad a comprar (admite fracciones)

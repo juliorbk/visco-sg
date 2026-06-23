@@ -88,29 +88,7 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
             """)
     Optional<Requisition> findByIdDetailed(@Param("id") Long id);
 
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("DELETE FROM RequisitionItem ri WHERE ri.requisition.id = :requisitionId")
-  void deleteItemsByRequisitionId(@Param("requisitionId") Long requisitionId);
-
-  /**
-   * Loads requisitions (with items, products and cost-center) for the
-   * "requisition fulfillment" report. All filters are optional and combine
-   * with AND when more than one is supplied.
-   */
-  @Query(
-    "SELECT DISTINCT r FROM Requisition r " +
-      "JOIN FETCH r.requestedBy " +
-      "JOIN FETCH r.costCenter " +
-      "LEFT JOIN FETCH r.items i " +
-      "LEFT JOIN FETCH i.product " +
-      "WHERE (:startDate IS NULL OR r.createdAt >= :startDate) " +
-      "AND (:endDate IS NULL OR r.createdAt <= :endDate) " +
-      "AND (:status IS NULL OR r.status = :status) " +
-      "ORDER BY r.createdAt DESC"
-  )
-  List<Requisition> findAllForFulfillmentReport(
-    @Param("startDate") java.time.LocalDateTime startDate,
-    @Param("endDate") java.time.LocalDateTime endDate,
-    @Param("status") RequisitionStatus status
-  );
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM RequisitionItem ri WHERE ri.requisition.id = :requisitionId")
+    void deleteItemsByRequisitionId(@Param("requisitionId") Long requisitionId);
 }

@@ -18,8 +18,6 @@ public interface ProductRepository
 
   Optional<Product> findFirstBySku(String sku);
 
-  Optional<Product> findFirstBySapCode(String sapCode);
-
   @Query(
     value = "SELECT p FROM Product p JOIN FETCH p.supplier JOIN FETCH p.category WHERE p.category.id = :categoryId",
     countQuery = "SELECT COUNT(p) FROM Product p WHERE p.category.id = :categoryId"

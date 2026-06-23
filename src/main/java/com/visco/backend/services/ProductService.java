@@ -115,12 +115,6 @@ public class ProductService {
       throw new IllegalArgumentException("The product is already registered");
     }
 
-    String sapCode = dto.sapCode() != null ? dto.sapCode().trim() : "";
-    if (!sapCode.isEmpty() && productRepository.findFirstBySapCode(sapCode).isPresent()) {
-      throw new IllegalArgumentException(
-        "Ya existe un producto con el código SAP " + sapCode);
-    }
-
     String nextCode = generateNextInternalCode();
 
     Supplier supplier = null;
@@ -142,7 +136,7 @@ public class ProductService {
       .sku(dto.sku())
       .name(dto.name())
       .description(dto.description())
-      .sapCode(sapCode)
+      .sapCode(dto.sapCode() != null ? dto.sapCode() : "")
       .uom(dto.uom())
       .reorderPoint(dto.reorderPoint())
       .maxStock(dto.maxStock())
@@ -186,16 +180,6 @@ public class ProductService {
       productRepository.findFirstBySku(dto.getSku()).isPresent()
     ) {
       throw new IllegalArgumentException("El SKU ya existe");
-    }
-
-    if (
-      dto.getSapCode() != null &&
-      !dto.getSapCode().trim().isEmpty() &&
-      !dto.getSapCode().equals(existing.getSapCode()) &&
-      productRepository.findFirstBySapCode(dto.getSapCode()).isPresent()
-    ) {
-      throw new IllegalArgumentException(
-        "Ya existe un producto con el código SAP " + dto.getSapCode());
     }
 
     Supplier supplier = null;
