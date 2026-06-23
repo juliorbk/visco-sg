@@ -28,4 +28,16 @@ public class LegalRepresentative {
 
     @Column(name = "full_name", nullable = false)
     private String fullName;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof LegalRepresentative that)) return false;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

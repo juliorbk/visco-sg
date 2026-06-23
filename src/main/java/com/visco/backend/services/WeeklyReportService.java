@@ -36,6 +36,7 @@ public class WeeklyReportService {
   private final StatsService statsService;
   private final UserRepository userRepository;
   private final ResendEmailService resendEmailService;
+  private final ReportAttachmentStorage reportAttachmentStorage;
 
   @Value("${report.recipients:}")
   private String reportRecipients;
@@ -514,13 +515,29 @@ public class WeeklyReportService {
       "Reporte_Semanal_" +
       LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) +
       ".xlsx";
-    resendEmailService.sendEmailWithAttachment(
-      to,
-      subject,
-      "Adjunto: Reporte Semanal en Excel\n\nVer archivo para detalle completo.",
+
+    // Upload the report to Cloudinary instead of attaching it. A 50k-row
+    // Excel can exceed 50 MB; encoding to base64 to embed in an email
+    // would double that and OOM the Render free-tier container.
+    String downloadUrl = reportAttachmentStorage.uploadReport(
       filename,
       excelBytes,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    String body = (downloadUrl != null)
+      ? String.format(
+        "Reporte Semanal generado automaticamente.%n%n" +
+        "Descarguelo desde el siguiente enlace (valido por tiempo limitado):%n%s",
+        downloadUrl)
+      : "Reporte Semanal generado automaticamente. " +
+        "Intente descargarlo desde la aplicacion mas tarde.";
+
+    resendEmailService.sendHtmlEmail(to, subject, body);
+    log.info(
+      "Weekly report notification sent to {} (downloadUrl={})",
+      to,
+      downloadUrl != null ? "ok" : "unavailable"
     );
   }
 

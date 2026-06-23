@@ -20,6 +20,9 @@ public class ReportDTO {
     private LocalDateTime generatedAt;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Long warehouseId;
+    private Long categoryId;
+    private String search;
     private Integer recordCount;
     private Long fileSize;
     private String filePath;

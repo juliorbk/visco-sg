@@ -56,4 +56,7 @@ public class RequisitionItem {
 
     @Column(length = 500)
     private String notes;
+
+    @Column(name = "line_number")
+    private Integer lineNumber;
 }

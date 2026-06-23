@@ -65,8 +65,14 @@ public class Supplier {
     @Column(name = "tax_id", length = 20)
     private String taxId;
 
-    // Colección para manejar múltiples teléfonos (sin problemas de equals/hashCode)
-    @ElementCollection(fetch = FetchType.LAZY)
+    // Colección para manejar múltiples teléfonos (sin problemas de equals/hashCode).
+    // EAGER: a supplier typically has 1-3 phone numbers. Loading it eagerly
+    // avoids LazyInitializationException when the collection is accessed
+    // outside a JPA session (e.g., DTO conversion in
+    // GoodReceiptResponse/PurchaseOrderResponse, or any post-transaction
+    // serialization). The query cost is one extra row in supplier_phones per
+    // supplier load, which is negligible compared to the bug-prevention value.
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "supplier_phones", joinColumns = @JoinColumn(name = "supplier_id"))
     @Builder.Default
     @Column(name = "phone_number", nullable = false)

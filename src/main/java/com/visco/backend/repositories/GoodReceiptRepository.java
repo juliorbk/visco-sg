@@ -57,6 +57,23 @@ public interface GoodReceiptRepository
       + "GROUP BY gri.product.id")
   List<ReceivedQuantityProjection> getTotalReceivedByOrder(@Param("orderId") Long orderId);
 
+  /**
+   * Batch counterpart of {@link #getTotalReceivedByOrder(Long)}: returns the
+   * cumulative received quantity per (PO, product) pair for the given set of
+   * purchase orders in a single round-trip. Used by the daily receptions
+   * report to compute PO-level completeness when a PO was received in
+   * multiple partial deliveries.
+   */
+  @Query("SELECT gri.goodReceipt.purchaseOrder.id as orderId, "
+      + "       gri.product.id as productId, "
+      + "       SUM(gri.receivedQuantity) as totalReceived "
+      + "FROM GoodReceiptItem gri "
+      + "WHERE gri.goodReceipt.purchaseOrder.id IN :orderIds "
+      + "GROUP BY gri.goodReceipt.purchaseOrder.id, gri.product.id")
+  List<OrderProductReceivedProjection> getCumulativeReceivedForOrders(
+    @Param("orderIds") List<Long> orderIds
+  );
+
   @Query(value = "SELECT nextval('receipt_seq')", nativeQuery = true)
   Long getNextReceiptSequence();
 
@@ -79,6 +96,12 @@ public interface GoodReceiptRepository
     @Param("end") LocalDateTime end);
 
   interface ReceivedQuantityProjection {
+    Long getProductId();
+    BigDecimal getTotalReceived();
+  }
+
+  interface OrderProductReceivedProjection {
+    Long getOrderId();
     Long getProductId();
     BigDecimal getTotalReceived();
   }

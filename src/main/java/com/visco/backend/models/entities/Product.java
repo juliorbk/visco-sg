@@ -52,7 +52,7 @@ public class Product {
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "product_seq")
   @SequenceGenerator(
     name = "product_seq",
-    sequenceName = "product_code_seq",
+    sequenceName = "product_id_seq",
     allocationSize = 1
   )
   private Long id;
@@ -69,7 +69,7 @@ public class Product {
   @Column(length = 1000)
   private String description;
 
-  @Column(name = "sap_code", nullable = false)
+  @Column(name = "sap_code", nullable = false, unique = true)
   private String sapCode;
 
   @Enumerated(EnumType.STRING)

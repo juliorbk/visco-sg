@@ -17,7 +17,5 @@ public record TransferStockRequest(
 
     String reason,
 
-    @NotNull(message = "El usuario que realiza la transferencia es obligatorio") UUID createdById,
-
-    BigDecimal unitCost
+    @NotNull(message = "El usuario que realiza la transferencia es obligatorio") UUID createdById
 ) {}

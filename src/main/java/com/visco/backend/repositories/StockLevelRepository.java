@@ -131,7 +131,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   // Atomic stock operations
   // ─────────────────────────────────────────────────────────────
 
-  @Modifying
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
     value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
@@ -148,7 +148,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("quantity") BigDecimal quantity
   );
 
-  @Modifying
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
     value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
@@ -165,7 +165,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("quantity") BigDecimal quantity
   );
 
-  @Modifying
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
     value = """
     UPDATE stock_levels
@@ -198,7 +198,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("warehouseId") Long warehouseId
   );
 
-  @Modifying
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
     value = """
     UPDATE stock_levels
@@ -214,7 +214,7 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("quantity") BigDecimal quantity
   );
 
-  @Modifying
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
     value = """
     INSERT INTO stock_levels (product_id, warehouse_id, current_stock, pending_stock, created_at, updated_at)
