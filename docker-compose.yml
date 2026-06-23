@@ -11,8 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Tras hacer el dump, descomentar para seed automático:
-      # - ./visco_backup.sql:/docker-entrypoint-initdb.d/01_seed.sql
+      - ./backup_render.sql:/docker-entrypoint-initdb.d/01_seed.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d visco_db"]
       interval: 5s
