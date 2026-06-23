@@ -25,6 +25,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.springframework.data.annotation.CreatedDate;
@@ -66,15 +67,17 @@ public class Supplier {
     private String taxId;
 
     // Colección para manejar múltiples teléfonos (sin problemas de equals/hashCode)
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "supplier_phones", joinColumns = @JoinColumn(name = "supplier_id"))
     @Builder.Default
     @Column(name = "phone_number", nullable = false)
+    @BatchSize(size = 100)
     private Set<String> phoneNumbers = new HashSet<>();
 
     @OneToMany(cascade = { CascadeType.PERSIST, CascadeType.MERGE }, fetch = FetchType.LAZY)
     @JoinColumn(name = "supplier_id")
     @Builder.Default
+    @BatchSize(size = 100)
     private Set<LegalRepresentative> representatives = new HashSet<>();
 
     @Column(nullable = false, columnDefinition = "TEXT")

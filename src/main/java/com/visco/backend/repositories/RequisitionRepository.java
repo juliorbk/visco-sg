@@ -20,53 +20,53 @@ public interface RequisitionRepository extends JpaRepository<Requisition, Long> 
     Page<Requisition> findByRequestedById(java.util.UUID requestedById, Pageable pageable);
 
     @Query(
-        value = "SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy",
+        value = "SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy LEFT JOIN FETCH r.items i LEFT JOIN FETCH i.product",
         countQuery = "SELECT COUNT(r) FROM Requisition r"
     )
     Page<Requisition> findAllWithFetch(Pageable pageable);
-
+ 
     @Query(
-        value = "SELECT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy WHERE r.status = :status",
+        value = "SELECT DISTINCT r FROM Requisition r JOIN FETCH r.requestedBy JOIN FETCH r.costCenter LEFT JOIN FETCH r.approvedBy LEFT JOIN FETCH r.items i LEFT JOIN FETCH i.product WHERE r.status = :status",
         countQuery = "SELECT COUNT(r) FROM Requisition r WHERE r.status = :status"
     )
     Page<Requisition> findByStatusWithFetch(@Param("status") RequisitionStatus status, Pageable pageable);
 
     @Query(
-        value = """
-        SELECT r.* FROM requisitions r
-        WHERE CAST(:search AS text) IS NULL
-          OR r.requisition_number ILIKE '%' || :search || '%'
-          OR r.description ILIKE '%' || :search || '%'
-        """,
-        countQuery = """
-        SELECT COUNT(*) FROM requisitions r
-        WHERE CAST(:search AS text) IS NULL
-          OR r.requisition_number ILIKE '%' || :search || '%'
-          OR r.description ILIKE '%' || :search || '%'
-        """,
-        nativeQuery = true
+        value = "SELECT DISTINCT r FROM Requisition r " +
+          "JOIN FETCH r.requestedBy " +
+          "JOIN FETCH r.costCenter " +
+          "LEFT JOIN FETCH r.approvedBy " +
+          "LEFT JOIN FETCH r.items i " +
+          "LEFT JOIN FETCH i.product " +
+          "WHERE :search IS NULL " +
+          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))",
+        countQuery = "SELECT COUNT(r) FROM Requisition r " +
+          "WHERE :search IS NULL " +
+          "OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+          "OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%'))"
     )
     Page<Requisition> findAllWithSearch(@Param("search") String search, Pageable pageable);
-
+ 
     @Query(
-        value = """
-        SELECT r.* FROM requisitions r
-        WHERE r.status = :status
-          AND (CAST(:search AS text) IS NULL
-            OR r.requisition_number ILIKE '%' || :search || '%'
-            OR r.description ILIKE '%' || :search || '%')
-        """,
-        countQuery = """
-        SELECT COUNT(*) FROM requisitions r
-        WHERE r.status = :status
-          AND (CAST(:search AS text) IS NULL
-            OR r.requisition_number ILIKE '%' || :search || '%'
-            OR r.description ILIKE '%' || :search || '%')
-        """,
-        nativeQuery = true
+        value = "SELECT DISTINCT r FROM Requisition r " +
+          "JOIN FETCH r.requestedBy " +
+          "JOIN FETCH r.costCenter " +
+          "LEFT JOIN FETCH r.approvedBy " +
+          "LEFT JOIN FETCH r.items i " +
+          "LEFT JOIN FETCH i.product " +
+          "WHERE r.status = :status " +
+          "AND (:search IS NULL " +
+          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%')))",
+        countQuery = "SELECT COUNT(r) FROM Requisition r " +
+          "WHERE r.status = :status " +
+          "AND (:search IS NULL " +
+          "  OR LOWER(r.requisitionNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+          "  OR LOWER(r.description) LIKE LOWER(CONCAT('%', :search, '%')))"
     )
     Page<Requisition> findByStatusWithSearch(
-        @Param("status") String status,
+        @Param("status") RequisitionStatus status,
         @Param("search") String search,
         Pageable pageable
     );

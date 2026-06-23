@@ -263,7 +263,7 @@ public class RequisitionService {
   ) {
     if (search != null && search.trim().isEmpty()) search = null;
     return requisitionRepository
-      .findByStatusWithSearch(status.name(), search, pageable)
+      .findByStatusWithSearch(status, search, pageable)
       .map(this::toResponse);
   }
 

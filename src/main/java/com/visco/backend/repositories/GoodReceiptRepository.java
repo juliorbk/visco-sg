@@ -19,29 +19,29 @@ public interface GoodReceiptRepository
   Page<GoodReceipt> findAll(Pageable pageable);
 
   @Query(
-    value = "SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy",
+    value = "SELECT DISTINCT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location",
     countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr"
   )
   Page<GoodReceipt> findAllWithFetch(Pageable pageable);
 
   @Query(
-    value = """
-    SELECT gr.* FROM good_receipts gr
-    JOIN purchase_orders po ON po.id = gr.purchase_order_id
-    WHERE CAST(:search AS text) IS NULL
-      OR gr.receipt_number ILIKE '%' || :search || '%'
-      OR gr.notes ILIKE '%' || :search || '%'
-      OR po.order_number ILIKE '%' || :search || '%'
-    """,
-    countQuery = """
-    SELECT COUNT(*) FROM good_receipts gr
-    JOIN purchase_orders po ON po.id = gr.purchase_order_id
-    WHERE CAST(:search AS text) IS NULL
-      OR gr.receipt_number ILIKE '%' || :search || '%'
-      OR gr.notes ILIKE '%' || :search || '%'
-      OR po.order_number ILIKE '%' || :search || '%'
-    """,
-    nativeQuery = true
+    value = "SELECT DISTINCT gr FROM GoodReceipt gr " +
+      "JOIN FETCH gr.purchaseOrder po " +
+      "LEFT JOIN FETCH po.destinationWarehouse " +
+      "LEFT JOIN FETCH gr.receivedBy " +
+      "LEFT JOIN FETCH gr.items i " +
+      "LEFT JOIN FETCH i.product " +
+      "LEFT JOIN FETCH i.location " +
+      "WHERE :search IS NULL " +
+      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', :search, '%'))",
+    countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr " +
+      "LEFT JOIN gr.purchaseOrder po " +
+      "WHERE :search IS NULL " +
+      "OR LOWER(gr.receiptNumber) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(gr.notes) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(po.orderNumber) LIKE LOWER(CONCAT('%', :search, '%'))"
   )
   Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
@@ -78,13 +78,14 @@ public interface GoodReceiptRepository
   Long getNextReceiptSequence();
 
   @Query("""
-    SELECT gr FROM GoodReceipt gr
+    SELECT DISTINCT gr FROM GoodReceipt gr
       JOIN FETCH gr.purchaseOrder po
       JOIN FETCH po.supplier
       JOIN FETCH gr.destinationWarehouse
       LEFT JOIN FETCH gr.receivedBy
       LEFT JOIN FETCH gr.items i
       LEFT JOIN FETCH i.product
+      LEFT JOIN FETCH po.items
     WHERE gr.destinationWarehouse.id = :warehouseId
       AND gr.receivedAt >= :start
       AND gr.receivedAt <  :end

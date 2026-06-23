@@ -15,42 +15,37 @@ import org.springframework.data.repository.query.Param;
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
-  @Query("SELECT s FROM Supplier s")
+  @Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.category")
   Page<Supplier> findAllWithFetch(Pageable pageable);
 
   @Query(
-    value = """
-    SELECT s.* FROM suppliers s
-    WHERE CAST(:search AS text) IS NULL
-      OR s.name ILIKE '%' || :search || '%'
-      OR s.email ILIKE '%' || :search || '%'
-    """,
-    countQuery = """
-    SELECT COUNT(*) FROM suppliers s
-    WHERE CAST(:search AS text) IS NULL
-      OR s.name ILIKE '%' || :search || '%'
-      OR s.email ILIKE '%' || :search || '%'
-    """,
-    nativeQuery = true
+    value = "SELECT s FROM Supplier s LEFT JOIN FETCH s.category " +
+      "WHERE :search IS NULL " +
+      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))",
+    countQuery = "SELECT COUNT(s) FROM Supplier s " +
+      "WHERE :search IS NULL " +
+      "OR LOWER(s.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+      "OR LOWER(s.email) LIKE LOWER(CONCAT('%', :search, '%'))"
   )
   Page<Supplier> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  @Query("SELECT s FROM Supplier s WHERE s.active = true")
+  @Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.category WHERE s.active = true")
   Page<Supplier> findByActiveTrueWithFetch(Pageable pageable);
 
-  @Query("SELECT s FROM Supplier s WHERE s.active = false")
+  @Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.category WHERE s.active = false")
   Page<Supplier> findByActiveFalseWithFetch(Pageable pageable);
 
   Page<Supplier> findByCurrency(Currency currency, Pageable pageable);
 
   @Query(
-    value = "SELECT s FROM Supplier s WHERE s.currency = :currency",
+    value = "SELECT s FROM Supplier s LEFT JOIN FETCH s.category WHERE s.currency = :currency",
     countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.currency = :currency"
   )
   Page<Supplier> findByCurrencyWithFetch(@Param("currency") Currency currency, Pageable pageable);
 
   @Query(
-    value = "SELECT s FROM Supplier s WHERE s.category.id = :categoryId",
+    value = "SELECT s FROM Supplier s LEFT JOIN FETCH s.category WHERE s.category.id = :categoryId",
     countQuery = "SELECT COUNT(s) FROM Supplier s WHERE s.category.id = :categoryId"
   )
   Page<Supplier> findByCategoryIdWithFetch(@Param("categoryId") Long categoryId, Pageable pageable);
