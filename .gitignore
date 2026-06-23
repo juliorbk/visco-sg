@@ -34,6 +34,7 @@ build/
 
 # .gitignore
 .env
+.env.render
 
 backups/
 *.sql.gz
