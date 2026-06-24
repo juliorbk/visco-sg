@@ -112,13 +112,14 @@ public class ProcurementService {
                 .orElseThrow(() ->
                     new EntityNotFoundException("Requisition not found: " + request.requisitionId())
                 );
-            if (requisition.getStatus() != RequisitionStatus.APPROVED) {
+            if (requisition.getStatus() != RequisitionStatus.APPROVED &&
+                requisition.getStatus() != RequisitionStatus.PARTIALLY_CONVERTED) {
                 throw new IllegalStateException(
-                    "Only approved requisitions can be converted to PO"
+                    "Only approved or partially converted requisitions can be converted to PO"
                 );
             }
             order.setRequisition(requisition);
-            requisition.setStatus(RequisitionStatus.CONVERTED);
+            requisition.setStatus(RequisitionStatus.PARTIALLY_CONVERTED);
             requisitionRepository.save(requisition);
         }
 

@@ -218,6 +218,7 @@ public class RequisitionService {
     Requisition req = findById(id);
     if (
       req.getStatus() == RequisitionStatus.CONVERTED ||
+      req.getStatus() == RequisitionStatus.PARTIALLY_CONVERTED ||
       req.getStatus() == RequisitionStatus.CANCELLED
     ) {
       throw new IllegalStateException(
@@ -303,9 +304,10 @@ public class RequisitionService {
   @Transactional
   public RequisitionResponse markAsConverted(Long id) {
     Requisition req = findById(id);
-    if (req.getStatus() != RequisitionStatus.APPROVED) {
+    if (req.getStatus() != RequisitionStatus.APPROVED &&
+        req.getStatus() != RequisitionStatus.PARTIALLY_CONVERTED) {
       throw new IllegalStateException(
-        "Only approved requisitions can be converted to PO"
+        "Only approved or partially converted requisitions can be marked as converted"
       );
     }
     req.setStatus(RequisitionStatus.CONVERTED);
