@@ -25,6 +25,7 @@ import com.visco.backend.repositories.WarehouseRepository;
 import jakarta.persistence.EntityNotFoundException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -167,7 +168,40 @@ public class ProcurementService {
         }
 
         PurchaseOrder savedOrder = purchaseOrderRepository.save(order);
+
+        if (request.requisitionId() != null) {
+            updateRequisitionConversionStatus(request.requisitionId());
+        }
+
         return toResponse(savedOrder);
+    }
+
+    private void updateRequisitionConversionStatus(Long requisitionId) {
+        Requisition requisition = requisitionRepository
+            .findById(requisitionId)
+            .orElse(null);
+        if (requisition == null) return;
+
+        Map<Long, BigDecimal> orderedByProduct = new HashMap<>();
+        for (PurchaseOrder po : purchaseOrderRepository.findByRequisitionId(requisitionId)) {
+            for (PurchaseOrderItem item : po.getItems()) {
+                orderedByProduct.merge(
+                    item.getProduct().getId(),
+                    item.getQuantity(),
+                    BigDecimal::add
+                );
+            }
+        }
+
+        boolean allCovered = requisition.getItems().stream().allMatch(ri -> {
+            BigDecimal ordered = orderedByProduct.getOrDefault(ri.getProduct().getId(), BigDecimal.ZERO);
+            return ordered.compareTo(ri.getQuantity()) >= 0;
+        });
+
+        if (allCovered) {
+            requisition.setStatus(RequisitionStatus.CONVERTED);
+            requisitionRepository.save(requisition);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ import org.springframework.data.repository.query.Param;
 public interface PurchaseOrderRepository
   extends JpaRepository<PurchaseOrder, Long>
 {
+  List<PurchaseOrder> findByRequisitionId(Long requisitionId);
   @Query(
     "SELECT DISTINCT o FROM PurchaseOrder o " +
     "JOIN FETCH o.supplier JOIN FETCH o.createdBy " +
