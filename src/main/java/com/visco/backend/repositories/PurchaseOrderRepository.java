@@ -16,7 +16,11 @@ import org.springframework.data.repository.query.Param;
 public interface PurchaseOrderRepository
   extends JpaRepository<PurchaseOrder, Long>
 {
-  List<PurchaseOrder> findByRequisitionId(Long requisitionId);
+  @Query("SELECT po FROM PurchaseOrder po " +
+    "LEFT JOIN FETCH po.items i " +
+    "LEFT JOIN FETCH i.product " +
+    "WHERE po.requisition.id = :requisitionId")
+  List<PurchaseOrder> findByRequisitionId(@Param("requisitionId") Long requisitionId);
   @Query(
     "SELECT DISTINCT o FROM PurchaseOrder o " +
     "JOIN FETCH o.supplier JOIN FETCH o.createdBy " +
