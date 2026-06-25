@@ -25,7 +25,8 @@ public interface PurchaseOrderRepository
     "SELECT DISTINCT o FROM PurchaseOrder o " +
     "JOIN FETCH o.supplier JOIN FETCH o.createdBy " +
     "LEFT JOIN FETCH o.approvedBy " +
-    "LEFT JOIN FETCH o.destinationWarehouse " +
+    "LEFT JOIN FETCH o.destinationWarehouse dw " +
+    "LEFT JOIN FETCH dw.responsibleUser " +
     "LEFT JOIN FETCH o.requisition " +
     "LEFT JOIN FETCH o.items i LEFT JOIN FETCH i.product"
   )
@@ -58,7 +59,8 @@ public interface PurchaseOrderRepository
       "JOIN FETCH o.supplier " +
       "JOIN FETCH o.createdBy " +
       "LEFT JOIN FETCH o.approvedBy " +
-      "LEFT JOIN FETCH o.destinationWarehouse " +
+      "LEFT JOIN FETCH o.destinationWarehouse dw " +
+      "LEFT JOIN FETCH dw.responsibleUser " +
       "LEFT JOIN FETCH o.requisition " +
       "LEFT JOIN FETCH o.items i " +
       "LEFT JOIN FETCH i.product " +
@@ -88,6 +90,8 @@ public interface PurchaseOrderRepository
     "SELECT o FROM PurchaseOrder o " +
       "JOIN FETCH o.supplier " +
       "JOIN FETCH o.createdBy " +
+      "LEFT JOIN FETCH o.destinationWarehouse dw " +
+      "LEFT JOIN FETCH dw.responsibleUser " +
       "LEFT JOIN FETCH o.items " +
       "ORDER BY o.createdAt DESC"
   )

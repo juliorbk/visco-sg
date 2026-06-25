@@ -13,7 +13,8 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
 
   @Query(
     value = "SELECT DISTINCT dn FROM DispatchNote dn " +
-      "JOIN FETCH dn.warehouse " +
+      "JOIN FETCH dn.warehouse w " +
+      "LEFT JOIN FETCH w.responsibleUser " +
       "JOIN FETCH dn.withdrawnBy " +
       "JOIN FETCH dn.costCenter " +
       "JOIN FETCH dn.createdBy " +
@@ -25,7 +26,8 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
 
   @Query(
     value = "SELECT DISTINCT dn FROM DispatchNote dn " +
-      "JOIN FETCH dn.warehouse " +
+      "JOIN FETCH dn.warehouse w " +
+      "LEFT JOIN FETCH w.responsibleUser " +
       "JOIN FETCH dn.withdrawnBy " +
       "JOIN FETCH dn.costCenter " +
       "JOIN FETCH dn.createdBy " +
@@ -41,7 +43,7 @@ public interface DispatchNoteRepository extends JpaRepository<DispatchNote, Long
   )
   Page<DispatchNote> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse JOIN FETCH dn.withdrawnBy JOIN FETCH dn.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
+  @Query("SELECT dn FROM DispatchNote dn JOIN FETCH dn.warehouse w LEFT JOIN FETCH w.responsibleUser JOIN FETCH dn.withdrawnBy JOIN FETCH dn.costCenter JOIN FETCH dn.createdBy LEFT JOIN FETCH dn.items i LEFT JOIN FETCH i.product WHERE dn.id = :id")
   Optional<DispatchNote> findByIdDetailed(@Param("id") Long id);
 
   @Query(value = "SELECT nextval('dispatch_seq')", nativeQuery = true)

@@ -131,7 +131,7 @@ public class WarehouseService {
   @Transactional(readOnly = true)
   public WarehouseDTO getWarehouse(Long id) {
     return warehouseRepository
-      .findById(id)
+      .findByIdWithFetch(id)
       .map(WarehouseDTO::fromEntity)
       .orElseThrow(() ->
         new EntityNotFoundException("Warehouse not found: " + id)

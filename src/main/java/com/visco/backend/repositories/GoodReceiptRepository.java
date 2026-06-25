@@ -19,7 +19,7 @@ public interface GoodReceiptRepository
   Page<GoodReceipt> findAll(Pageable pageable);
 
   @Query(
-    value = "SELECT DISTINCT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location",
+    value = "SELECT DISTINCT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse dw LEFT JOIN FETCH dw.responsibleUser LEFT JOIN FETCH po.supplier LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location",
     countQuery = "SELECT COUNT(gr) FROM GoodReceipt gr"
   )
   Page<GoodReceipt> findAllWithFetch(Pageable pageable);
@@ -27,7 +27,9 @@ public interface GoodReceiptRepository
   @Query(
     value = "SELECT DISTINCT gr FROM GoodReceipt gr " +
       "JOIN FETCH gr.purchaseOrder po " +
-      "LEFT JOIN FETCH po.destinationWarehouse " +
+      "LEFT JOIN FETCH po.destinationWarehouse dw " +
+      "LEFT JOIN FETCH dw.responsibleUser " +
+      "LEFT JOIN FETCH po.supplier " +
       "LEFT JOIN FETCH gr.receivedBy " +
       "LEFT JOIN FETCH gr.items i " +
       "LEFT JOIN FETCH i.product " +
@@ -45,10 +47,10 @@ public interface GoodReceiptRepository
   )
   Page<GoodReceipt> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
-  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.purchaseOrder.id = :orderId")
+  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse dw LEFT JOIN FETCH dw.responsibleUser LEFT JOIN FETCH po.supplier LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.purchaseOrder.id = :orderId")
   List<GoodReceipt> findByPurchaseOrderIdWithFetch(@Param("orderId") Long orderId);
 
-  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.id = :id")
+  @Query("SELECT gr FROM GoodReceipt gr JOIN FETCH gr.purchaseOrder po LEFT JOIN FETCH po.destinationWarehouse dw LEFT JOIN FETCH dw.responsibleUser LEFT JOIN FETCH po.supplier LEFT JOIN FETCH gr.receivedBy LEFT JOIN FETCH gr.items i LEFT JOIN FETCH i.product LEFT JOIN FETCH i.location WHERE gr.id = :id")
   Optional<GoodReceipt> findByIdDetailed(@Param("id") Long id);
 
   @Query("SELECT gri.product.id as productId, SUM(gri.receivedQuantity) as totalReceived "
