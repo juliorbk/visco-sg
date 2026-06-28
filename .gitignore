@@ -1,1 +1,6 @@
 docs/*.pdf
+target/
+.env
+.vscode/
+backup*.sql
+*.log
