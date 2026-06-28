@@ -1017,7 +1017,7 @@ public class WarehouseService {
     String currentUserEmail
   ) {
     Warehouse warehouse = warehouseRepository
-      .findById(request.warehouseId())
+      .findByIdWithFetch(request.warehouseId())
       .orElseThrow(() ->
         new EntityNotFoundException(
           "Warehouse not found: " + request.warehouseId()
