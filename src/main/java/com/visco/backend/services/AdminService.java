@@ -255,7 +255,7 @@ public class AdminService {
 
         try {
             Map<?, ?> uploadResult = cloudinary.uploader().upload(
-                file.getBytes(),
+                file.getInputStream(),
                 ObjectUtils.asMap(
                     "folder", "profile-pictures",
                     "public_id", "user_" + userId,

@@ -146,7 +146,7 @@ public class WarehouseService {
    * @return the goods receipt response
    */
   @Transactional
-  @CacheEvict(value = "dashboard", allEntries = true)
+  @CacheEvict(value = "dashboard", key = "'kpis'")
   public GoodReceiptResponse receiveGoods(
     Long orderId,
     ReceiveGoodsRequest request
@@ -221,6 +221,18 @@ public class WarehouseService {
         Collectors.toMap(item -> item.getProduct().getId(), item -> item)
       );
 
+    // Batch: cargar todas las ubicaciones en UNA consulta
+    List<Long> allLocationIds = request.items().stream()
+      .map(r -> r.locationId() != null ? r.locationId() : defaultLocationId)
+      .filter(java.util.Objects::nonNull)
+      .distinct()
+      .toList();
+    Map<Long, Location> locationCache = allLocationIds.isEmpty()
+      ? Map.of()
+      : locationRepository.findAllById(allLocationIds)
+          .stream()
+          .collect(Collectors.toMap(Location::getId, l -> l));
+
     for (ReceiveGoodsRequest.ReceiveItem itemReq : request.items()) {
       PurchaseOrderItem poItem = poItemsByProduct.get(itemReq.productId());
       if (poItem == null) {
@@ -233,7 +245,8 @@ public class WarehouseService {
       Location itemLocation = resolveItemLocation(
         itemLocationId,
         destWarehouse,
-        itemReq.productId()
+        itemReq.productId(),
+        locationCache
       );
       processReceiptItem(
         receipt,
@@ -294,7 +307,8 @@ public class WarehouseService {
   private Location resolveItemLocation(
     Long locationId,
     Warehouse destWarehouse,
-    Long productId
+    Long productId,
+    Map<Long, Location> locationCache
   ) {
     if (locationId == null) {
       throw new IllegalArgumentException(
@@ -303,11 +317,15 @@ public class WarehouseService {
           " has no location. Provide a locationId on the item or as the default for the receipt."
       );
     }
-    Location location = locationRepository
-      .findById(locationId)
-      .orElseThrow(() ->
-        new EntityNotFoundException("Location not found: " + locationId)
-      );
+    Location location = locationCache.get(locationId);
+    if (location == null) {
+      // Fallback: load individually (e.g. if location was not in the batch)
+      location = locationRepository
+        .findById(locationId)
+        .orElseThrow(() ->
+          new EntityNotFoundException("Location not found: " + locationId)
+        );
+    }
     if (!location.getWarehouse().getId().equals(destWarehouse.getId())) {
       throw new IllegalArgumentException(
         "Location " +

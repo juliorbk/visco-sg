@@ -1,11 +1,13 @@
 package com.visco.backend.services;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,9 +31,13 @@ public class ResendEmailService {
   private boolean emailEnabled;
 
   private static final String RESEND_API_URL = "https://api.resend.com/emails";
+  private static final long MAX_ATTACHMENT_SIZE_BYTES = 25L * 1024 * 1024; // 25 MB
 
-  public ResendEmailService() {
-    this.restTemplate = new RestTemplate();
+  public ResendEmailService(RestTemplateBuilder builder) {
+    this.restTemplate = builder
+        .connectTimeout(Duration.ofSeconds(10))
+        .readTimeout(Duration.ofSeconds(30))
+        .build();
   }
 
   public void sendHtmlEmail(String to, String subject, String html) {
@@ -68,6 +74,11 @@ public class ResendEmailService {
         subject,
         filename
       );
+      return;
+    }
+    if (content.length > MAX_ATTACHMENT_SIZE_BYTES) {
+      log.warn("Attachment too large ({} MB) for email to {} — skipping. Use Cloudinary upload for files > 25 MB.",
+        content.length / (1024 * 1024), to);
       return;
     }
     try {

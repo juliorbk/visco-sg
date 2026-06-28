@@ -32,6 +32,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -96,17 +98,15 @@ public class ReportController {
 
     @GetMapping("/{id}/download")
     @Operation(summary = "Descargar archivo del reporte",
-               description = "Regenera el archivo PDF/Excel en memoria y lo devuelve como attachment. "
-                           + "No se persiste ningún archivo en disco.")
-    public ResponseEntity<byte[]> downloadReport(@PathVariable Long id) {
+               description = "Regenera el archivo PDF/Excel y lo transmite como streaming. "
+                           + "No se carga el contenido completo en memoria del servidor.")
+    public ResponseEntity<StreamingResponseBody> downloadReport(@PathVariable Long id) {
         Report report = reportRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Reporte no encontrado: " + id));
 
         if (report.getStatus() != ReportStatus.COMPLETED) {
             throw new IllegalStateException("El reporte aún no está listo (estado: " + report.getStatus() + ")");
         }
-
-        byte[] content = reportService.buildReportBytes(report);
 
         String safeName = report.getName() == null
                 ? "reporte-" + report.getId()
@@ -122,12 +122,14 @@ public class ReportController {
             case JSON -> MediaType.APPLICATION_JSON;
         };
 
+        StreamingResponseBody stream = outputStream ->
+            reportService.streamReportBytes(report, outputStream);
+
         return ResponseEntity.ok()
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")
-                .contentLength(content.length)
-                .body(content);
+                .body(stream);
     }
 
     @DeleteMapping("/{id}")

@@ -70,7 +70,7 @@ public class ProcurementService {
      * @return the created purchase order response
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse createPurchaseOrder(CreatePurchaseOrderRequest request) {
         Supplier supplier = supplierRepository
             .findById(request.supplierId())
@@ -178,7 +178,7 @@ public class ProcurementService {
 
     private void updateRequisitionConversionStatus(Long requisitionId) {
         Requisition requisition = requisitionRepository
-            .findById(requisitionId)
+            .findByIdDetailed(requisitionId)
             .orElse(null);
         if (requisition == null) return;
 
@@ -398,7 +398,7 @@ public class ProcurementService {
      * @return the updated purchase order response
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse submitOrderForApproval(Long id) {
         return toResponse(submitForApproval(id));
     }
@@ -408,7 +408,7 @@ public class ProcurementService {
      * (e.g. from a request body field like the reject endpoint).
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse markAsApproved(Long id, UUID approverUserId, String notes) {
         return toResponse(approveOrder(id, approverUserId, notes));
     }
@@ -442,7 +442,7 @@ public class ProcurementService {
      * @return the updated purchase order response
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse rejectPurchaseOrder(Long id, String rejecterEmail, String reason) {
         UUID rejecterId = null;
         if (rejecterEmail != null) {
@@ -463,7 +463,7 @@ public class ProcurementService {
      * @return the updated purchase order response
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse markAsSentToSupplier(Long id) {
         return toResponse(sendToSupplier(id));
     }
@@ -476,7 +476,7 @@ public class ProcurementService {
      * @return the updated purchase order response
      */
     @Transactional
-    @CacheEvict(value = "dashboard", allEntries = true)
+    @CacheEvict(value = "dashboard", key = "'kpis'")
     public PurchaseOrderResponse cancelOrder(Long id, String reason) {
         return toResponse(cancelOrderById(id, reason));
     }

@@ -62,6 +62,17 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
   );
 
   @Query(
+    "SELECT s.product.id AS productId, COALESCE(SUM(s.currentStock), 0) AS totalStock " +
+      "FROM StockLevel s " +
+      "WHERE s.product.id IN :productIds AND s.warehouse.id = :warehouseId " +
+      "GROUP BY s.product.id"
+  )
+  List<StockByProductProjection> sumStockByProductIdsAndWarehouse(
+    @Param("productIds") List<Long> productIds,
+    @Param("warehouseId") Long warehouseId
+  );
+
+  @Query(
     "SELECT s.warehouse.id               as warehouseId, " +
       "       s.warehouse.name             as warehouseName, " +
       "       COALESCE(SUM(s.currentStock), 0) as currentStock, " +
@@ -119,6 +130,14 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("sku") String sku,
     @Param("onlyWithStock") boolean onlyWithStock
   );
+
+  @Query(
+    "SELECT sl FROM StockLevel sl " +
+      "JOIN FETCH sl.product p " +
+      "LEFT JOIN FETCH p.category " +
+      "WHERE sl.warehouse.id IN :warehouseIds AND sl.currentStock > 0"
+  )
+  List<StockLevel> findByWarehouseIdInWithStock(@Param("warehouseIds") List<Long> warehouseIds);
 
   // ─────────────────────────────────────────────────────────────
   // Atomic stock operations
@@ -223,6 +242,11 @@ public interface StockLevelRepository extends JpaRepository<StockLevel, Long> {
     @Param("warehouseId") Long warehouseId,
     @Param("newStock") BigDecimal newStock
   );
+
+  interface StockByProductProjection {
+    Long getProductId();
+    BigDecimal getTotalStock();
+  }
 
   interface WarehouseStockProjection {
     Long getWarehouseId();

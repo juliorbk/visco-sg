@@ -52,7 +52,7 @@ public class InvoiceService {
    * @return the created invoice response
    */
   @Transactional
-  @CacheEvict(value = "dashboard", allEntries = true)
+  @CacheEvict(value = "dashboard", key = "'spending'")
   public InvoiceResponse createInvoice(CreateInvoiceRequest request) {
     PurchaseOrder order = purchaseOrderRepository
       .findByIdWithItems(request.purchaseOrderId())
@@ -217,7 +217,7 @@ public class InvoiceService {
    * @return the updated invoice response
    */
   @Transactional
-  @CacheEvict(value = "dashboard", allEntries = true)
+  @CacheEvict(value = "dashboard", key = "'spending'")
   public InvoiceResponse markAsPaid(Long id, LocalDate paymentDate) {
     Invoice invoice = findById(id);
     if (invoice.getStatus() == InvoiceStatus.PAID) {
@@ -242,7 +242,7 @@ public class InvoiceService {
    * @return the updated invoice response
    */
   @Transactional
-  @CacheEvict(value = "dashboard", allEntries = true)
+  @CacheEvict(value = "dashboard", key = "'spending'")
   public InvoiceResponse cancelInvoice(Long id) {
     Invoice invoice = findById(id);
     if (invoice.getStatus() == InvoiceStatus.PAID) {

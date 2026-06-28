@@ -20,7 +20,9 @@ import com.visco.backend.reports.repositories.ScheduledReportRepository;
 import com.visco.backend.reports.utils.DateUtils;
 import jakarta.persistence.EntityNotFoundException;
 import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,15 +154,32 @@ public class ReportService {
      * (to return the bytes on demand).
      */
     public byte[] buildReportBytes(Report report) {
+        CreateReportRequest request = buildRequestFromReport(report);
+        Map<String, String> metadata = buildMetadataFromReport(report);
+        return buildReportBytes(request, metadata);
+    }
+
+    /**
+     * Streams the report content directly to the given OutputStream, avoiding
+     * holding the entire byte[] in heap. Useful for large report downloads.
+     */
+    public void streamReportBytes(Report report, OutputStream outputStream) {
+        CreateReportRequest request = buildRequestFromReport(report);
+        Map<String, String> metadata = buildMetadataFromReport(report);
+        try {
+            writeReportToStream(outputStream, request, metadata);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generando reporte: " + e.getMessage(), e);
+        }
+    }
+
+    private CreateReportRequest buildRequestFromReport(Report report) {
         CreateReportRequest request = new CreateReportRequest();
         request.setName(report.getName());
         request.setType(report.getType());
         request.setFormat(report.getFormat());
         request.setStartDate(report.getStartDate());
         request.setEndDate(report.getEndDate());
-        // The top-level filter scope is stored in dedicated columns on the
-        // Report entity, so we can rebuild the request without touching
-        // the user-supplied additionalFilters JSON at all.
         request.setWarehouseId(report.getWarehouseId());
         request.setCategoryId(report.getCategoryId());
         request.setSearch(report.getSearch());
@@ -172,27 +191,38 @@ public class ReportService {
                 log.warn("Could not parse stored filters for report {}", report.getId(), e);
             }
         }
+        return request;
+    }
 
+    private Map<String, String> buildMetadataFromReport(Report report) {
         Map<String, String> metadata = new HashMap<>();
         metadata.put("Generado por", report.getCreatedBy() != null ? report.getCreatedBy() : "system");
         metadata.put("Tipo", report.getType().getDisplayName());
         metadata.put("Período", DateUtils.formatDate(report.getStartDate()) + " - "
                 + DateUtils.formatDate(report.getEndDate()));
-
-        return buildReportBytes(request, metadata);
+        return metadata;
     }
 
     private record GeneratedReport(byte[] bytes, int recordCount) {}
 
     private GeneratedReport buildReport(CreateReportRequest request, Map<String, String> metadata) {
         try (var baos = new ByteArrayOutputStream()) {
-            int recordCount = switch (request.getType()) {
+            int recordCount = writeReportToStream(baos, request, metadata);
+            return new GeneratedReport(baos.toByteArray(), recordCount);
+        } catch (Exception e) {
+            throw new RuntimeException("Error generando reporte: " + e.getMessage(), e);
+        }
+    }
+
+    private int writeReportToStream(OutputStream out, CreateReportRequest request, Map<String, String> metadata) {
+        try {
+            return switch (request.getType()) {
                 case STOCK_INVENTORY -> {
                     var data = reportGeneratorService.generateStockReport(
                             request.getStartDate(), request.getEndDate(),
                             request.getCategoryId(), request.getWarehouseId(), request.getSearch());
                     if (data.size() > maxRecords) data = data.subList(0, maxRecords);
-                    writeStockReport(baos, request, data, metadata);
+                    writeStockReport(out, request, data, metadata);
                     yield data.size();
                 }
                 case STOCK_MOVEMENTS -> {
@@ -200,17 +230,17 @@ public class ReportService {
                             request.getStartDate(), request.getEndDate(),
                             null, request.getCategoryId(), request.getWarehouseId(), request.getSearch());
                     if (data.size() > maxRecords) data = data.subList(0, maxRecords);
-                    writeMovementReport(baos, request, data, metadata);
+                    writeMovementReport(out, request, data, metadata);
                     yield data.size();
                 }
                 case CRITICAL_ALERTS -> {
                     var data = reportGeneratorService.generateAlertReport(null, null, request.getWarehouseId());
-                    writeAlertReport(baos, request, data, metadata);
+                    writeAlertReport(out, request, data, metadata);
                     yield data.size();
                 }
                 case WAREHOUSE_ANALYSIS -> {
                     var data = reportGeneratorService.generateWarehouseAnalysis(request.getWarehouseId());
-                    writeWarehouseAnalysis(baos, request, data, metadata);
+                    writeWarehouseAnalysis(out, request, data, metadata);
                     yield data.size();
                 }
                 case DAILY_RECEIPTS -> {
@@ -218,12 +248,11 @@ public class ReportService {
                             request.getWarehouseId(), request.getStartDate(), request.getEndDate());
                     var data = kpis.getRows();
                     if (data.size() > maxRecords) data = data.subList(0, maxRecords);
-                    writeDailyReceiptReport(baos, request, data, kpis, metadata);
+                    writeDailyReceiptReport(out, request, data, kpis, metadata);
                     yield data.size();
                 }
                 default -> throw new IllegalArgumentException("Tipo de reporte no soportado: " + request.getType());
             };
-            return new GeneratedReport(baos.toByteArray(), recordCount);
         } catch (Exception e) {
             throw new RuntimeException("Error generando reporte: " + e.getMessage(), e);
         }
@@ -233,9 +262,9 @@ public class ReportService {
         return buildReport(request, metadata).bytes();
     }
 
-    private void writeStockReport(ByteArrayOutputStream out, CreateReportRequest request,
-                                  List<com.visco.backend.reports.models.dtos.StockReportDTO> data,
-                                  Map<String, String> metadata) {
+    private void writeStockReport(OutputStream out, CreateReportRequest request,
+                                   List<com.visco.backend.reports.models.dtos.StockReportDTO> data,
+                                   Map<String, String> metadata) {
         if (request.getFormat() == ReportFormat.PDF) {
             pdfExportService.exportStockReportToPdf(data, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
@@ -245,9 +274,9 @@ public class ReportService {
         }
     }
 
-    private void writeMovementReport(ByteArrayOutputStream out, CreateReportRequest request,
-                                     List<com.visco.backend.reports.models.dtos.MovementReportDTO> data,
-                                     Map<String, String> metadata) {
+    private void writeMovementReport(OutputStream out, CreateReportRequest request,
+                                      List<com.visco.backend.reports.models.dtos.MovementReportDTO> data,
+                                      Map<String, String> metadata) {
         if (request.getFormat() == ReportFormat.PDF) {
             pdfExportService.exportMovementReportToPdf(data, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
@@ -257,9 +286,9 @@ public class ReportService {
         }
     }
 
-    private void writeAlertReport(ByteArrayOutputStream out, CreateReportRequest request,
-                                  List<com.visco.backend.reports.models.dtos.AlertReportDTO> data,
-                                  Map<String, String> metadata) {
+    private void writeAlertReport(OutputStream out, CreateReportRequest request,
+                                   List<com.visco.backend.reports.models.dtos.AlertReportDTO> data,
+                                   Map<String, String> metadata) {
         if (request.getFormat() == ReportFormat.PDF) {
             pdfExportService.exportAlertReportToPdf(data, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
@@ -269,9 +298,9 @@ public class ReportService {
         }
     }
 
-    private void writeWarehouseAnalysis(ByteArrayOutputStream out, CreateReportRequest request,
-                                        List<com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO> data,
-                                        Map<String, String> metadata) {
+    private void writeWarehouseAnalysis(OutputStream out, CreateReportRequest request,
+                                         List<com.visco.backend.reports.models.dtos.WarehouseAnalysisDTO> data,
+                                         Map<String, String> metadata) {
         if (request.getFormat() == ReportFormat.PDF) {
             pdfExportService.exportWarehouseAnalysisToPdf(data, request.getName(), metadata, out);
         } else if (request.getFormat() == ReportFormat.EXCEL) {
@@ -281,7 +310,7 @@ public class ReportService {
         }
     }
 
-    private void writeDailyReceiptReport(ByteArrayOutputStream out, CreateReportRequest request,
+    private void writeDailyReceiptReport(OutputStream out, CreateReportRequest request,
                                           List<DailyReceiptReportDTO> data,
                                           DailyReceiptReportKPIs kpis,
                                           Map<String, String> metadata) {
@@ -430,10 +459,16 @@ public class ReportService {
                 .countByMonthSince(sixMonthsAgo)
                 .stream()
                 .map(row -> {
-                    java.sql.Timestamp ts = (java.sql.Timestamp) row[0];
+                    Object dateObj = row[0];
+                    LocalDateTime ldt;
+                    if (dateObj instanceof java.sql.Timestamp ts) {
+                        ldt = ts.toLocalDateTime();
+                    } else {
+                        ldt = (LocalDateTime) dateObj;
+                    }
                     long count = (Long) row[1];
                     return ReportAnalyticsDTO.MonthlyCount.builder()
-                            .month(ts.toString().substring(0, 7))
+                            .month(ldt.format(DateTimeFormatter.ofPattern("yyyy-MM")))
                             .count(count)
                             .build();
                 })

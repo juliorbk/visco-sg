@@ -91,7 +91,7 @@ public class AuthService {
         if (profilePicture != null && !profilePicture.isEmpty()) {
             try {
                 Map<?, ?> uploadResult = cloudinary.uploader().upload(
-                    profilePicture.getBytes(),
+                    profilePicture.getInputStream(),
                     ObjectUtils.asMap(
                         "folder", "profile-pictures",
                         "public_id", "user_" + newUser.getId(),

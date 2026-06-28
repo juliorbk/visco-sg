@@ -301,20 +301,16 @@ public class ReportGeneratorService {
           .stream()
           .collect(Collectors.groupingBy(s -> s.getProduct().getId()));
 
-    // Pre-cargar stock por warehouse si es necesario
+    // Pre-cargar stock por warehouse en una sola consulta batch
     Map<Long, BigDecimal> stockByProductAndWarehouse;
-    if (warehouseId != null) {
-      stockByProductAndWarehouse = allProductIds
+    if (warehouseId != null && !allProductIds.isEmpty()) {
+      stockByProductAndWarehouse = stockLevelRepository
+        .sumStockByProductIdsAndWarehouse(allProductIds, warehouseId)
         .stream()
         .collect(
           Collectors.toMap(
-            pid -> pid,
-            pid ->
-              stockLevelRepository.getStockByProductAndWarehouse(
-                pid,
-                warehouseId
-              ),
-            (a, b) -> a
+            StockLevelRepository.StockByProductProjection::getProductId,
+            StockLevelRepository.StockByProductProjection::getTotalStock
           )
         );
     } else {
@@ -445,20 +441,18 @@ public class ReportGeneratorService {
         .getContent();
     }
 
+    // Batch: cargar todo el stock de todos los almacenes en UNA sola consulta
+    List<Long> warehouseIds = warehouses.stream().map(Warehouse::getId).toList();
+    Map<Long, List<StockLevel>> stockByWarehouse = warehouseIds.isEmpty()
+      ? Map.of()
+      : stockLevelRepository
+          .findByWarehouseIdInWithStock(warehouseIds)
+          .stream()
+          .filter(sl -> sl.getCurrentStock().compareTo(BigDecimal.ZERO) > 0)
+          .collect(Collectors.groupingBy(sl -> sl.getWarehouse().getId()));
+
     for (Warehouse w : warehouses) {
-      var whPage = stockLevelRepository.findByWarehouse(
-        Pageable.ofSize(maxRecords),
-        w.getId(),
-        null,
-        null,
-        null,
-        false
-      );
-      List<StockLevel> positiveStock = whPage
-        .getContent()
-        .stream()
-        .filter(sl -> sl.getCurrentStock().compareTo(BigDecimal.ZERO) > 0)
-        .toList();
+      List<StockLevel> positiveStock = stockByWarehouse.getOrDefault(w.getId(), List.of());
 
       int productCount = positiveStock.size();
       int criticalCount = 0;
