@@ -1214,6 +1214,64 @@ public class WarehouseService {
    * @return page of inventory movement responses
    */
   @Transactional(readOnly = true)
+  public List<InventoryMovementResponse> exportMovements(
+    Long productId,
+    Long warehouseId,
+    MovementType type,
+    LocalDateTime startDate,
+    LocalDateTime endDate
+  ) {
+    BigDecimal balanceBefore = BigDecimal.ZERO;
+    if (productId != null && startDate != null) {
+      balanceBefore = inventoryMovementRepository.calculateRunningBalanceUntil(
+        productId,
+        startDate
+      );
+      if (balanceBefore == null) balanceBefore = BigDecimal.ZERO;
+    }
+
+    final BigDecimal openingBalance = balanceBefore;
+
+    Specification<InventoryMovement> spec = Specification.where(
+      InventoryMovementSpecification.withAssociations()
+    )
+      .and(InventoryMovementSpecification.hasProductId(productId))
+      .and(InventoryMovementSpecification.touchesWarehouse(warehouseId))
+      .and(InventoryMovementSpecification.hasType(type))
+      .and(InventoryMovementSpecification.createdAtBetween(startDate, endDate));
+
+    List<InventoryMovement> movements = inventoryMovementRepository.findAll(
+      spec,
+      Sort.by("createdAt").ascending()
+    );
+
+    AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
+
+    return movements.stream()
+      .map(m -> {
+        BigDecimal signedQty = signedQuantityForRunningBalance(m);
+        BigDecimal runningBalance = running.updateAndGet(current ->
+          current.add(signedQty)
+        );
+        return new InventoryMovementResponse(
+          m.getId(),
+          m.getProduct().getId(),
+          m.getProduct().getName(),
+          m.getProduct().getSku(),
+          m.getType().name(),
+          m.getQuantity(),
+          m.getEntryUnitPrice(),
+          m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
+          m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
+          m.getReason(),
+          m.getCreatedAt(),
+          m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
+          runningBalance
+        );
+      })
+      .toList();
+  }
+
   public Page<InventoryMovementResponse> getMovements(
     Long productId,
     Long warehouseId,
