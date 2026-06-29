@@ -430,7 +430,7 @@ public class ReportService {
                 .countByMonthSince(sixMonthsAgo)
                 .stream()
                 .map(row -> {
-                    java.sql.Timestamp ts = (java.sql.Timestamp) row[0];
+                    LocalDateTime ts = (LocalDateTime) row[0];
                     long count = (Long) row[1];
                     return ReportAnalyticsDTO.MonthlyCount.builder()
                             .month(ts.toString().substring(0, 7))
