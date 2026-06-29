@@ -133,7 +133,7 @@ public class SupplierService {
   @Transactional
   public SupplierDTO updateSupplier(Long id, UpdateSupplierRequest request) {
     Supplier existing = supplierRepository
-      .findById(id)
+      .findByIdWithRepresentatives(id)
       .orElseThrow(() ->
         new EntityNotFoundException("Supplier not found: " + id)
       );

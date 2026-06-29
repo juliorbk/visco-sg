@@ -19,15 +19,22 @@ import com.visco.backend.services.WarehouseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -273,5 +280,68 @@ public class WarehouseController {
                 pageable
             )
         );
+    }
+
+    @GetMapping("/movements/export")
+    @Operation(
+        summary = "Export inventory movements to CSV",
+        description = "Exports filtered inventory movements (kardex) as a CSV file download"
+    )
+    public ResponseEntity<StreamingResponseBody> exportMovements(
+        @RequestParam(required = false) Long productId,
+        @RequestParam(required = false) Long warehouseId,
+        @RequestParam(required = false) MovementType type,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE_TIME
+        ) LocalDateTime startDate,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE_TIME
+        ) LocalDateTime endDate
+    ) {
+        List<InventoryMovementResponse> movements = warehouseService.exportMovements(
+            productId, warehouseId, type, startDate, endDate
+        );
+
+        String filename = "movimientos_"
+            + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+            + ".csv";
+
+        StreamingResponseBody stream = outputStream -> {
+            try (var writer = new PrintWriter(
+                    new OutputStreamWriter(outputStream, StandardCharsets.UTF_8)
+            )) {
+                writer.println("ID,Producto,SKU,Tipo,Cantidad,Precio Unit.,Almacén Origen,Almacén Destino,Motivo,Fecha,Creado por,Saldo");
+                for (InventoryMovementResponse m : movements) {
+                    writer.printf("%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+                        m.id(),
+                        escapeCsv(m.productName()),
+                        escapeCsv(m.productSku()),
+                        m.type(),
+                        m.quantity(),
+                        m.entryUnitPrice() != null ? m.entryUnitPrice().toPlainString() : "",
+                        escapeCsv(m.fromWarehouseName()),
+                        escapeCsv(m.toWarehouseName()),
+                        escapeCsv(m.reason()),
+                        m.createdAt() != null ? m.createdAt().toString() : "",
+                        escapeCsv(m.createdByName()),
+                        m.runningBalance().toPlainString()
+                    );
+                }
+            }
+        };
+
+        return ResponseEntity.ok()
+            .contentType(new MediaType("text", "csv"))
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+            .body(stream);
+    }
+
+    private static String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

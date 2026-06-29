@@ -62,4 +62,7 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
   }
 
   Boolean existsByName(String name);
+
+  @Query("SELECT s FROM Supplier s LEFT JOIN FETCH s.category LEFT JOIN FETCH s.representatives WHERE s.id = :id")
+  java.util.Optional<Supplier> findByIdWithRepresentatives(@Param("id") Long id);
 }

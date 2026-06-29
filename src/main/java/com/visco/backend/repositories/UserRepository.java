@@ -17,16 +17,10 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
-    @Query(
-      value = "SELECT u.* FROM app_user u WHERE u.email ILIKE :email",
-      nativeQuery = true
-    )
+    @Query("SELECT u FROM User u WHERE u.email = :email")
     Optional<User> findByEmailIgnoreCase(@Param("email") String email);
 
-    @Query(
-      value = "SELECT u.* FROM app_user u LEFT JOIN cost_centers cc ON cc.id = u.cost_center_id WHERE u.email ILIKE :email",
-      nativeQuery = true
-    )
+    @Query("SELECT u FROM User u LEFT JOIN FETCH u.costCenter WHERE u.email = :email")
     Optional<User> findByEmailWithCostCenter(@Param("email") String email);
 
     @Query(

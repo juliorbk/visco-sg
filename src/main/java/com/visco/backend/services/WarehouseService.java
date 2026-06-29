@@ -146,7 +146,7 @@ public class WarehouseService {
    * @return the goods receipt response
    */
   @Transactional
-  @CacheEvict(value = "dashboard", allEntries = true)
+  @CacheEvict(value = "dashboard", key = "'kpis'")
   public GoodReceiptResponse receiveGoods(
     Long orderId,
     ReceiveGoodsRequest request
@@ -221,6 +221,18 @@ public class WarehouseService {
         Collectors.toMap(item -> item.getProduct().getId(), item -> item)
       );
 
+    // Batch: cargar todas las ubicaciones en UNA consulta
+    List<Long> allLocationIds = request.items().stream()
+      .map(r -> r.locationId() != null ? r.locationId() : defaultLocationId)
+      .filter(java.util.Objects::nonNull)
+      .distinct()
+      .toList();
+    Map<Long, Location> locationCache = allLocationIds.isEmpty()
+      ? Map.of()
+      : locationRepository.findAllById(allLocationIds)
+          .stream()
+          .collect(Collectors.toMap(Location::getId, l -> l));
+
     for (ReceiveGoodsRequest.ReceiveItem itemReq : request.items()) {
       PurchaseOrderItem poItem = poItemsByProduct.get(itemReq.productId());
       if (poItem == null) {
@@ -233,7 +245,8 @@ public class WarehouseService {
       Location itemLocation = resolveItemLocation(
         itemLocationId,
         destWarehouse,
-        itemReq.productId()
+        itemReq.productId(),
+        locationCache
       );
       processReceiptItem(
         receipt,
@@ -294,7 +307,8 @@ public class WarehouseService {
   private Location resolveItemLocation(
     Long locationId,
     Warehouse destWarehouse,
-    Long productId
+    Long productId,
+    Map<Long, Location> locationCache
   ) {
     if (locationId == null) {
       throw new IllegalArgumentException(
@@ -303,11 +317,15 @@ public class WarehouseService {
           " has no location. Provide a locationId on the item or as the default for the receipt."
       );
     }
-    Location location = locationRepository
-      .findById(locationId)
-      .orElseThrow(() ->
-        new EntityNotFoundException("Location not found: " + locationId)
-      );
+    Location location = locationCache.get(locationId);
+    if (location == null) {
+      // Fallback: load individually (e.g. if location was not in the batch)
+      location = locationRepository
+        .findById(locationId)
+        .orElseThrow(() ->
+          new EntityNotFoundException("Location not found: " + locationId)
+        );
+    }
     if (!location.getWarehouse().getId().equals(destWarehouse.getId())) {
       throw new IllegalArgumentException(
         "Location " +
@@ -999,7 +1017,7 @@ public class WarehouseService {
     String currentUserEmail
   ) {
     Warehouse warehouse = warehouseRepository
-      .findById(request.warehouseId())
+      .findByIdWithFetch(request.warehouseId())
       .orElseThrow(() ->
         new EntityNotFoundException(
           "Warehouse not found: " + request.warehouseId()
@@ -1196,6 +1214,64 @@ public class WarehouseService {
    * @return page of inventory movement responses
    */
   @Transactional(readOnly = true)
+  public List<InventoryMovementResponse> exportMovements(
+    Long productId,
+    Long warehouseId,
+    MovementType type,
+    LocalDateTime startDate,
+    LocalDateTime endDate
+  ) {
+    BigDecimal balanceBefore = BigDecimal.ZERO;
+    if (productId != null && startDate != null) {
+      balanceBefore = inventoryMovementRepository.calculateRunningBalanceUntil(
+        productId,
+        startDate
+      );
+      if (balanceBefore == null) balanceBefore = BigDecimal.ZERO;
+    }
+
+    final BigDecimal openingBalance = balanceBefore;
+
+    Specification<InventoryMovement> spec = Specification.where(
+      InventoryMovementSpecification.withAssociations()
+    )
+      .and(InventoryMovementSpecification.hasProductId(productId))
+      .and(InventoryMovementSpecification.touchesWarehouse(warehouseId))
+      .and(InventoryMovementSpecification.hasType(type))
+      .and(InventoryMovementSpecification.createdAtBetween(startDate, endDate));
+
+    List<InventoryMovement> movements = inventoryMovementRepository.findAll(
+      spec,
+      Sort.by("createdAt").ascending()
+    );
+
+    AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
+
+    return movements.stream()
+      .map(m -> {
+        BigDecimal signedQty = signedQuantityForRunningBalance(m);
+        BigDecimal runningBalance = running.updateAndGet(current ->
+          current.add(signedQty)
+        );
+        return new InventoryMovementResponse(
+          m.getId(),
+          m.getProduct().getId(),
+          m.getProduct().getName(),
+          m.getProduct().getSku(),
+          m.getType().name(),
+          m.getQuantity(),
+          m.getEntryUnitPrice(),
+          m.getFromWarehouse() != null ? m.getFromWarehouse().getName() : null,
+          m.getToWarehouse() != null ? m.getToWarehouse().getName() : null,
+          m.getReason(),
+          m.getCreatedAt(),
+          m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
+          runningBalance
+        );
+      })
+      .toList();
+  }
+
   public Page<InventoryMovementResponse> getMovements(
     Long productId,
     Long warehouseId,
