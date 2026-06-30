@@ -213,6 +213,13 @@
 			<artifactId>logstash-logback-encoder</artifactId>
 			<version>8.0</version>
 		</dependency>
+
+		<!-- Loki Logback — envía logs directamente a Grafana Cloud Loki -->
+		<dependency>
+			<groupId>com.github.loki4j</groupId>
+			<artifactId>loki-logback-appender</artifactId>
+			<version>1.5.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>
