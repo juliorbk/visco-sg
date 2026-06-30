@@ -1,0 +1,91 @@
+prometheus.exporter.self "alloy_check" { }
+
+discovery.relabel "alloy_check" {
+  targets = prometheus.exporter.self.alloy_check.targets
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "alloy_hostname"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/alloy-check"
+  }
+}
+
+prometheus.scrape "alloy_check" {
+  targets    = discovery.relabel.alloy_check.output
+  forward_to = [prometheus.relabel.alloy_check.receiver]  
+
+  scrape_interval = "60s"
+}
+
+prometheus.relabel "alloy_check" {
+  forward_to = [prometheus.remote_write.metrics_service.receiver]
+
+  rule {
+    source_labels = ["__name__"]
+    regex         = "(prometheus_target_sync_length_seconds_sum|prometheus_target_scrapes_.*|prometheus_target_interval.*|prometheus_sd_discovered_targets|alloy_build.*|prometheus_remote_write_wal_samples_appended_total|process_start_time_seconds)"
+    action        = "keep"
+  }
+}
+
+// ── Spring Boot (Visco SG en Render) ──────────────────────────────────────────
+discovery.relabel "spring_boot" {
+  targets = [{
+    __address__ = "visco-sg.onrender.com:443",
+  }]
+
+  rule {
+    target_label = "instance"
+    replacement  = "visco-sg.onrender.com"
+  }
+}
+
+prometheus.scrape "spring_boot" {
+  targets      = discovery.relabel.spring_boot.output
+  forward_to   = [prometheus.relabel.spring_boot.receiver]
+  job_name     = "integrations/spring-boot"
+  metrics_path = "/actuator/prometheus"
+  scheme       = "https"
+  scrape_interval = "60s"
+}
+
+prometheus.relabel "spring_boot" {
+  forward_to = [prometheus.remote_write.metrics_service.receiver]
+
+  // Keep only metrics used by the Spring Boot dashboard (fits Grafana Cloud free tier)
+  rule {
+    source_labels = ["__name__"]
+    regex         = "up|jvm_memory_heap_used_percent|jvm_memory_used_bytes|jvm_memory_max_bytes|jvm_memory_committed_bytes|jvm_gc_pause_seconds_count|jvm_gc_pause_seconds_sum|jvm_gc_memory_allocated_bytes_total|jvm_gc_memory_promoted_bytes_total|jvm_threads_live_threads|jvm_threads_daemon_threads|jvm_threads_peak_threads|jvm_buffer_memory_used_bytes|jvm_classes_loaded_classes|http_server_requests_seconds_count|http_server_requests_seconds_sum|hikaricp_connections_active|hikaricp_connections_idle|hikaricp_connections_pending|hikaricp_connections_timeout_total|process_cpu_usage|system_cpu_usage|process_files_open_files|process_uptime_seconds|process_start_time_seconds|tomcat_threads_busy|tomcat_threads_config_max_threads|tomcat_threads_current_threads|logback_events_total"
+    action        = "keep"
+  }
+}
+
+prometheus.remote_write "metrics_service" {
+  endpoint {
+    url = "https://prometheus-prod-67-prod-us-west-0.grafana.net/api/prom/push"
+
+    basic_auth {
+      username = "3341928"
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}
+
+loki.write "grafana_cloud_loki" {
+  endpoint {
+    url = "https://logs-prod-021.grafana.net/loki/api/v1/push"
+
+    basic_auth {
+      username = "1666639"
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}

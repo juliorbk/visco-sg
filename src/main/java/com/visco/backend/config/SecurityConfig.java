@@ -215,6 +215,9 @@ public class SecurityConfig {
           .hasRole("SUPERADMIN")
           .requestMatchers(HttpMethod.GET, "/api/users/*/references")
           .hasRole("SUPERADMIN")
+          // Métricas Prometheus públicas (solo lectura, sin datos sensibles)
+          .requestMatchers("/actuator/prometheus")
+          .permitAll()
           .requestMatchers("/actuator/**")
           .hasRole("SUPERADMIN")
           // Roles específicos: escritura inventario, reportes
