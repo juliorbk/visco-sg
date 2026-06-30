@@ -23,21 +23,9 @@ USER visco
 # Copiar el JAR generado
 COPY --from=builder /app/target/*.jar app.jar
 
-# Anular JAVA_TOOL_OPTIONS que Render inyecta (sobreescribe -Xmx)
-ENV JAVA_TOOL_OPTIONS=""
-
 # Puerto que expone Spring Boot
 EXPOSE 8080
 
-# Arrancar la app
-ENTRYPOINT ["java", \
-  "-XX:+UseG1GC", \
-  "-Xmx280m", \
-  "-Xms128m", \
-  "-Xss512k", \
-  "-XX:MaxMetaspaceSize=128m", \
-  "-XX:+UseCompressedOops", \
-  "-XX:+ExitOnOutOfMemoryError", \
-  "-XX:+HeapDumpOnOutOfMemoryError", \
-  "-XX:HeapDumpPath=/tmp", \
-  "-jar", "app.jar"]
+# Script de arranque que ignora JAVA_TOOL_OPTIONS de Render
+COPY --chmod=755 start.sh .
+ENTRYPOINT ["/app/start.sh"]
