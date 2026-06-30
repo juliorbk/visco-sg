@@ -1,6 +1,10 @@
 docs/*.pdf
 target/
 .env
+.env.render
 .vscode/
 backup*.sql
+scripts/migracion_optimizacion_v1.sql
+visco_update.sql
+cp.txt
 *.log
