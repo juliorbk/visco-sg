@@ -220,6 +220,12 @@
 			<artifactId>loki-logback-appender</artifactId>
 			<version>1.5.1</version>
 		</dependency>
+
+		<!-- Apache HttpClient 4.x — necesario para ApacheHttpSender de Loki4j -->
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
