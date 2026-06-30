@@ -32,10 +32,10 @@ EXPOSE 8080
 # Arrancar la app
 ENTRYPOINT ["java", \
   "-XX:+UseG1GC", \
-  "-Xmx300m", \
+  "-Xmx280m", \
   "-Xms128m", \
   "-Xss512k", \
-  "-XX:MaxMetaspaceSize=96m", \
+  "-XX:MaxMetaspaceSize=128m", \
   "-XX:+UseCompressedOops", \
   "-XX:+ExitOnOutOfMemoryError", \
   "-XX:+HeapDumpOnOutOfMemoryError", \
