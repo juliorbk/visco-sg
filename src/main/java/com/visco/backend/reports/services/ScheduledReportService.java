@@ -36,7 +36,7 @@ public class ScheduledReportService {
   /**
    * Runs every hour, checks for due scheduled reports, generates them, and emails recipients.
    */
-  @Scheduled(cron = "0 0 * * * *")
+  // @Scheduled(cron = "0 0 * * * *") // DISABLED - OOM issues, waiting for Railway cloud infra
   @Transactional
   public void executeScheduledReports() {
     log.info("Checking for scheduled reports to execute...");
