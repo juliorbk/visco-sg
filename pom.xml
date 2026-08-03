@@ -207,6 +207,12 @@
 			<artifactId>micrometer-registry-prometheus</artifactId>
 		</dependency>
 
+		<!-- Micrometer OTLP — envía métricas directo a Grafana Cloud (sin Alloy) -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-otlp</artifactId>
+		</dependency>
+
 		<!-- Logstash Logback — logs JSON estructurados para Render logs -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
