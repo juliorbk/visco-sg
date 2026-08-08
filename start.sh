@@ -1,5 +1,6 @@
 #!/bin/sh
-# Force our JVM args ignoring Render's JAVA_TOOL_OPTIONS
+# JVM args fijos: evitar OOM en instancias small (512MB).
+# unset JAVA_TOOL_OPTIONS evita que el platform inyecte flags conflictivos.
 unset JAVA_TOOL_OPTIONS
 
 exec java \

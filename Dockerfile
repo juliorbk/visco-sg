@@ -26,6 +26,6 @@ COPY --from=builder /app/target/*.jar app.jar
 # Puerto que expone Spring Boot
 EXPOSE 8080
 
-# Script de arranque que ignora JAVA_TOOL_OPTIONS de Render
+# Script de arranque con flags de memoria conservadores
 COPY --chmod=755 start.sh .
 ENTRYPOINT ["/app/start.sh"]

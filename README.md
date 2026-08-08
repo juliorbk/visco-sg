@@ -1,6 +1,6 @@
 # Visco Orinoco — Backend API
 
-Sistema de gestión empresarial para control de inventario, órdenes de compra, proveedores y facturación. Desarrollado con Spring Boot 3 y desplegado en Render.
+Sistema de gestión empresarial para control de inventario, órdenes de compra, proveedores y facturación. Desarrollado con Spring Boot 3 y desplegado en Railway.
 
 ---
 
@@ -15,7 +15,7 @@ Sistema de gestión empresarial para control de inventario, órdenes de compra, 
 - [Ejecutar el proyecto](#ejecutar-el-proyecto)
 - [API Reference](#api-reference)
 - [Seguridad](#seguridad)
-- [Despliegue en Render](#despliegue-en-render)
+- [Despliegue en Railway](#despliegue-en-railway)
 - [Estructura del proyecto](#estructura-del-proyecto)
 
 ---
@@ -49,7 +49,7 @@ Sistema de gestión empresarial para control de inventario, órdenes de compra, 
 └────────────────┬────────────────────────┘
                  │ HTTPS + HttpOnly Cookie (JWT)
 ┌────────────────▼────────────────────────┐
-│         Spring Boot API (Render)        │
+│         Spring Boot API (Railway)       │
 │                                         │
 │  Controllers → Services → Repositories  │
 │                                         │
@@ -60,7 +60,7 @@ Sistema de gestión empresarial para control de inventario, órdenes de compra, 
 └────────────────┬────────────────────────┘
                  │
 ┌────────────────▼────────────────────────┐
-│         PostgreSQL (Render)             │
+│         PostgreSQL (Railway)            │
 └─────────────────────────────────────────┘
 ```
 
@@ -152,23 +152,27 @@ jwt.cookie.secure=false
 
 ## Variables de entorno
 
-Variables requeridas en producción (Render):
+Variables requeridas en producción (Railway):
 
 | Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `DB_URL` | URL de conexión PostgreSQL | `jdbc:postgresql://host:5432/visco_db` |
-| `DB_USERNAME` | Usuario de la base de datos | `visco_admin` |
+| `DB_URL` | URL de conexión PostgreSQL en **formato JDBC** | `jdbc:postgresql://host:5432/railway` |
+| `DB_USERNAME` | Usuario de la base de datos | `postgres` |
 | `DB_PASSWORD` | Contraseña de la base de datos | `***` |
 | `JWT_SECRET` | Secreto para firmar JWT (Base64, min 32 chars) | `***` |
 | `JWT_EXPIRATION_MS` | Expiración del token en ms | `86400000` |
-| `MAIL_HOST` | Host del servidor SMTP | `smtp.gmail.com` |
-| `MAIL_PORT` | Puerto SMTP | `587` |
-| `MAIL_USERNAME` | Correo remitente | `sistema@empresa.com` |
-| `MAIL_PASSWORD` | App password del correo | `***` |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (sin espacios) | `https://viscoorinocosia.vercel.app` |
 | `JPA_DDL_AUTO` | Estrategia DDL de Hibernate | `validate` |
 | `JWT_COOKIE_SECURE` | Cookie segura (true en producción) | `true` |
+| `RESEND_API_KEY` | API key del transporte de email (Resend) | `***` |
+| `APP_EMAIL_ENABLED` | Activa el envío de emails | `true` |
 | `REPORT_RECIPIENTS` | Emails para reporte semanal (separados por coma) | `admin@empresa.com` |
+| `CLOUDINARY_URL` | URL de Cloudinary para uploads | `cloudinary://key:secret@cloud` |
+| `OTLP_ENABLED` | Activa export de métricas OTLP a Grafana | `false` |
+| `REPORTS_MAX_RECORDS` | Tope de filas por reporte/export | `2000` |
+| `PORT` | Puerto(HTTP) que Railway inyectaautomáticamente | `8080` |
+
+> **Nota sobre `DB_URL`:** Railway Postgres expone `DATABASE_URL` en formato libpq (`postgres://...`). Spring Boot JDBC necesita `jdbc:postgresql://...`. En Railway, define `DB_URL` manualmente con el formato JDBC, o referencia `${Postgres.DATABASE_PRIVATE_URL}` y reemplaza el scheme `postgres://` → `jdbc:postgresql://` en el valor. Las migraciones las maneja Flyway, por eso `JPA_DDL_AUTO=validate`.
 
 ---
 
@@ -277,21 +281,38 @@ GET    /api/dashboard/critical-inventory
 
 ---
 
-## Despliegue en Render
+## Despliegue en Railway
 
 ### Configuración del servicio
 
+El deploy usa el `Dockerfile` multi-stage (Maven build → JRE alpine) y `railway.json` de la raíz del repo. No requiere Build/Start Command manuales: Railway detecta el Dockerfile automáticamente.
+
 | Campo | Valor |
 |-------|-------|
-| Runtime | Java |
-| Build Command | `./mvnw clean package -DskipTests` |
-| Start Command | `java -jar target/*.jar` |
+| Builder | Dockerfile (`railway.json` ya configurado) |
+| Start Command | `/app/start.sh` (definido en `railway.json`) |
+| Healthcheck | `GET /actuator/health` (Actuator, expuesto) |
+| Restart Policy | `ON_FAILURE` (máx. 10 reintentos) |
 | Branch | `main` |
-| Plan | Starter (512 MB RAM mínimo) |
+| Plan | Developer (512 MB RAM mínimo) |
+
+### Pasos para desplegar
+
+1. Crea un nuevo proyecto en [Railway](https://railway.app).
+2. **New → Database → PostgreSQL** (Railway aprovisiona Postgres y expone variables `DATABASE_PUBLIC_URL` / `DATABASE_PRIVATE_URL`).
+3. **New → GitHub Repo** y selecciona este repositorio. Railway detectará `Dockerfile` + `railway.json`.
+4. En la pestaña **Variables** del servicio, agrega:
+   - `DB_URL` = `jdbc:postgresql://<host>:<port>/<db>` (convierte el `postgres://` de Railway al scheme JDBC).
+   - `DB_USERNAME`, `DB_PASSWORD` (del plugin Postgres).
+   - `JWT_SECRET`, `JWT_COOKIE_SECURE=true`, `JPA_DDL_AUTO=validate`.
+   - `CORS_ALLOWED_ORIGINS`, `RESEND_API_KEY`, `APP_EMAIL_ENABLED`, `REPORT_RECIPIENTS`, etc. (ver tabla de variables).
+5. Railway inyecta `PORT` automáticamente; la app escucha en él (`server.port=${PORT:8080}`).
+6. Opcional: agrega un **Custom Domain** en Settings → Networking.
+7. Flyway ejecutará las migraciones automáticamente en el primer arranque.
 
 ### Deploy automático
 
-Cada push a `main` dispara un deploy automático en Render:
+Cada push a `main` dispara un deploy automático en Railway:
 
 ```bash
 git add .
