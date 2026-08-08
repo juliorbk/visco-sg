@@ -53,7 +53,7 @@ public class ReportGeneratorService {
   private final WarehouseRepository warehouseRepository;
   private final GoodReceiptRepository goodReceiptRepository;
 
-  @Value("${app.reports.max-records-per-export:50000}")
+  @Value("${app.reports.max-records-per-export:2000}")
   private int maxRecords;
 
   /**

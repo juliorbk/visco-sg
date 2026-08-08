@@ -51,7 +51,7 @@ public class ReportService {
     private final ExcelExportService excelExportService;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.reports.max-records-per-export:50000}")
+    @Value("${app.reports.max-records-per-export:2000}")
     private int maxRecords;
 
     public Page<ReportDTO> getReports(Pageable pageable, ReportType type, ReportStatus status) {
@@ -335,7 +335,14 @@ public class ReportService {
     }
 
     public List<ScheduledReportDTO> getScheduledReports() {
-        return scheduledReportRepository.findAllByOrderByCreatedAtDesc().stream()
+        var page = scheduledReportRepository.findAllByOrderByCreatedAtDesc(
+                org.springframework.data.domain.PageRequest.of(0, Math.max(maxRecords, 1))
+        );
+        if (page.getTotalElements() > maxRecords) {
+            log.warn("getScheduledReports truncated to {} of {} total scheduled reports.",
+                    maxRecords, page.getTotalElements());
+        }
+        return page.stream()
                 .map(this::toScheduledDTO)
                 .collect(Collectors.toList());
     }

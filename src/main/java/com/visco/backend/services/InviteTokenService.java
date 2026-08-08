@@ -12,7 +12,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class InviteTokenService {
 
   private static final SecureRandom RANDOM = new SecureRandom();
@@ -32,6 +35,9 @@ public class InviteTokenService {
 
   @Value("${app.invite.default-validity-hours:72}")
   private int defaultValidityHours;
+
+  @Value("${app.invite.list-max-records:1000}")
+  private int listMaxRecords;
 
   /**
    * Creates an invite token and sends the invitation email.
@@ -109,8 +115,17 @@ public class InviteTokenService {
    * @return list of invite token responses
    */
   public List<InviteTokenResponse> listInvites() {
-    return inviteTokenRepository
-      .findAll()
+    var page = inviteTokenRepository.findAll(
+      PageRequest.of(0, listMaxRecords, org.springframework.data.domain.Sort.by("createdAt").descending())
+    );
+    if (page.getTotalElements() > listMaxRecords) {
+      log.warn(
+        "listInvites truncated to {} of {} total tokens. " +
+          "Consider purging expired/revoked tokens.",
+        listMaxRecords, page.getTotalElements()
+      );
+    }
+    return page
       .stream()
       .map(InviteTokenResponse::fromEntity)
       .toList();

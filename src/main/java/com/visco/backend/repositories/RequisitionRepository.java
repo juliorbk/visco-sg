@@ -16,7 +16,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface RequisitionRepository extends JpaRepository<Requisition, Long> {
     Page<Requisition> findByStatus(RequisitionStatus status, Pageable pageable);
-    List<Requisition> findByStatus(RequisitionStatus status);
     Page<Requisition> findByRequestedById(java.util.UUID requestedById, Pageable pageable);
 
     @Query(

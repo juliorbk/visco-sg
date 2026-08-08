@@ -53,6 +53,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -66,6 +68,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Handles business logic for warehouse, stock, and inventory operations.
  */
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class WarehouseService {
 
@@ -79,6 +82,9 @@ public class WarehouseService {
   private final DispatchNoteRepository dispatchNoteRepository;
   private final EmployeeRepository employeeRepository;
   private final CostCenterRepository costCenterRepository;
+
+  @Value("${app.reports.max-records-per-export:2000}")
+  private int exportMaxRecords;
   private final LocationRepository locationRepository;
 
   /**
@@ -1240,10 +1246,19 @@ public class WarehouseService {
       .and(InventoryMovementSpecification.hasType(type))
       .and(InventoryMovementSpecification.createdAtBetween(startDate, endDate));
 
-    List<InventoryMovement> movements = inventoryMovementRepository.findAll(
+    var movementsPage = inventoryMovementRepository.findAll(
       spec,
-      Sort.by("createdAt").ascending()
+      PageRequest.of(0, exportMaxRecords, Sort.by("createdAt").ascending())
     );
+    List<InventoryMovement> movements = movementsPage.getContent();
+
+    if (movementsPage.getTotalElements() > exportMaxRecords) {
+      log.warn(
+        "exportMovements truncated to {} of {} total rows. " +
+          "Apply filters (product/warehouse/type/date) to export all data.",
+        exportMaxRecords, movementsPage.getTotalElements()
+      );
+    }
 
     AtomicReference<BigDecimal> running = new AtomicReference<>(openingBalance);
 
