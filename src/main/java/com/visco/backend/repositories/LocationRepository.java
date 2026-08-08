@@ -28,6 +28,11 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
     @Param("warehouseId") Long warehouseId
   );
 
+  @Query(
+    "SELECT l FROM Location l JOIN FETCH l.warehouse WHERE l.warehouse.id = :warehouseId"
+  )
+  List<Location> findAllByWarehouseId(@Param("warehouseId") Long warehouseId);
+
   Optional<Location> findByWarehouseIdAndCode(Long warehouseId, String code);
   boolean existsByWarehouseIdAndCode(Long warehouseId, String code);
 

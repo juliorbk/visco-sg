@@ -57,6 +57,30 @@ public class Location {
   @JoinColumn(name = "warehouse_id", nullable = false) // FK to Warehouse
   private Warehouse warehouse;
 
+  // Structured physical layout fields used to render the warehouse
+  // as a 2D inventory map. All optional; location_code remains the
+  // unique stable identifier per warehouse.
+  @Column(name = "zone")
+  private String zone;
+
+  @Column(name = "aisle")
+  private String aisle;
+
+  @Column(name = "rack")
+  private String rack;
+
+  @Column(name = "level")
+  private String level;
+
+  @Column(name = "position_x")
+  private Integer positionX;
+
+  @Column(name = "position_y")
+  private Integer positionY;
+
+  @Column(name = "description")
+  private String description;
+
   @CreatedDate
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;

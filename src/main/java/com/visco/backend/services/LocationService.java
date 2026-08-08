@@ -2,7 +2,9 @@ package com.visco.backend.services;
 
 import com.visco.backend.models.dtos.CreateLocationRequest;
 import com.visco.backend.models.dtos.LocationDTO;
+import com.visco.backend.models.dtos.LocationNode;
 import com.visco.backend.models.dtos.UpdateLocationRequest;
+import com.visco.backend.models.dtos.WarehouseMapResponse;
 import com.visco.backend.models.entities.Location;
 import com.visco.backend.models.entities.Warehouse;
 import com.visco.backend.repositories.LocationRepository;
@@ -125,6 +127,13 @@ public class LocationService {
       .code(request.code())
       .warehouse(warehouse)
       .active(true)
+      .zone(request.zone())
+      .aisle(request.aisle())
+      .rack(request.rack())
+      .level(request.level())
+      .positionX(request.positionX())
+      .positionY(request.positionY())
+      .description(request.description())
       .build();
 
     return LocationDTO.fromEntity(locationRepository.save(location));
@@ -148,6 +157,27 @@ public class LocationService {
     if (request.active() != null) {
       location.setActive(request.active());
     }
+    if (request.zone() != null) {
+      location.setZone(request.zone());
+    }
+    if (request.aisle() != null) {
+      location.setAisle(request.aisle());
+    }
+    if (request.rack() != null) {
+      location.setRack(request.rack());
+    }
+    if (request.level() != null) {
+      location.setLevel(request.level());
+    }
+    if (request.positionX() != null) {
+      location.setPositionX(request.positionX());
+    }
+    if (request.positionY() != null) {
+      location.setPositionY(request.positionY());
+    }
+    if (request.description() != null) {
+      location.setDescription(request.description());
+    }
 
     return LocationDTO.fromEntity(locationRepository.save(location));
   }
@@ -166,5 +196,47 @@ public class LocationService {
       );
     location.setActive(false);
     locationRepository.save(location);
+  }
+
+  /**
+   * Builds the full inventory map for a warehouse: returns all locations
+   * (active and inactive) with their physical layout fields so the
+   * frontend can render a 2D view.
+   *
+   * @param warehouseId the warehouse ID
+   * @return the warehouse map response
+   */
+  @Transactional(readOnly = true)
+  public WarehouseMapResponse getWarehouseMap(Long warehouseId) {
+    Warehouse warehouse = warehouseRepository
+      .findById(warehouseId)
+      .orElseThrow(() ->
+        new EntityNotFoundException("Warehouse not found: " + warehouseId)
+      );
+
+    List<LocationNode> nodes = locationRepository
+      .findAllByWarehouseId(warehouseId)
+      .stream()
+      .map(l ->
+        new LocationNode(
+          l.getId(),
+          l.getCode(),
+          Boolean.TRUE.equals(l.getActive()),
+          l.getZone(),
+          l.getAisle(),
+          l.getRack(),
+          l.getLevel(),
+          l.getPositionX(),
+          l.getPositionY(),
+          l.getDescription()
+        )
+      )
+      .toList();
+
+    return new WarehouseMapResponse(
+      warehouse.getId(),
+      warehouse.getName(),
+      nodes
+    );
   }
 }

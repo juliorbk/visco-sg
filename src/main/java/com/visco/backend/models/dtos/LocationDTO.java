@@ -16,6 +16,13 @@ public class LocationDTO {
   private boolean active;
   private Long warehouseId;
   private String warehouseName;
+  private String zone;
+  private String aisle;
+  private String rack;
+  private String level;
+  private Integer positionX;
+  private Integer positionY;
+  private String description;
 
   public static LocationDTO fromEntity(Location l) {
     return LocationDTO.builder()
@@ -26,6 +33,13 @@ public class LocationDTO {
       .warehouseName(
         l.getWarehouse() != null ? l.getWarehouse().getName() : null
       )
+      .zone(l.getZone())
+      .aisle(l.getAisle())
+      .rack(l.getRack())
+      .level(l.getLevel())
+      .positionX(l.getPositionX())
+      .positionY(l.getPositionY())
+      .description(l.getDescription())
       .build();
   }
 }

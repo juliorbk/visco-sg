@@ -3,6 +3,7 @@ package com.visco.backend.controllers;
 import com.visco.backend.models.dtos.CreateLocationRequest;
 import com.visco.backend.models.dtos.LocationDTO;
 import com.visco.backend.models.dtos.UpdateLocationRequest;
+import com.visco.backend.models.dtos.WarehouseMapResponse;
 import com.visco.backend.services.LocationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,6 +48,17 @@ public class LocationController {
     @PathVariable Long warehouseId
   ) {
     return ResponseEntity.ok(locationService.getActiveLocationsByWarehouse(warehouseId));
+  }
+
+  @GetMapping("/warehouse/{warehouseId}/map")
+  @Operation(
+    summary = "Get warehouse inventory map",
+    description = "Returns the full inventory map for a warehouse: all locations (active and inactive) with their physical layout fields (zone, aisle, rack, level, position) so a 2D map can be rendered."
+  )
+  public ResponseEntity<WarehouseMapResponse> getWarehouseMap(
+    @PathVariable Long warehouseId
+  ) {
+    return ResponseEntity.ok(locationService.getWarehouseMap(warehouseId));
   }
 
   @GetMapping("/{id}")
