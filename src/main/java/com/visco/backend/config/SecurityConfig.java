@@ -218,6 +218,8 @@ public class SecurityConfig {
           // Métricas Prometheus públicas (solo lectura, sin datos sensibles)
           .requestMatchers("/actuator/prometheus")
           .permitAll()
+          .requestMatchers("/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness")
+          .permitAll()
           .requestMatchers("/actuator/**")
           .hasRole("SUPERADMIN")
           // Roles específicos: escritura inventario, reportes
