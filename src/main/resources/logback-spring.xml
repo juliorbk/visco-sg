@@ -2,7 +2,7 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- JSON a stdout (capturado por Render logs) -->
+    <!-- JSON a stdout (capturado por Railway / Render logs) -->
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeContext>false</includeContext>
@@ -18,27 +18,29 @@
         </encoder>
     </appender>
 
-    <!-- Loki — envía logs a Grafana Cloud directamente desde Render -->
-    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-        <http class="com.github.loki4j.logback.ApacheHttpSender">
-            <url>${LOKI_URL:-https://logs-prod-021.grafana.net/loki/api/v1/push}</url>
-            <username>${LOKI_USERNAME:-1666639}</username>
-            <password>${GCLOUD_RW_API_KEY}</password>
-        </http>
-        <format>
-            <label>
-                <pattern>app=viscosg,instance=${HOSTNAME:-local},level=%level</pattern>
-            </label>
-            <message>
-                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}","level":"%level","logger":"%logger{36}","message":"%msg","thread":"%thread"}%ex</pattern>
-            </message>
-            <sortByTime>true</sortByTime>
-        </format>
-        <maxBatchMs>5000</maxBatchMs>
-    </appender>
+    <!-- Loki — solo se activa con el profile "loki" (requiere credenciales válidas).
+         Railway captura stdout por defecto, así que Loki es opcional. -->
+    <springProfile name="loki">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <http class="com.github.loki4j.logback.ApacheHttpSender">
+                <url>${LOKI_URL:-https://logs-prod-021.grafana.net/loki/api/v1/push}</url>
+            </http>
+            <format>
+                <label>
+                    <pattern>app=viscosg,instance=${HOSTNAME:-local},level=%level</pattern>
+                </label>
+                <message>
+                    <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}","level":"%level","logger":"%logger{36}","message":"%msg","thread":"%thread"}%ex</pattern>
+                </message>
+                <sortByTime>true</sortByTime>
+            </format>
+        </appender>
+    </springProfile>
 
     <root level="INFO">
         <appender-ref ref="JSON"/>
-        <appender-ref ref="LOKI"/>
+        <springProfile name="loki">
+            <appender-ref ref="LOKI"/>
+        </springProfile>
     </root>
 </configuration>
