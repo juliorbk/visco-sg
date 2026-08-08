@@ -1,7 +1,7 @@
 package com.visco.backend.config;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.otlp.OtlpRegistryConfig;
+import io.micrometer.registry.otlp.OtlpConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.micrometer.metrics.autoconfigure.MeterRegistryCustomizer;
@@ -26,12 +26,16 @@ public class MonitoringConfig {
 
     @Bean
     @ConditionalOnProperty(name = "management.otlp.metrics.export.enabled", havingValue = "true")
-    OtlpRegistryConfig otlpRegistryConfig(
+    OtlpConfig otlpRegistryConfig(
             @Value("${management.otlp.metrics.export.url}") String url,
-            @Value("${management.otlp.metrics.export.step:60s}") String step,
             @Value("${GRAFANA_INSTANCE_ID:3341928}") String instanceId,
             @Value("${GCLOUD_RW_API_KEY:}") String apiKey) {
-        return new OtlpRegistryConfig() {
+        return new OtlpConfig() {
+            @Override
+            public String get(String key) {
+                return null;
+            }
+
             @Override
             public String url() {
                 return url;
